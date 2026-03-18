@@ -46,11 +46,39 @@ If you do not install the package, you can still run directly:
 PYTHONPATH=src python3 -m tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
 ```
 
+## CLI Commands
+
+Single run (default behavior):
+
+```bash
+tcrb run --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
+```
+
+Multi-seed aggregate with confidence intervals:
+
+```bash
+tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3,4,5 --label ms-baseline
+```
+
+Scenario sweep (each scenario is run as multi-seed):
+
+```bash
+tcrb sweep --base-config configs/baseline.json --sweep-config configs/sweeps/fault_levels.json --workload workloads/sample_tasks.json --label sweep-fault-levels
+```
+
 ## Outputs
 
 Each run writes to `runs/<label>/`:
 - `result.json` full per-task and per-attempt records
 - `summary.md` compact results table + failure taxonomy
+
+Multi-seed runs write:
+- `multi_seed.json` per-seed policy metrics + aggregate stats
+- `multi_seed_summary.md` mean +/- CI95 metric table
+
+Sweep runs write:
+- `sweep.json` all scenarios with nested multi-seed results
+- `sweep_summary.md` scenario comparison table
 
 Core metrics in `summary.md`:
 - task success rate
@@ -72,6 +100,22 @@ Core metrics in `summary.md`:
 3. Sweep timeout and retry budgets
 4. Compare rank shifts by metric (cost-first vs success-first)
 5. Use taxonomy to identify which policy fails on which mode
+
+Concrete commands:
+
+```bash
+tcrb multi-seed --seeds 1,2,3,4,5 --label ms-baseline
+tcrb sweep --sweep-config configs/sweeps/fault_levels.json --label sweep-fault-levels
+tcrb sweep --sweep-config configs/sweeps/budget_tradeoff.json --label sweep-budget
+```
+
+## Plot Frontier
+
+Generate a publication-ready scatter showing success vs p95 latency, with point size mapped to cost per success.
+
+```bash
+python scripts/plot_frontier.py --input runs/ms-baseline/multi_seed.json --output runs/ms-baseline/frontier.png
+```
 
 ## Extend Next
 
