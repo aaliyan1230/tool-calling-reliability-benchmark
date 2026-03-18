@@ -25,6 +25,7 @@ class ToolSpec:
     jitter_ms: int
     schema_fields: list[str]
     timeout_ms: int | None = None
+    fault_multipliers: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
