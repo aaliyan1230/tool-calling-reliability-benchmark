@@ -33,17 +33,15 @@ This repo bootstraps Project 1 from the roadmap:
 ## Quickstart
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-pytest
-tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
+uv sync --extra dev
+uv run pytest
+uv run tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
 ```
 
-If you do not install the package, you can still run directly:
+If you want to run module entrypoints explicitly:
 
 ```bash
-PYTHONPATH=src python3 -m tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
+uv run python -m tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
 ```
 
 ## CLI Commands
@@ -51,19 +49,19 @@ PYTHONPATH=src python3 -m tcrb --config configs/baseline.json --workload workloa
 Single run (default behavior):
 
 ```bash
-tcrb run --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
+uv run tcrb run --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
 ```
 
 Multi-seed aggregate with confidence intervals:
 
 ```bash
-tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3,4,5 --label ms-baseline
+uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3,4,5 --label ms-baseline
 ```
 
 Scenario sweep (each scenario is run as multi-seed):
 
 ```bash
-tcrb sweep --base-config configs/baseline.json --sweep-config configs/sweeps/fault_levels.json --workload workloads/sample_tasks.json --label sweep-fault-levels
+uv run tcrb sweep --base-config configs/baseline.json --sweep-config configs/sweeps/fault_levels.json --workload workloads/sample_tasks.json --label sweep-fault-levels
 ```
 
 ## Planner Abstraction (Provider-Agnostic)
@@ -82,8 +80,8 @@ Included planner types:
 Example runs:
 
 ```bash
-tcrb run --planner-config configs/planners/heuristic.json --label run-heuristic
-tcrb multi-seed --planner-config configs/planners/stochastic_lowhalluc.json --seeds 1,2,3,4,5 --label ms-stochastic
+uv run tcrb run --planner-config configs/planners/heuristic.json --label run-heuristic
+uv run tcrb multi-seed --planner-config configs/planners/stochastic_lowhalluc.json --seeds 1,2,3,4,5 --label ms-stochastic
 ```
 
 ### Command Planner Contract
@@ -134,9 +132,9 @@ Core metrics in `summary.md`:
 Concrete commands:
 
 ```bash
-tcrb multi-seed --seeds 1,2,3,4,5 --label ms-baseline
-tcrb sweep --sweep-config configs/sweeps/fault_levels.json --label sweep-fault-levels
-tcrb sweep --sweep-config configs/sweeps/budget_tradeoff.json --label sweep-budget
+uv run tcrb multi-seed --seeds 1,2,3,4,5 --label ms-baseline
+uv run tcrb sweep --sweep-config configs/sweeps/fault_levels.json --label sweep-fault-levels
+uv run tcrb sweep --sweep-config configs/sweeps/budget_tradeoff.json --label sweep-budget
 ```
 
 ## Plot Frontier
@@ -144,7 +142,7 @@ tcrb sweep --sweep-config configs/sweeps/budget_tradeoff.json --label sweep-budg
 Generate a publication-ready scatter showing success vs p95 latency, with point size mapped to cost per success.
 
 ```bash
-python scripts/plot_frontier.py --input runs/ms-baseline/multi_seed.json --output runs/ms-baseline/frontier.png
+uv run python scripts/plot_frontier.py --input runs/ms-baseline/multi_seed.json --output runs/ms-baseline/frontier.png
 ```
 
 ## Extend Next
