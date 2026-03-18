@@ -63,6 +63,7 @@ class BenchmarkConfig:
 class AttemptRecord:
     task_id: str
     policy: str
+    planner_id: str
     attempt_number: int
     tool_name: str
     status: str
@@ -77,6 +78,7 @@ class AttemptRecord:
 class TaskResult:
     task_id: str
     policy: str
+    planner_id: str
     success: bool
     final_status: str
     total_latency_ms: int

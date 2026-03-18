@@ -8,6 +8,7 @@ from pathlib import Path
 from .benchmark import run_benchmark, write_result_json
 from .config import load_benchmark_config, load_workload
 from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
+from .planner import load_tool_planner
 from .reporting import (
     render_multi_seed_markdown,
     render_sweep_markdown,
@@ -29,6 +30,11 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--outdir", default="runs", help="Directory for run outputs")
     parser.add_argument("--label", default=None, help="Optional run label")
+    parser.add_argument(
+        "--planner-config",
+        default=None,
+        help="Optional tool planner JSON config",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--outdir", default="runs", help="Directory for run outputs"
     )
     multi_parser.add_argument("--label", default=None, help="Optional run label")
+    multi_parser.add_argument(
+        "--planner-config",
+        default=None,
+        help="Optional tool planner JSON config",
+    )
 
     sweep_parser = subparsers.add_parser(
         "sweep", help="Run scenario sweep with multi-seed aggregation"
@@ -82,6 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--outdir", default="runs", help="Directory for run outputs"
     )
     sweep_parser.add_argument("--label", default=None, help="Optional run label")
+    sweep_parser.add_argument(
+        "--planner-config",
+        default=None,
+        help="Optional tool planner JSON config",
+    )
 
     return parser
 
@@ -99,7 +115,8 @@ def _load_json(path: str) -> dict:
 def _run_single(args: argparse.Namespace) -> int:
     workload = load_workload(args.workload)
     config = load_benchmark_config(args.config)
-    result = run_benchmark(workload=workload, config=config)
+    planner = load_tool_planner(args.planner_config)
+    result = run_benchmark(workload=workload, config=config, planner=planner)
 
     label = args.label or _default_label()
     run_dir = Path(args.outdir) / label
@@ -111,6 +128,7 @@ def _run_single(args: argparse.Namespace) -> int:
     write_result_json(result, raw_json)
     write_markdown_summary(result, summary_md)
 
+    print(f"Planner: {planner.planner_id}")
     print(f"Wrote benchmark results: {raw_json}")
     print(f"Wrote markdown summary: {summary_md}")
     return 0
@@ -119,8 +137,11 @@ def _run_single(args: argparse.Namespace) -> int:
 def _run_multi_seed(args: argparse.Namespace) -> int:
     workload = load_workload(args.workload)
     config = load_benchmark_config(args.config)
+    planner = load_tool_planner(args.planner_config)
     seeds = parse_seed_list(args.seeds)
-    payload = run_multi_seed(workload=workload, config=config, seeds=seeds)
+    payload = run_multi_seed(
+        workload=workload, config=config, seeds=seeds, planner=planner
+    )
 
     label = args.label or _default_label()
     run_dir = Path(args.outdir) / label
@@ -132,6 +153,7 @@ def _run_multi_seed(args: argparse.Namespace) -> int:
     write_json(payload, raw_json)
     write_markdown_text(render_multi_seed_markdown(payload), summary_md)
 
+    print(f"Planner: {planner.planner_id}")
     print(f"Wrote multi-seed results: {raw_json}")
     print(f"Wrote multi-seed summary: {summary_md}")
     return 0
@@ -141,10 +163,12 @@ def _run_sweep(args: argparse.Namespace) -> int:
     workload = load_workload(args.workload)
     base_payload = _load_json(args.base_config)
     sweep_payload = _load_json(args.sweep_config)
+    planner = load_tool_planner(args.planner_config)
     result = run_sweep(
         workload=workload,
         base_config_payload=base_payload,
         sweep_payload=sweep_payload,
+        planner=planner,
     )
 
     label = args.label or _default_label()
@@ -157,6 +181,7 @@ def _run_sweep(args: argparse.Namespace) -> int:
     write_json(result, raw_json)
     write_markdown_text(render_sweep_markdown(result), summary_md)
 
+    print(f"Planner: {planner.planner_id}")
     print(f"Wrote sweep results: {raw_json}")
     print(f"Wrote sweep summary: {summary_md}")
     return 0

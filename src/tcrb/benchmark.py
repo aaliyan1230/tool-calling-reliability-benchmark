@@ -12,6 +12,7 @@ from .models import (
     TaskResult,
     Workload,
 )
+from .planner import PolicyNativePlanner, ToolPlanner
 from .policies import run_task_for_policy
 
 
@@ -59,8 +60,13 @@ def _policy_metrics(policy: str, task_results: list[TaskResult]) -> PolicyMetric
     )
 
 
-def run_benchmark(workload: Workload, config: BenchmarkConfig) -> BenchmarkResult:
+def run_benchmark(
+    workload: Workload,
+    config: BenchmarkConfig,
+    planner: ToolPlanner | None = None,
+) -> BenchmarkResult:
     rng = random.Random(config.seed)
+    active_planner = planner or PolicyNativePlanner()
     all_task_results: list[TaskResult] = []
     all_policy_metrics: list[PolicyMetrics] = []
 
@@ -73,6 +79,7 @@ def run_benchmark(workload: Workload, config: BenchmarkConfig) -> BenchmarkResul
                 workload=workload,
                 config=config,
                 rng=rng,
+                planner=active_planner,
             )
             policy_results.append(result)
             all_task_results.append(result)

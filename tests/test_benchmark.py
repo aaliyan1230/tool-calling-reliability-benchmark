@@ -109,6 +109,7 @@ def test_schema_first_uses_fallback_after_schema_fault():
     assert task_result.success is True
     assert len(task_result.attempts) == 2
     assert task_result.attempts[0].tool_name == "primary"
+    assert task_result.attempts[0].planner_id == "policy_native"
     assert task_result.attempts[0].status == "malformed_schema"
     assert task_result.attempts[1].tool_name == "fallback"
     assert task_result.attempts[1].status == "success"

@@ -66,11 +66,41 @@ Scenario sweep (each scenario is run as multi-seed):
 tcrb sweep --base-config configs/baseline.json --sweep-config configs/sweeps/fault_levels.json --workload workloads/sample_tasks.json --label sweep-fault-levels
 ```
 
+## Planner Abstraction (Provider-Agnostic)
+
+The benchmark now supports a model-planner abstraction so you can evaluate orchestration policies against different planner behaviors without binding to any closed provider SDK.
+
+Planner config path is passed with `--planner-config`.
+
+Included planner types:
+- `policy_native`: baseline planner that mirrors existing policy logic
+- `heuristic`: schema-aware and latency-aware deterministic chooser
+- `stochastic`: probabilistic chooser with tunable off-catalog tool-call rate
+- `replay`: fixed per-task tool sequence playback
+- `command`: shell command adapter (bridge to any external/open model runner)
+
+Example runs:
+
+```bash
+tcrb run --planner-config configs/planners/heuristic.json --label run-heuristic
+tcrb multi-seed --planner-config configs/planners/stochastic_lowhalluc.json --seeds 1,2,3,4,5 --label ms-stochastic
+```
+
+### Command Planner Contract
+
+`command` planner receives JSON on stdin with task context and must return either:
+- plain tool name on stdout, or
+- JSON with `{"tool_name": "..."}`
+
+This lets you plug in local runners (for example, open-weight models served via local infra) while keeping the benchmark core unchanged.
+
 ## Outputs
 
 Each run writes to `runs/<label>/`:
 - `result.json` full per-task and per-attempt records
 - `summary.md` compact results table + failure taxonomy
+
+Per-attempt records now include `planner_id` for model/planner attribution.
 
 Multi-seed runs write:
 - `multi_seed.json` per-seed policy metrics + aggregate stats

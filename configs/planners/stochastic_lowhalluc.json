@@ -1,0 +1,9 @@
+{
+  "type": "stochastic",
+  "name": "stochastic_lowhalluc_v1",
+  "off_catalog_probability": 0.02,
+  "schema_bonus": 2.0,
+  "primary_bonus": 1.0,
+  "unexplored_bonus": 0.8,
+  "hallucinated_tool_name": "hallucinated_tool"
+}

@@ -17,6 +17,15 @@ class CallOutcome:
     invalid_tool_call: bool
 
 
+def unknown_tool_outcome(rng: random.Random) -> CallOutcome:
+    return CallOutcome(
+        status="unknown_tool",
+        latency_ms=rng.randint(2, 20),
+        schema_valid=False,
+        invalid_tool_call=True,
+    )
+
+
 def _sample_fault(
     tool: ToolSpec, config: BenchmarkConfig, rng: random.Random
 ) -> str | None:
