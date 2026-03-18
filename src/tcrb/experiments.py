@@ -10,6 +10,7 @@ from typing import Any
 from .benchmark import run_benchmark
 from .config import benchmark_config_from_dict
 from .models import BenchmarkConfig, PolicyMetrics, Workload
+from .planner import PolicyNativePlanner, ToolPlanner
 
 
 METRIC_FIELDS = [
@@ -72,16 +73,20 @@ def run_multi_seed(
     workload: Workload,
     config: BenchmarkConfig,
     seeds: list[int],
+    planner: ToolPlanner | None = None,
 ) -> dict:
     if not seeds:
         raise ValueError("seeds must not be empty")
 
+    active_planner = planner or PolicyNativePlanner()
     per_seed: list[dict] = []
     aggregate: dict[str, dict[str, list[float]]] = {}
 
     for seed in seeds:
         seed_config = replace(config, seed=int(seed))
-        result = run_benchmark(workload=workload, config=seed_config)
+        result = run_benchmark(
+            workload=workload, config=seed_config, planner=active_planner
+        )
         policy_rows = _policy_metric_map(result.policy_metrics)
 
         per_seed.append(
@@ -120,6 +125,7 @@ def run_multi_seed(
 
     return {
         "type": "multi_seed",
+        "planner_id": getattr(active_planner, "planner_id", "planner"),
         "seeds": [int(seed) for seed in seeds],
         "per_seed": per_seed,
         "aggregate_policy_metrics": aggregate_rows,
@@ -130,6 +136,7 @@ def run_sweep(
     workload: Workload,
     base_config_payload: dict,
     sweep_payload: dict,
+    planner: ToolPlanner | None = None,
 ) -> dict:
     scenarios = list(sweep_payload.get("scenarios", []))
     if not scenarios:
@@ -150,6 +157,7 @@ def run_sweep(
             workload=workload,
             config=scenario_config,
             seeds=scenario_seeds,
+            planner=planner,
         )
         scenario_results.append(
             {
@@ -164,6 +172,9 @@ def run_sweep(
         "type": "sweep",
         "name": str(sweep_payload.get("name", "sweep")),
         "description": str(sweep_payload.get("description", "")).strip(),
+        "planner_id": getattr(
+            planner or PolicyNativePlanner(), "planner_id", "planner"
+        ),
         "scenarios": scenario_results,
     }
 

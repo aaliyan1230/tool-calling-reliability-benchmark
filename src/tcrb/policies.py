@@ -8,42 +8,10 @@ from .models import (
     BenchmarkConfig,
     TaskResult,
     TaskSpec,
-    ToolSpec,
     Workload,
 )
-from .simulator import SCHEMA_FAULTS, simulate_call
-
-
-def _candidate_tool_names(task: TaskSpec, workload: Workload) -> list[str]:
-    ordered = [task.primary_tool, *task.fallback_tools]
-    return [name for name in ordered if name in workload.tools]
-
-
-def _supports_schema(tool: ToolSpec, task: TaskSpec) -> bool:
-    return all(field in tool.schema_fields for field in task.required_schema)
-
-
-def _select_initial_tool(policy: str, task: TaskSpec, workload: Workload) -> str:
-    candidates = _candidate_tool_names(task, workload)
-    if not candidates:
-        raise ValueError(f"Task {task.task_id} has no valid tools")
-
-    if policy == "schema_first_fallback":
-        for name in candidates:
-            if _supports_schema(workload.tools[name], task):
-                return name
-    return candidates[0]
-
-
-def _next_schema_compatible_tool(
-    task: TaskSpec, workload: Workload, attempted: set[str]
-) -> str | None:
-    for name in _candidate_tool_names(task, workload):
-        if name in attempted:
-            continue
-        if _supports_schema(workload.tools[name], task):
-            return name
-    return None
+from .planner import PolicyNativePlanner, ToolPlanner, next_schema_compatible_tool
+from .simulator import SCHEMA_FAULTS, simulate_call, unknown_tool_outcome
 
 
 def _retry_delay_ms(
@@ -90,20 +58,37 @@ def run_task_for_policy(
     workload: Workload,
     config: BenchmarkConfig,
     rng: random.Random,
+    planner: ToolPlanner | None = None,
 ) -> TaskResult:
     effective = apply_policy_override(config, policy)
+    active_planner = planner or PolicyNativePlanner()
+    planner_id = getattr(active_planner, "planner_id", "planner")
+
     attempts: list[AttemptRecord] = []
     elapsed_ms = 0
     total_cost = 0.0
     attempted_tools: set[str] = set()
-    tool_name = _select_initial_tool(policy, task, workload)
+    last_status: str | None = None
 
     success = False
     final_status = "unknown"
 
     for attempt_number in range(1, effective.max_attempts + 1):
-        tool = workload.tools[tool_name]
-        outcome = simulate_call(tool=tool, task=task, config=effective, rng=rng)
+        tool_name = active_planner.choose_tool(
+            task=task,
+            workload=workload,
+            policy=policy,
+            attempt_number=attempt_number,
+            attempted_tools=attempted_tools,
+            last_status=last_status,
+            rng=rng,
+        )
+
+        tool = workload.tools.get(tool_name)
+        if tool is None:
+            outcome = unknown_tool_outcome(rng)
+        else:
+            outcome = simulate_call(tool=tool, task=task, config=effective, rng=rng)
 
         elapsed_ms += outcome.latency_ms
         cost = effective.cost.base_per_call_usd + (
@@ -115,6 +100,7 @@ def run_task_for_policy(
         record = AttemptRecord(
             task_id=task.task_id,
             policy=policy,
+            planner_id=planner_id,
             attempt_number=attempt_number,
             tool_name=tool_name,
             status=outcome.status,
@@ -137,17 +123,14 @@ def run_task_for_policy(
 
         should_retry = _can_retry(outcome.status, effective)
 
-        if policy == "schema_first_fallback" and outcome.status in SCHEMA_FAULTS:
-            replacement_tool = _next_schema_compatible_tool(
-                task, workload, attempted_tools
-            )
-            if replacement_tool:
-                tool_name = replacement_tool
-                should_retry = True
+        if outcome.status in SCHEMA_FAULTS:
+            if policy == "schema_first_fallback":
+                should_retry = (
+                    next_schema_compatible_tool(task, workload, attempted_tools)
+                    is not None
+                )
             else:
                 should_retry = False
-        elif outcome.status in SCHEMA_FAULTS:
-            should_retry = False
 
         if policy == "timeout_budget_early_abort":
             remaining = effective.time_budget_ms - elapsed_ms
@@ -167,10 +150,12 @@ def run_task_for_policy(
 
         attempts[-1].retry_delay_ms = retry_delay
         elapsed_ms += retry_delay
+        last_status = outcome.status
 
     return TaskResult(
         task_id=task.task_id,
         policy=policy,
+        planner_id=planner_id,
         success=success,
         final_status=final_status,
         total_latency_ms=elapsed_ms,

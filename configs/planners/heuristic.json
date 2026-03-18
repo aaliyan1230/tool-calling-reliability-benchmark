@@ -1,0 +1,6 @@
+{
+  "type": "heuristic",
+  "name": "heuristic_v1",
+  "prefer_schema": true,
+  "avoid_reusing_attempted": true
+}
