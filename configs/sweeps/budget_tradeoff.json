@@ -1,0 +1,37 @@
+{
+  "name": "budget-tradeoff-sweep",
+  "description": "Explores retry and timeout budget tradeoffs for each policy.",
+  "seeds": [11, 12, 13, 14, 15],
+  "scenarios": [
+    {
+      "id": "tight_budget",
+      "label": "Tight Budget",
+      "config_overrides": {
+        "max_attempts": 3,
+        "time_budget_ms": 900,
+        "base_backoff_ms": 80,
+        "backoff_jitter_ms": 60
+      }
+    },
+    {
+      "id": "baseline_budget",
+      "label": "Baseline Budget",
+      "config_overrides": {
+        "max_attempts": 4,
+        "time_budget_ms": 1800,
+        "base_backoff_ms": 100,
+        "backoff_jitter_ms": 120
+      }
+    },
+    {
+      "id": "aggressive_retry",
+      "label": "Aggressive Retry",
+      "config_overrides": {
+        "max_attempts": 7,
+        "time_budget_ms": 2600,
+        "base_backoff_ms": 120,
+        "backoff_jitter_ms": 180
+      }
+    }
+  ]
+}

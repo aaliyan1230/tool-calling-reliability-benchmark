@@ -11,8 +11,7 @@ def _read_json(path: str | Path) -> dict:
         return json.load(handle)
 
 
-def load_workload(path: str | Path) -> Workload:
-    payload = _read_json(path)
+def workload_from_dict(payload: dict) -> Workload:
     tools: dict[str, ToolSpec] = {}
     for tool in payload["tools"]:
         spec = ToolSpec(
@@ -37,8 +36,7 @@ def load_workload(path: str | Path) -> Workload:
     return Workload(tools=tools, tasks=tasks)
 
 
-def load_benchmark_config(path: str | Path) -> BenchmarkConfig:
-    payload = _read_json(path)
+def benchmark_config_from_dict(payload: dict) -> BenchmarkConfig:
     return BenchmarkConfig(
         seed=int(payload["seed"]),
         max_attempts=int(payload["max_attempts"]),
@@ -59,3 +57,11 @@ def load_benchmark_config(path: str | Path) -> BenchmarkConfig:
         ),
         policy_overrides=dict(payload.get("policy_overrides", {})),
     )
+
+
+def load_workload(path: str | Path) -> Workload:
+    return workload_from_dict(_read_json(path))
+
+
+def load_benchmark_config(path: str | Path) -> BenchmarkConfig:
+    return benchmark_config_from_dict(_read_json(path))
