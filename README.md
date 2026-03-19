@@ -128,6 +128,10 @@ Core metrics in `summary.md`:
 3. Sweep timeout and retry budgets
 4. Compare rank shifts by metric (cost-first vs success-first)
 5. Use taxonomy to identify which policy fails on which mode
+6. Compare open local model planners on the same workload/policies
+7. Fine-tune each open model on a target toolchain trace set
+8. Re-evaluate base vs fine-tuned models on both target and open toolchains
+9. Quantify in-domain gains vs out-of-domain regressions
 
 Concrete commands:
 
@@ -136,6 +140,31 @@ uv run tcrb multi-seed --seeds 1,2,3,4,5 --label ms-baseline
 uv run tcrb sweep --sweep-config configs/sweeps/fault_levels.json --label sweep-fault-levels
 uv run tcrb sweep --sweep-config configs/sweeps/budget_tradeoff.json --label sweep-budget
 ```
+
+### Fine-Tuning Extension Plan (Base vs Adapted)
+
+Use this extension when you want to test whether model adaptation to a specific toolchain improves tool-calling reliability without overfitting.
+
+1. Prepare two workloads:
+   - target toolchain workload used for adaptation/evaluation (`target`)
+   - held-out open toolchain workload used for transfer check (`open`)
+2. For each base model, run baseline evaluation on both workloads.
+3. Build supervised fine-tuning data from target toolchain traces:
+   - input: planner payload (task, attempted tools, last status, available tools)
+   - output: strict `{"tool_name":"..."}` label
+4. Fine-tune with LoRA/QLoRA per model family (same train budget for fairness).
+5. Register fine-tuned checkpoints behind planner configs (same command planner contract).
+6. Re-run the benchmark matrix for base and fine-tuned variants on both workloads.
+7. Report `delta` metrics by variant:
+   - target delta: `finetuned - base` on success/latency/cost
+   - transfer delta: `finetuned - base` on open workload
+8. Flag regressions where target gain is positive but open transfer degrades materially.
+
+Recommended run label pattern:
+- base target: `ms-<model>-base-target`
+- base open: `ms-<model>-base-open`
+- ft target: `ms-<model>-ft-target`
+- ft open: `ms-<model>-ft-open`
 
 ## Plot Frontier
 
@@ -151,3 +180,4 @@ uv run python scripts/plot_frontier.py --input runs/ms-baseline/multi_seed.json 
 - Add async/concurrency and queueing effects
 - Add confidence intervals via multi-seed runs
 - Add plotting notebook for report-ready figures
+- Add base-vs-fine-tuned model benchmarking across target and open toolchains
