@@ -1,0 +1,6 @@
+{
+  "type": "command",
+  "name": "ollama_qwen3_4b",
+  "command": "uv run python scripts/planners/ollama_tool_selector.py --model qwen3:4b",
+  "timeout_seconds": 65.0
+}
