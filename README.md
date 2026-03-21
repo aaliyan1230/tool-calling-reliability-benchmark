@@ -174,6 +174,20 @@ Generate a publication-ready scatter showing success vs p95 latency, with point 
 uv run python scripts/plot_frontier.py --input runs/ms-baseline/multi_seed.json --output runs/ms-baseline/frontier.png
 ```
 
+## Notebook Analysis
+
+The repo includes a notebook for local open-model comparison:
+
+- `analysis/ollama_model_comparison.ipynb`
+
+It uses the existing `tcrb` helpers (`load_workload`, `load_benchmark_config`, `load_tool_planner`, `run_multi_seed`) and can either:
+- analyze cached output in `analysis/ollama_open_models_baseline_s3.json`, or
+- run fresh local simulations when `RUN_BENCHMARKS = True`.
+
+The notebook writes a combined frontier figure to:
+
+- `analysis/ollama_open_models_baseline_s3_frontier.png`
+
 ## Extend Next
 
 - Add real provider traces into fault models
