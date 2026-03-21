@@ -1,0 +1,137 @@
+{
+  "analysis_label": "ollama_open_models_baseline_s3",
+  "config_path": "configs/baseline.json",
+  "workload_path": "workloads/sample_tasks.json",
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "run_paths": {
+    "qwen3:4b": "runs/ms-next-qwen3-4b-s3/multi_seed.json",
+    "gemma3:4b": "runs/ms-next-gemma3-4b-s3/multi_seed.json",
+    "llama3.1:8b": "runs/ms-next-llama3.1-8b-s3/multi_seed.json"
+  },
+  "aggregate_metrics": [
+    {
+      "model": "qwen3:4b",
+      "policy": "exponential_backoff_jitter",
+      "task_success_rate": 0.6666666666666666,
+      "invalid_tool_call_rate": 0.2619047619047619,
+      "mean_latency_ms": 562.3333333333334,
+      "p95_latency_ms": 1515.3333333333333,
+      "retries_per_successful_task": 0.4166666666666667,
+      "estimated_cost_per_successful_task_usd": 0.0013030833333333332
+    },
+    {
+      "model": "qwen3:4b",
+      "policy": "naive_retry",
+      "task_success_rate": 0.611111111111111,
+      "invalid_tool_call_rate": 0.2943121693121693,
+      "mean_latency_ms": 523.2777777777777,
+      "p95_latency_ms": 1336.0,
+      "retries_per_successful_task": 0.5555555555555555,
+      "estimated_cost_per_successful_task_usd": 0.001589888888888889
+    },
+    {
+      "model": "qwen3:4b",
+      "policy": "schema_first_fallback",
+      "task_success_rate": 0.611111111111111,
+      "invalid_tool_call_rate": 0.5995726495726496,
+      "mean_latency_ms": 830.0,
+      "p95_latency_ms": 2324.0,
+      "retries_per_successful_task": 2.0833333333333335,
+      "estimated_cost_per_successful_task_usd": 0.0010447777777777777
+    },
+    {
+      "model": "qwen3:4b",
+      "policy": "timeout_budget_early_abort",
+      "task_success_rate": 0.6666666666666666,
+      "invalid_tool_call_rate": 0.3333333333333333,
+      "mean_latency_ms": 385.88888888888886,
+      "p95_latency_ms": 585.0,
+      "retries_per_successful_task": 0.0,
+      "estimated_cost_per_successful_task_usd": 0.0009631666666666665
+    },
+    {
+      "model": "gemma3:4b",
+      "policy": "exponential_backoff_jitter",
+      "task_success_rate": 0.7222222222222222,
+      "invalid_tool_call_rate": 0.2261904761904762,
+      "mean_latency_ms": 545.5555555555555,
+      "p95_latency_ms": 1484.0,
+      "retries_per_successful_task": 0.31666666666666665,
+      "estimated_cost_per_successful_task_usd": 0.0013492666666666665
+    },
+    {
+      "model": "gemma3:4b",
+      "policy": "naive_retry",
+      "task_success_rate": 0.611111111111111,
+      "invalid_tool_call_rate": 0.2943121693121693,
+      "mean_latency_ms": 526.6111111111112,
+      "p95_latency_ms": 1324.3333333333333,
+      "retries_per_successful_task": 0.5555555555555555,
+      "estimated_cost_per_successful_task_usd": 0.0015946111111111109
+    },
+    {
+      "model": "gemma3:4b",
+      "policy": "schema_first_fallback",
+      "task_success_rate": 0.7777777777777778,
+      "invalid_tool_call_rate": 0.4374514374514375,
+      "mean_latency_ms": 693.2777777777778,
+      "p95_latency_ms": 1453.6666666666667,
+      "retries_per_successful_task": 1.1166666666666667,
+      "estimated_cost_per_successful_task_usd": 0.0014038666666666665
+    },
+    {
+      "model": "gemma3:4b",
+      "policy": "timeout_budget_early_abort",
+      "task_success_rate": 0.6666666666666666,
+      "invalid_tool_call_rate": 0.3333333333333333,
+      "mean_latency_ms": 389.22222222222223,
+      "p95_latency_ms": 620.3333333333334,
+      "retries_per_successful_task": 0.0,
+      "estimated_cost_per_successful_task_usd": 0.0009823333333333333
+    },
+    {
+      "model": "llama3.1:8b",
+      "policy": "exponential_backoff_jitter",
+      "task_success_rate": 0.6666666666666666,
+      "invalid_tool_call_rate": 0.2619047619047619,
+      "mean_latency_ms": 592.4444444444445,
+      "p95_latency_ms": 1696.0,
+      "retries_per_successful_task": 0.4388888888888889,
+      "estimated_cost_per_successful_task_usd": 0.00123475
+    },
+    {
+      "model": "llama3.1:8b",
+      "policy": "naive_retry",
+      "task_success_rate": 0.611111111111111,
+      "invalid_tool_call_rate": 0.2943121693121693,
+      "mean_latency_ms": 526.6111111111112,
+      "p95_latency_ms": 1324.3333333333333,
+      "retries_per_successful_task": 0.5555555555555555,
+      "estimated_cost_per_successful_task_usd": 0.0015946111111111109
+    },
+    {
+      "model": "llama3.1:8b",
+      "policy": "schema_first_fallback",
+      "task_success_rate": 0.6666666666666666,
+      "invalid_tool_call_rate": 0.5207847707847708,
+      "mean_latency_ms": 771.8333333333334,
+      "p95_latency_ms": 1537.0,
+      "retries_per_successful_task": 1.5833333333333333,
+      "estimated_cost_per_successful_task_usd": 0.001408911111111111
+    },
+    {
+      "model": "llama3.1:8b",
+      "policy": "timeout_budget_early_abort",
+      "task_success_rate": 0.5555555555555555,
+      "invalid_tool_call_rate": 0.4444444444444444,
+      "mean_latency_ms": 377.77777777777777,
+      "p95_latency_ms": 563.6666666666666,
+      "retries_per_successful_task": 0.0,
+      "estimated_cost_per_successful_task_usd": 0.0009490833333333331
+    }
+  ]
+}
