@@ -1,0 +1,6 @@
+{
+  "type": "command",
+  "name": "ollama_llama3.1_8b",
+  "command": "python scripts/planners/ollama_tool_selector.py --model llama3.1:8b --timeout 8",
+  "timeout_seconds": 12.0
+}
