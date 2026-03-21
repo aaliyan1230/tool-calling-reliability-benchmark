@@ -181,12 +181,12 @@ The repo includes a notebook for local open-model comparison:
 - `analysis/ollama_model_comparison.ipynb`
 
 It uses the existing `tcrb` helpers (`load_workload`, `load_benchmark_config`, `load_tool_planner`, `run_multi_seed`) and can either:
-- analyze cached output in `analysis/ollama_open_models_baseline_s3.json`, or
+- analyze cached output in `analysis/ollama_open_models_baseline_s10.json`, or
 - run fresh local simulations when `RUN_BENCHMARKS = True`.
 
 The notebook writes a combined frontier figure to:
 
-- `analysis/ollama_open_models_baseline_s3_frontier.png`
+- `analysis/ollama_open_models_baseline_s10_frontier.png`
 
 ## Extend Next
 
