@@ -2,10 +2,12 @@ import random
 
 from tcrb.models import TaskSpec, ToolSpec, Workload
 from tcrb.planner import (
+    FinetunedPlanner,
     HeuristicPlanner,
     PolicyNativePlanner,
     ReplayPlanner,
     StochasticPlanner,
+    planner_from_dict,
 )
 
 
@@ -112,3 +114,24 @@ def test_replay_uses_sequence_then_fallback():
 
     assert chosen_first == "b"
     assert chosen_second == "a"
+
+
+def test_finetuned_planner_from_dict_resolves_command_template():
+    planner = planner_from_dict(
+        {
+            "type": "finetuned",
+            "name": "llama-ft",
+            "base_model": "llama3.1:8b",
+            "adapter_path": "finetuned-models/llama-ft-v1/adapter",
+            "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
+            "timeout_seconds": 9.0,
+        }
+    )
+
+    assert isinstance(planner, FinetunedPlanner)
+    assert planner.planner_id == "llama-ft"
+    assert planner.timeout_seconds == 9.0
+    assert planner.resolved_command() == (
+        "python scripts/planners/ollama_tool_selector.py "
+        "--model llama3.1:8b --lora finetuned-models/llama-ft-v1/adapter"
+    )

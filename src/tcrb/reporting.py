@@ -139,3 +139,58 @@ def write_markdown_text(text: str, output_path: str | Path) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+def render_delta_markdown(payload: dict) -> str:
+    lines = [
+        "## Base vs Finetuned Delta",
+        "",
+        "Delta is computed as finetuned - base.",
+        "",
+    ]
+
+    def _append_table(section_name: str, section_payload: dict) -> None:
+        lines.extend(
+            [
+                f"### {section_name}",
+                "",
+                "| policy | delta_success_rate | delta_invalid_call_rate | delta_mean_ms | delta_p95_ms | delta_retries_per_success | delta_cost_per_success_usd |",
+                "|---|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        rows = section_payload.get("policies", [])
+        if not rows:
+            lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
+            lines.append("")
+            return
+
+        for row in rows:
+            delta = row.get("delta", {})
+
+            def _delta_value(name: str, digits: int) -> str:
+                value = delta.get(name)
+                if value is None:
+                    return "n/a"
+                return f"{float(value):.{digits}f}"
+
+            lines.append(
+                "| "
+                f"{row.get('policy', 'unknown')} | "
+                f"{_delta_value('task_success_rate', 4)} | "
+                f"{_delta_value('invalid_tool_call_rate', 4)} | "
+                f"{_delta_value('mean_latency_ms', 2)} | "
+                f"{_delta_value('p95_latency_ms', 2)} | "
+                f"{_delta_value('retries_per_successful_task', 3)} | "
+                f"{_delta_value('estimated_cost_per_successful_task_usd', 6)} |"
+            )
+        lines.append("")
+
+    target = payload.get("target")
+    if isinstance(target, dict):
+        _append_table("Target Workload", target)
+
+    open_payload = payload.get("open")
+    if isinstance(open_payload, dict):
+        _append_table("Open Workload", open_payload)
+
+    return "\n".join(lines).rstrip() + "\n"

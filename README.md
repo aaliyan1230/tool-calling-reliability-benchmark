@@ -64,6 +64,18 @@ Scenario sweep (each scenario is run as multi-seed):
 uv run tcrb sweep --base-config configs/baseline.json --sweep-config configs/sweeps/fault_levels.json --workload workloads/sample_tasks.json --label sweep-fault-levels
 ```
 
+Finetune dataset export from an existing run payload:
+
+```bash
+uv run tcrb finetune-data --input-json runs/baseline/result.json --output-dir finetuned-models/training --validation-split 0.2 --seed 42
+```
+
+Base-vs-finetuned delta comparison (supports both result.json and multi_seed.json):
+
+```bash
+uv run tcrb eval-delta --base-run runs/ms-model-base-target/multi_seed.json --finetuned-run runs/ms-model-ft-target/multi_seed.json --output-json runs/ms-model-ft-target/delta.json
+```
+
 ## Planner Abstraction (Provider-Agnostic)
 
 The benchmark now supports a model-planner abstraction so you can evaluate orchestration policies against different planner behaviors without binding to any closed provider SDK.
@@ -76,6 +88,7 @@ Included planner types:
 - `stochastic`: probabilistic chooser with tunable off-catalog tool-call rate
 - `replay`: fixed per-task tool sequence playback
 - `command`: shell command adapter (bridge to any external/open model runner)
+- `finetuned`: command planner template with `{base_model}` and `{adapter_path}` substitution
 
 Example runs:
 
