@@ -38,6 +38,20 @@ uv run pytest
 uv run tcrb --config configs/baseline.json --workload workloads/sample_tasks.json --label baseline
 ```
 
+## HF-Only North-Star Runner
+
+Run a single command that executes multi-seed base/ft, delta evaluation, and enriched transfer matrix:
+
+```bash
+uv run python scripts/run_northstar_hf.py
+```
+
+Default planner configs compare the same HF planner logic with only model state changed:
+- base: `configs/planners/hf_qwen2_5_3b_base.json`
+- finetuned: `configs/planners/hf_qwen2_5_3b_ft.json`
+
+The script writes artifacts under `runs/northstar-hf-*`.
+
 If you want to run module entrypoints explicitly:
 
 ```bash
@@ -89,6 +103,7 @@ Included planner types:
 - `replay`: fixed per-task tool sequence playback
 - `command`: shell command adapter (bridge to any external/open model runner)
 - `finetuned`: command planner template with `{base_model}` and `{adapter_path}` substitution
+- `hf_local`: in-process Hugging Face planner (base model with optional adapter)
 
 Example runs:
 

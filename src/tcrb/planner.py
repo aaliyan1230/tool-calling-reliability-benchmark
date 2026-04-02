@@ -415,6 +415,54 @@ class FinetunedPlanner:
         )
 
 
+@dataclass
+class HFLocalPlanner:
+    planner_id: str = "hf_local"
+    base_model: str = ""
+    adapter_path: str = ""
+    fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
+    _core: object | None = field(default=None, init=False, repr=False)
+
+    def _get_core(self):
+        if self._core is None:
+            model_name = str(self.base_model).strip()
+            if not model_name:
+                raise RuntimeError(
+                    f"{self.planner_id}: base_model is required for hf_local planner"
+                )
+            adapter = str(self.adapter_path).strip()
+            from .hf_planner import HFLocalPlannerCore
+
+            self._core = HFLocalPlannerCore(
+                planner_id=self.planner_id,
+                base_model_id=model_name,
+                adapter_path=adapter,
+            )
+        return self._core
+
+    def choose_tool(
+        self,
+        *,
+        task: TaskSpec,
+        workload: Workload,
+        policy: str,
+        attempt_number: int,
+        attempted_tools: set[str],
+        last_status: str | None,
+        rng: random.Random,
+    ) -> str:
+        del rng
+        core = self._get_core()
+        return core.choose_tool(
+            task=task,
+            workload=workload,
+            policy=policy,
+            attempt_number=attempt_number,
+            attempted_tools=attempted_tools,
+            last_status=last_status,
+        )
+
+
 def planner_from_dict(payload: dict) -> ToolPlanner:
     planner_type = str(payload.get("type", "policy_native")).strip().lower()
     planner_id = str(payload.get("name", planner_type)).strip() or planner_type
@@ -465,6 +513,13 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
             base_command=str(payload.get("base_command", "")),
             timeout_seconds=float(payload.get("timeout_seconds", 15.0)),
             strict_mode=bool(payload.get("strict_mode", False)),
+            fallback=PolicyNativePlanner(),
+        )
+    if planner_type == "hf_local":
+        return HFLocalPlanner(
+            planner_id=planner_id,
+            base_model=str(payload.get("base_model", "")),
+            adapter_path=str(payload.get("adapter_path", "")),
             fallback=PolicyNativePlanner(),
         )
 
