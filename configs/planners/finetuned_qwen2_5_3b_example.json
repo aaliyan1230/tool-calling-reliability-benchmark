@@ -1,0 +1,8 @@
+{
+  "type": "finetuned",
+  "name": "qwen2.5-3b-ft-example",
+  "base_model": "qwen2.5:3b",
+  "adapter_path": "finetuned-models/qwen2.5-3b-ft-example/adapter",
+  "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
+  "timeout_seconds": 12.0
+}

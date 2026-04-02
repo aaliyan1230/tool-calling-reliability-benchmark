@@ -11,14 +11,31 @@ from ..models import Workload
 def _task_lookup_from_workload(workload: Workload | None) -> dict[str, dict[str, Any]]:
     if workload is None:
         return {}
-    return {
-        task.task_id: {
+    lookup: dict[str, dict[str, Any]] = {}
+    for task in workload.tasks:
+        candidate_names = [task.primary_tool, *task.fallback_tools]
+        candidate_tool_context = []
+        for name in candidate_names:
+            spec = workload.tools.get(name)
+            if spec is None:
+                continue
+            candidate_tool_context.append(
+                {
+                    "name": spec.name,
+                    "description": spec.description,
+                    "schema_fields": list(spec.schema_fields),
+                    "timeout_ms": spec.timeout_ms,
+                }
+            )
+
+        lookup[task.task_id] = {
             "primary_tool": task.primary_tool,
             "fallback_tools": list(task.fallback_tools),
             "required_schema": list(task.required_schema),
+            "user_query": task.user_query,
+            "candidate_tool_context": candidate_tool_context,
         }
-        for task in workload.tasks
-    }
+    return lookup
 
 
 def build_examples_from_result_payload(

@@ -1,0 +1,503 @@
+{
+  "toolset_id": "fintech_risk",
+  "tools": [
+    {
+      "name": "kyc_profile_lookup",
+      "description": "Fetch customer KYC profile and verification status.",
+      "base_latency_ms": 260,
+      "jitter_ms": 80,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "customer_id",
+        "kyc_status",
+        "risk_tier"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.1
+      }
+    },
+    {
+      "name": "aml_screening",
+      "description": "Screen customer/entity against sanctions and watchlists.",
+      "base_latency_ms": 390,
+      "jitter_ms": 120,
+      "timeout_ms": 1200,
+      "schema_fields": [
+        "match",
+        "score",
+        "watchlist",
+        "reason"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "transaction_graph",
+      "description": "Build graph of counterparties and money flow paths.",
+      "base_latency_ms": 520,
+      "jitter_ms": 160,
+      "timeout_ms": 1450,
+      "schema_fields": [
+        "nodes",
+        "edges",
+        "anomaly_score"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.3
+      }
+    },
+    {
+      "name": "device_fingerprint",
+      "description": "Assess device trust from hardware and browser signals.",
+      "base_latency_ms": 240,
+      "jitter_ms": 80,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "device_id",
+        "trust_score",
+        "flags"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    },
+    {
+      "name": "ip_geo_risk",
+      "description": "Compute geolocation and VPN/proxy risk from IP.",
+      "base_latency_ms": 220,
+      "jitter_ms": 70,
+      "timeout_ms": 800,
+      "schema_fields": [
+        "country",
+        "vpn",
+        "risk_score"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.2
+      }
+    },
+    {
+      "name": "velocity_rules",
+      "description": "Detect suspicious transaction velocity bursts.",
+      "base_latency_ms": 280,
+      "jitter_ms": 90,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "window",
+        "count",
+        "limit",
+        "breach"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "behavioral_anomaly",
+      "description": "Detect unusual behavior against user baseline.",
+      "base_latency_ms": 360,
+      "jitter_ms": 110,
+      "timeout_ms": 1100,
+      "schema_fields": [
+        "anomaly_score",
+        "signals",
+        "explanation"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "merchant_risk_api",
+      "description": "Score merchant fraud and chargeback propensity.",
+      "base_latency_ms": 300,
+      "jitter_ms": 95,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "merchant_id",
+        "risk_score",
+        "risk_factors"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.1
+      }
+    },
+    {
+      "name": "chargeback_history",
+      "description": "Retrieve account chargeback history and trends.",
+      "base_latency_ms": 310,
+      "jitter_ms": 100,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "chargebacks",
+        "ratio",
+        "period"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.2
+      }
+    },
+    {
+      "name": "payment_network_status",
+      "description": "Get real-time processor and network incident status.",
+      "base_latency_ms": 180,
+      "jitter_ms": 55,
+      "timeout_ms": 700,
+      "schema_fields": [
+        "network",
+        "status",
+        "degraded_regions"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.3
+      }
+    },
+    {
+      "name": "fraud_case_search",
+      "description": "Search historical fraud investigation cases.",
+      "base_latency_ms": 340,
+      "jitter_ms": 100,
+      "timeout_ms": 1050,
+      "schema_fields": [
+        "cases",
+        "query",
+        "count"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.1
+      }
+    },
+    {
+      "name": "sar_template_builder",
+      "description": "Build SAR draft with structured suspicious activity narrative.",
+      "base_latency_ms": 420,
+      "jitter_ms": 130,
+      "timeout_ms": 1250,
+      "schema_fields": [
+        "title",
+        "narrative",
+        "evidence_refs"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.3
+      }
+    },
+    {
+      "name": "policy_clause_retriever",
+      "description": "Retrieve policy clause for compliance decisions.",
+      "base_latency_ms": 230,
+      "jitter_ms": 75,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "policy_id",
+        "clause",
+        "source"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "risk_decision_engine",
+      "description": "Produce allow/challenge/deny decision with rationale.",
+      "base_latency_ms": 270,
+      "jitter_ms": 85,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "decision",
+        "reason",
+        "confidence"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.2
+      }
+    },
+    {
+      "name": "limit_adjustment",
+      "description": "Recommend account limit changes based on risk profile.",
+      "base_latency_ms": 290,
+      "jitter_ms": 95,
+      "timeout_ms": 950,
+      "schema_fields": [
+        "new_limit",
+        "reason",
+        "effective_date"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.1
+      }
+    },
+    {
+      "name": "analyst_note_drafter",
+      "description": "Draft concise analyst notes for case timeline.",
+      "base_latency_ms": 250,
+      "jitter_ms": 80,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "summary",
+        "next_steps",
+        "risk_level"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "fin-001",
+      "user_query": "Check KYC status for customer C-191 and risk tier.",
+      "primary_tool": "kyc_profile_lookup",
+      "fallback_tools": [
+        "fraud_case_search",
+        "policy_clause_retriever"
+      ],
+      "required_schema": [
+        "customer_id",
+        "kyc_status",
+        "risk_tier"
+      ]
+    },
+    {
+      "task_id": "fin-002",
+      "user_query": "Run AML sanctions screening for new beneficiary.",
+      "primary_tool": "aml_screening",
+      "fallback_tools": [
+        "kyc_profile_lookup",
+        "policy_clause_retriever"
+      ],
+      "required_schema": [
+        "match",
+        "score",
+        "watchlist",
+        "reason"
+      ]
+    },
+    {
+      "task_id": "fin-003",
+      "user_query": "Investigate suspicious ring using transaction flow graph.",
+      "primary_tool": "transaction_graph",
+      "fallback_tools": [
+        "behavioral_anomaly",
+        "fraud_case_search"
+      ],
+      "required_schema": [
+        "nodes",
+        "edges",
+        "anomaly_score"
+      ]
+    },
+    {
+      "task_id": "fin-004",
+      "user_query": "Assess trustworthiness of current login device.",
+      "primary_tool": "device_fingerprint",
+      "fallback_tools": [
+        "ip_geo_risk",
+        "behavioral_anomaly"
+      ],
+      "required_schema": [
+        "device_id",
+        "trust_score",
+        "flags"
+      ]
+    },
+    {
+      "task_id": "fin-005",
+      "user_query": "Evaluate IP geo risk for payment attempt from unknown country.",
+      "primary_tool": "ip_geo_risk",
+      "fallback_tools": [
+        "device_fingerprint",
+        "behavioral_anomaly"
+      ],
+      "required_schema": [
+        "country",
+        "vpn",
+        "risk_score"
+      ]
+    },
+    {
+      "task_id": "fin-006",
+      "user_query": "Detect if user exceeded transfer velocity rules today.",
+      "primary_tool": "velocity_rules",
+      "fallback_tools": [
+        "behavioral_anomaly",
+        "risk_decision_engine"
+      ],
+      "required_schema": [
+        "window",
+        "count",
+        "limit",
+        "breach"
+      ]
+    },
+    {
+      "task_id": "fin-007",
+      "user_query": "Find unusual behavior relative to account baseline.",
+      "primary_tool": "behavioral_anomaly",
+      "fallback_tools": [
+        "velocity_rules",
+        "risk_decision_engine"
+      ],
+      "required_schema": [
+        "anomaly_score",
+        "signals",
+        "explanation"
+      ]
+    },
+    {
+      "task_id": "fin-008",
+      "user_query": "Score merchant M-44 for fraud exposure.",
+      "primary_tool": "merchant_risk_api",
+      "fallback_tools": [
+        "chargeback_history",
+        "risk_decision_engine"
+      ],
+      "required_schema": [
+        "merchant_id",
+        "risk_score",
+        "risk_factors"
+      ]
+    },
+    {
+      "task_id": "fin-009",
+      "user_query": "Get chargeback ratio trend for merchant M-44.",
+      "primary_tool": "chargeback_history",
+      "fallback_tools": [
+        "merchant_risk_api",
+        "fraud_case_search"
+      ],
+      "required_schema": [
+        "chargebacks",
+        "ratio",
+        "period"
+      ]
+    },
+    {
+      "task_id": "fin-010",
+      "user_query": "Are payment networks degraded in APAC right now?",
+      "primary_tool": "payment_network_status",
+      "fallback_tools": [
+        "analyst_note_drafter",
+        "fraud_case_search"
+      ],
+      "required_schema": [
+        "network",
+        "status",
+        "degraded_regions"
+      ]
+    },
+    {
+      "task_id": "fin-011",
+      "user_query": "Search past fraud cases matching mule account pattern.",
+      "primary_tool": "fraud_case_search",
+      "fallback_tools": [
+        "transaction_graph",
+        "behavioral_anomaly"
+      ],
+      "required_schema": [
+        "cases",
+        "query",
+        "count"
+      ]
+    },
+    {
+      "task_id": "fin-012",
+      "user_query": "Draft SAR narrative for suspicious layering activity.",
+      "primary_tool": "sar_template_builder",
+      "fallback_tools": [
+        "analyst_note_drafter",
+        "fraud_case_search"
+      ],
+      "required_schema": [
+        "title",
+        "narrative",
+        "evidence_refs"
+      ]
+    },
+    {
+      "task_id": "fin-013",
+      "user_query": "Retrieve compliance clause for enhanced due diligence step.",
+      "primary_tool": "policy_clause_retriever",
+      "fallback_tools": [
+        "kyc_profile_lookup",
+        "aml_screening"
+      ],
+      "required_schema": [
+        "policy_id",
+        "clause",
+        "source"
+      ]
+    },
+    {
+      "task_id": "fin-014",
+      "user_query": "Decide allow, challenge, or deny for this transfer request.",
+      "primary_tool": "risk_decision_engine",
+      "fallback_tools": [
+        "behavioral_anomaly",
+        "velocity_rules"
+      ],
+      "required_schema": [
+        "decision",
+        "reason",
+        "confidence"
+      ]
+    },
+    {
+      "task_id": "fin-015",
+      "user_query": "Recommend updated transfer limit for medium-risk account.",
+      "primary_tool": "limit_adjustment",
+      "fallback_tools": [
+        "risk_decision_engine",
+        "kyc_profile_lookup"
+      ],
+      "required_schema": [
+        "new_limit",
+        "reason",
+        "effective_date"
+      ]
+    },
+    {
+      "task_id": "fin-016",
+      "user_query": "Draft analyst note summarizing risk signals for review.",
+      "primary_tool": "analyst_note_drafter",
+      "fallback_tools": [
+        "risk_decision_engine",
+        "fraud_case_search"
+      ],
+      "required_schema": [
+        "summary",
+        "next_steps",
+        "risk_level"
+      ]
+    },
+    {
+      "task_id": "fin-017",
+      "user_query": "Need immediate deny/allow recommendation with rationale.",
+      "primary_tool": "risk_decision_engine",
+      "fallback_tools": [
+        "velocity_rules",
+        "behavioral_anomaly"
+      ],
+      "required_schema": [
+        "decision",
+        "reason",
+        "confidence"
+      ]
+    },
+    {
+      "task_id": "fin-018",
+      "user_query": "Build evidence-backed SAR section from known case links.",
+      "primary_tool": "sar_template_builder",
+      "fallback_tools": [
+        "fraud_case_search",
+        "analyst_note_drafter"
+      ],
+      "required_schema": [
+        "title",
+        "narrative",
+        "evidence_refs"
+      ]
+    }
+  ]
+}

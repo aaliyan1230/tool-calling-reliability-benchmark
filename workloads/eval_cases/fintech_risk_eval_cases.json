@@ -1,0 +1,239 @@
+{
+  "toolset_id": "fintech_risk",
+  "cases": [
+    {
+      "case_id": "fintech_risk-fin-001",
+      "task_id": "fin-001",
+      "question": "Check KYC status for customer C-191 and risk tier.",
+      "expected_first_tool": "kyc_profile_lookup",
+      "expected_tool_sequence": [
+        "kyc_profile_lookup"
+      ],
+      "acceptable_alternatives": [
+        "fraud_case_search",
+        "policy_clause_retriever"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-002",
+      "task_id": "fin-002",
+      "question": "Run AML sanctions screening for new beneficiary.",
+      "expected_first_tool": "aml_screening",
+      "expected_tool_sequence": [
+        "aml_screening"
+      ],
+      "acceptable_alternatives": [
+        "kyc_profile_lookup",
+        "policy_clause_retriever"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-003",
+      "task_id": "fin-003",
+      "question": "Investigate suspicious ring using transaction flow graph.",
+      "expected_first_tool": "transaction_graph",
+      "expected_tool_sequence": [
+        "transaction_graph"
+      ],
+      "acceptable_alternatives": [
+        "behavioral_anomaly",
+        "fraud_case_search"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-004",
+      "task_id": "fin-004",
+      "question": "Assess trustworthiness of current login device.",
+      "expected_first_tool": "device_fingerprint",
+      "expected_tool_sequence": [
+        "device_fingerprint"
+      ],
+      "acceptable_alternatives": [
+        "ip_geo_risk",
+        "behavioral_anomaly"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-005",
+      "task_id": "fin-005",
+      "question": "Evaluate IP geo risk for payment attempt from unknown country.",
+      "expected_first_tool": "ip_geo_risk",
+      "expected_tool_sequence": [
+        "ip_geo_risk"
+      ],
+      "acceptable_alternatives": [
+        "device_fingerprint",
+        "behavioral_anomaly"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-006",
+      "task_id": "fin-006",
+      "question": "Detect if user exceeded transfer velocity rules today.",
+      "expected_first_tool": "velocity_rules",
+      "expected_tool_sequence": [
+        "velocity_rules"
+      ],
+      "acceptable_alternatives": [
+        "behavioral_anomaly",
+        "risk_decision_engine"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-007",
+      "task_id": "fin-007",
+      "question": "Find unusual behavior relative to account baseline.",
+      "expected_first_tool": "behavioral_anomaly",
+      "expected_tool_sequence": [
+        "behavioral_anomaly"
+      ],
+      "acceptable_alternatives": [
+        "velocity_rules",
+        "risk_decision_engine"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-008",
+      "task_id": "fin-008",
+      "question": "Score merchant M-44 for fraud exposure.",
+      "expected_first_tool": "merchant_risk_api",
+      "expected_tool_sequence": [
+        "merchant_risk_api"
+      ],
+      "acceptable_alternatives": [
+        "chargeback_history",
+        "risk_decision_engine"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-009",
+      "task_id": "fin-009",
+      "question": "Get chargeback ratio trend for merchant M-44.",
+      "expected_first_tool": "chargeback_history",
+      "expected_tool_sequence": [
+        "chargeback_history"
+      ],
+      "acceptable_alternatives": [
+        "merchant_risk_api",
+        "fraud_case_search"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-010",
+      "task_id": "fin-010",
+      "question": "Are payment networks degraded in APAC right now?",
+      "expected_first_tool": "payment_network_status",
+      "expected_tool_sequence": [
+        "payment_network_status"
+      ],
+      "acceptable_alternatives": [
+        "analyst_note_drafter",
+        "fraud_case_search"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-011",
+      "task_id": "fin-011",
+      "question": "Search past fraud cases matching mule account pattern.",
+      "expected_first_tool": "fraud_case_search",
+      "expected_tool_sequence": [
+        "fraud_case_search"
+      ],
+      "acceptable_alternatives": [
+        "transaction_graph",
+        "behavioral_anomaly"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-012",
+      "task_id": "fin-012",
+      "question": "Draft SAR narrative for suspicious layering activity.",
+      "expected_first_tool": "sar_template_builder",
+      "expected_tool_sequence": [
+        "sar_template_builder"
+      ],
+      "acceptable_alternatives": [
+        "analyst_note_drafter",
+        "fraud_case_search"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-013",
+      "task_id": "fin-013",
+      "question": "Retrieve compliance clause for enhanced due diligence step.",
+      "expected_first_tool": "policy_clause_retriever",
+      "expected_tool_sequence": [
+        "policy_clause_retriever"
+      ],
+      "acceptable_alternatives": [
+        "kyc_profile_lookup",
+        "aml_screening"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-014",
+      "task_id": "fin-014",
+      "question": "Decide allow, challenge, or deny for this transfer request.",
+      "expected_first_tool": "risk_decision_engine",
+      "expected_tool_sequence": [
+        "risk_decision_engine"
+      ],
+      "acceptable_alternatives": [
+        "behavioral_anomaly",
+        "velocity_rules"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-015",
+      "task_id": "fin-015",
+      "question": "Recommend updated transfer limit for medium-risk account.",
+      "expected_first_tool": "limit_adjustment",
+      "expected_tool_sequence": [
+        "limit_adjustment"
+      ],
+      "acceptable_alternatives": [
+        "risk_decision_engine",
+        "kyc_profile_lookup"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-016",
+      "task_id": "fin-016",
+      "question": "Draft analyst note summarizing risk signals for review.",
+      "expected_first_tool": "analyst_note_drafter",
+      "expected_tool_sequence": [
+        "analyst_note_drafter"
+      ],
+      "acceptable_alternatives": [
+        "risk_decision_engine",
+        "fraud_case_search"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-017",
+      "task_id": "fin-017",
+      "question": "Need immediate deny/allow recommendation with rationale.",
+      "expected_first_tool": "risk_decision_engine",
+      "expected_tool_sequence": [
+        "risk_decision_engine"
+      ],
+      "acceptable_alternatives": [
+        "velocity_rules",
+        "behavioral_anomaly"
+      ]
+    },
+    {
+      "case_id": "fintech_risk-fin-018",
+      "task_id": "fin-018",
+      "question": "Build evidence-backed SAR section from known case links.",
+      "expected_first_tool": "sar_template_builder",
+      "expected_tool_sequence": [
+        "sar_template_builder"
+      ],
+      "acceptable_alternatives": [
+        "fraud_case_search",
+        "analyst_note_drafter"
+      ]
+    }
+  ]
+}

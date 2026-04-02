@@ -1,0 +1,25 @@
+{
+  "toolsets": [
+    {
+      "toolset_id": "customer_support",
+      "workload": "workloads/enriched/customer_support.json",
+      "eval_cases": "workloads/eval_cases/customer_support_eval_cases.json",
+      "tools": 16,
+      "tasks": 18
+    },
+    {
+      "toolset_id": "ecommerce_ops",
+      "workload": "workloads/enriched/ecommerce_ops.json",
+      "eval_cases": "workloads/eval_cases/ecommerce_ops_eval_cases.json",
+      "tools": 16,
+      "tasks": 18
+    },
+    {
+      "toolset_id": "fintech_risk",
+      "workload": "workloads/enriched/fintech_risk.json",
+      "eval_cases": "workloads/eval_cases/fintech_risk_eval_cases.json",
+      "tools": 16,
+      "tasks": 18
+    }
+  ]
+}

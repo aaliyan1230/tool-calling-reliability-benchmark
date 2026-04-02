@@ -19,6 +19,7 @@ def workload_from_dict(payload: dict) -> Workload:
             base_latency_ms=int(tool["base_latency_ms"]),
             jitter_ms=int(tool.get("jitter_ms", 0)),
             schema_fields=list(tool["schema_fields"]),
+            description=(str(tool.get("description", "")).strip() or None),
             timeout_ms=tool.get("timeout_ms"),
             fault_multipliers=dict(tool.get("fault_multipliers", {})),
         )
@@ -30,6 +31,7 @@ def workload_from_dict(payload: dict) -> Workload:
             primary_tool=item["primary_tool"],
             fallback_tools=list(item.get("fallback_tools", [])),
             required_schema=list(item["required_schema"]),
+            user_query=(str(item.get("user_query", "")).strip() or None),
         )
         for item in payload["tasks"]
     ]

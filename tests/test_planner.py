@@ -135,3 +135,20 @@ def test_finetuned_planner_from_dict_resolves_command_template():
         "python scripts/planners/ollama_tool_selector.py "
         "--model llama3.1:8b --lora finetuned-models/llama-ft-v1/adapter"
     )
+
+
+def test_finetuned_planner_from_dict_parses_strict_mode():
+    planner = planner_from_dict(
+        {
+            "type": "finetuned",
+            "name": "llama-ft-strict",
+            "base_model": "llama3.1:8b",
+            "adapter_path": "finetuned-models/llama-ft-v1/adapter",
+            "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
+            "timeout_seconds": 9.0,
+            "strict_mode": True,
+        }
+    )
+
+    assert isinstance(planner, FinetunedPlanner)
+    assert planner.strict_mode is True
