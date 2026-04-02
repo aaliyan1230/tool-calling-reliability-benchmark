@@ -1,0 +1,6 @@
+{
+  "type": "hf_local",
+  "name": "hf_qwen2_5_3b_ft",
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "adapter_path": "outputs/ft-notebook/final"
+}
