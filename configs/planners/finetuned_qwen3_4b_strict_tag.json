@@ -1,9 +1,0 @@
-{
-  "type": "finetuned",
-  "name": "qwen3_4b_ft_tag_strict",
-  "base_model": "qwen3:4b-ft",
-  "adapter_path": "",
-  "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --timeout 120 --fallback-mode empty --strict-errors",
-  "timeout_seconds": 130.0,
-  "strict_mode": true
-}

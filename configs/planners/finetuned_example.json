@@ -1,8 +1,0 @@
-{
-  "type": "finetuned",
-  "name": "llama3.1-8b-ft-example",
-  "base_model": "llama3.1:8b",
-  "adapter_path": "finetuned-models/llama3.1-8b-ft-example/adapter",
-  "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
-  "timeout_seconds": 12.0
-}

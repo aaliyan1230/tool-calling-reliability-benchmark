@@ -123,7 +123,7 @@ def test_finetuned_planner_from_dict_resolves_command_template():
             "name": "llama-ft",
             "base_model": "llama3.1:8b",
             "adapter_path": "finetuned-models/llama-ft-v1/adapter",
-            "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
+            "base_command": "python scripts/planners/tool_selector.py --model {base_model} --adapter {adapter_path}",
             "timeout_seconds": 9.0,
         }
     )
@@ -132,8 +132,8 @@ def test_finetuned_planner_from_dict_resolves_command_template():
     assert planner.planner_id == "llama-ft"
     assert planner.timeout_seconds == 9.0
     assert planner.resolved_command() == (
-        "python scripts/planners/ollama_tool_selector.py "
-        "--model llama3.1:8b --lora finetuned-models/llama-ft-v1/adapter"
+        "python scripts/planners/tool_selector.py "
+        "--model llama3.1:8b --adapter finetuned-models/llama-ft-v1/adapter"
     )
 
 
@@ -144,7 +144,7 @@ def test_finetuned_planner_from_dict_parses_strict_mode():
             "name": "llama-ft-strict",
             "base_model": "llama3.1:8b",
             "adapter_path": "finetuned-models/llama-ft-v1/adapter",
-            "base_command": "python scripts/planners/ollama_tool_selector.py --model {base_model} --lora {adapter_path}",
+            "base_command": "python scripts/planners/tool_selector.py --model {base_model} --adapter {adapter_path}",
             "timeout_seconds": 9.0,
             "strict_mode": True,
         }

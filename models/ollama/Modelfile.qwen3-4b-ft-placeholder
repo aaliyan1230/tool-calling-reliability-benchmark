@@ -1,3 +1,0 @@
-FROM qwen3:4b
-PARAMETER temperature 0
-SYSTEM "This is a placeholder tag for strict FT pipeline wiring. It currently points to base qwen3:4b behavior until a real finetuned artifact is imported."
