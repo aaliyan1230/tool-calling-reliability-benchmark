@@ -101,8 +101,9 @@ class HFLocalPlannerCore:
     ) -> str:
         ordered = [task.primary_tool, *task.fallback_tools]
         available = [name for name in ordered if name in workload.tools]
-        tool_schemas = {
+        candidate_tools = {
             name: {
+                "description": workload.tools[name].description,
                 "schema_fields": workload.tools[name].schema_fields,
                 "base_latency_ms": workload.tools[name].base_latency_ms,
             }
@@ -110,21 +111,17 @@ class HFLocalPlannerCore:
         }
 
         payload = {
-            "task": {
-                "task_id": task.task_id,
-                "primary_tool": task.primary_tool,
-                "fallback_tools": task.fallback_tools,
-                "required_schema": task.required_schema,
-            },
+            "user_query": task.user_query,
+            "required_schema": task.required_schema,
             "policy": policy,
             "attempt_number": attempt_number,
             "attempted_tools": sorted(attempted_tools),
             "last_status": last_status,
-            "available_tools": available,
-            "tool_schemas": tool_schemas,
+            "candidate_tools": candidate_tools,
         }
         return (
-            "Select exactly one tool for this task. "
+            "Select exactly one tool for the user query. "
+            "Do not infer labels from task IDs or hidden metadata; use only query and tool metadata. "
             "Output must be valid JSON with key tool_name only.\n\n"
             + json.dumps(payload, ensure_ascii=True)
             + "\n\nJSON:"
