@@ -219,6 +219,7 @@ class CommandPlanner:
     planner_id: str = "command"
     command: str = ""
     timeout_seconds: float = 15.0
+    strict_mode: bool = False
     fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
 
     def choose_tool(
@@ -233,6 +234,10 @@ class CommandPlanner:
         rng: random.Random,
     ) -> str:
         if not self.command.strip():
+            if self.strict_mode:
+                raise RuntimeError(
+                    f"{self.planner_id}: command planner requires non-empty command in strict_mode"
+                )
             return self.fallback.choose_tool(
                 task=task,
                 workload=workload,
@@ -249,12 +254,22 @@ class CommandPlanner:
                 "primary_tool": task.primary_tool,
                 "fallback_tools": task.fallback_tools,
                 "required_schema": task.required_schema,
+                "user_query": task.user_query,
             },
             "policy": policy,
             "attempt_number": attempt_number,
             "attempted_tools": sorted(attempted_tools),
             "last_status": last_status,
             "available_tools": sorted(workload.tools.keys()),
+            "tool_catalog": [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "schema_fields": list(tool.schema_fields),
+                    "timeout_ms": tool.timeout_ms,
+                }
+                for tool in sorted(workload.tools.values(), key=lambda t: t.name)
+            ],
         }
 
         try:
@@ -267,7 +282,11 @@ class CommandPlanner:
                 check=False,
                 timeout=max(0.1, float(self.timeout_seconds)),
             )
-        except Exception:
+        except Exception as exc:
+            if self.strict_mode:
+                raise RuntimeError(
+                    f"{self.planner_id}: command execution failed in strict_mode"
+                ) from exc
             return self.fallback.choose_tool(
                 task=task,
                 workload=workload,
@@ -279,6 +298,12 @@ class CommandPlanner:
             )
 
         if completed.returncode != 0:
+            if self.strict_mode:
+                stderr = (completed.stderr or "").strip()
+                raise RuntimeError(
+                    f"{self.planner_id}: command returned non-zero exit code "
+                    f"{completed.returncode} in strict_mode. stderr={stderr}"
+                )
             return self.fallback.choose_tool(
                 task=task,
                 workload=workload,
@@ -291,6 +316,10 @@ class CommandPlanner:
 
         output = completed.stdout.strip()
         if not output:
+            if self.strict_mode:
+                raise RuntimeError(
+                    f"{self.planner_id}: command produced empty output in strict_mode"
+                )
             return self.fallback.choose_tool(
                 task=task,
                 workload=workload,
@@ -313,6 +342,11 @@ class CommandPlanner:
         if first_line:
             return first_line
 
+        if self.strict_mode:
+            raise RuntimeError(
+                f"{self.planner_id}: unable to parse tool name from command output in strict_mode"
+            )
+
         return self.fallback.choose_tool(
             task=task,
             workload=workload,
@@ -331,6 +365,7 @@ class FinetunedPlanner:
     adapter_path: str = ""
     base_command: str = ""
     timeout_seconds: float = 15.0
+    strict_mode: bool = False
     fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
 
     def resolved_command(self) -> str:
@@ -366,6 +401,7 @@ class FinetunedPlanner:
             planner_id=self.planner_id,
             command=command,
             timeout_seconds=self.timeout_seconds,
+            strict_mode=self.strict_mode,
             fallback=self.fallback,
         )
         return delegate.choose_tool(
@@ -418,6 +454,7 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
             planner_id=planner_id,
             command=str(payload.get("command", "")),
             timeout_seconds=float(payload.get("timeout_seconds", 15.0)),
+            strict_mode=bool(payload.get("strict_mode", False)),
             fallback=PolicyNativePlanner(),
         )
     if planner_type == "finetuned":
@@ -427,6 +464,7 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
             adapter_path=str(payload.get("adapter_path", "")),
             base_command=str(payload.get("base_command", "")),
             timeout_seconds=float(payload.get("timeout_seconds", 15.0)),
+            strict_mode=bool(payload.get("strict_mode", False)),
             fallback=PolicyNativePlanner(),
         )
 

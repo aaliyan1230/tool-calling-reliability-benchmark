@@ -8,6 +8,7 @@ from pathlib import Path
 from .benchmark import run_benchmark, write_result_json
 from .config import load_benchmark_config, load_workload
 from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
+from .eval_cases import load_eval_cases, score_eval_cases
 from .finetune.dataset import build_examples_from_result_payload, split_examples, write_jsonl
 from .finetune.evaluate import compare_run_payloads, load_json_payload
 from .planner import load_tool_planner
@@ -172,6 +173,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional output path for markdown report (defaults next to output JSON)",
     )
 
+    eval_cases_parser = subparsers.add_parser(
+        "eval-cases-score",
+        help="Score run output against question-level expected-tool eval cases",
+    )
+    eval_cases_parser.add_argument(
+        "--result-json",
+        required=True,
+        help="Path to run result.json payload",
+    )
+    eval_cases_parser.add_argument(
+        "--eval-cases-json",
+        required=True,
+        help="Path to eval cases JSON with expected tools",
+    )
+    eval_cases_parser.add_argument(
+        "--output-json",
+        default=None,
+        help="Optional output path for scored eval-case JSON",
+    )
+
     return parser
 
 
@@ -324,6 +345,21 @@ def _run_eval_delta(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_eval_cases_score(args: argparse.Namespace) -> int:
+    result_payload = load_json_payload(args.result_json)
+    eval_cases_payload = load_eval_cases(args.eval_cases_json)
+    scored = score_eval_cases(result_payload, eval_cases_payload)
+
+    output_json = Path(args.output_json) if args.output_json else None
+    if output_json is not None:
+        write_json(scored, output_json)
+        print(f"Wrote eval-case score JSON: {output_json}")
+    else:
+        print(json.dumps(scored, indent=2))
+
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -338,6 +374,8 @@ def main() -> int:
         return _run_finetune_data(args)
     if args.command == "eval-delta":
         return _run_eval_delta(args)
+    if args.command == "eval-cases-score":
+        return _run_eval_cases_score(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 2

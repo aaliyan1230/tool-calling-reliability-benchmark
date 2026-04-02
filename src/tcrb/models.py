@@ -24,6 +24,7 @@ class ToolSpec:
     base_latency_ms: int
     jitter_ms: int
     schema_fields: list[str]
+    description: str | None = None
     timeout_ms: int | None = None
     fault_multipliers: dict[str, float] = field(default_factory=dict)
 
@@ -34,6 +35,7 @@ class TaskSpec:
     primary_tool: str
     fallback_tools: list[str]
     required_schema: list[str]
+    user_query: str | None = None
 
 
 @dataclass(frozen=True)

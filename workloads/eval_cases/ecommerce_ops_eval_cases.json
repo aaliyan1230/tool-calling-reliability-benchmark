@@ -1,0 +1,239 @@
+{
+  "toolset_id": "ecommerce_ops",
+  "cases": [
+    {
+      "case_id": "ecommerce_ops-eco-001",
+      "task_id": "eco-001",
+      "question": "Is sku A11 in stock right now in Dallas warehouse?",
+      "expected_first_tool": "inventory_realtime",
+      "expected_tool_sequence": [
+        "inventory_realtime"
+      ],
+      "acceptable_alternatives": [
+        "inventory_forecast",
+        "catalog_search"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-002",
+      "task_id": "eco-002",
+      "question": "When will sku B92 be restocked and risk of stockout?",
+      "expected_first_tool": "inventory_forecast",
+      "expected_tool_sequence": [
+        "inventory_forecast"
+      ],
+      "acceptable_alternatives": [
+        "vendor_eta_feed",
+        "inventory_realtime"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-003",
+      "task_id": "eco-003",
+      "question": "Search running shoes under 120 dollars with high rating.",
+      "expected_first_tool": "catalog_search",
+      "expected_tool_sequence": [
+        "catalog_search"
+      ],
+      "acceptable_alternatives": [
+        "recommendation_api",
+        "pricing_engine"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-004",
+      "task_id": "eco-004",
+      "question": "Compute dynamic price for sku C12 flash sale now.",
+      "expected_first_tool": "pricing_engine",
+      "expected_tool_sequence": [
+        "pricing_engine"
+      ],
+      "acceptable_alternatives": [
+        "promotion_eligibility",
+        "tax_calculator"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-005",
+      "task_id": "eco-005",
+      "question": "Check if cart qualifies for summer campaign discount.",
+      "expected_first_tool": "promotion_eligibility",
+      "expected_tool_sequence": [
+        "promotion_eligibility"
+      ],
+      "acceptable_alternatives": [
+        "pricing_engine",
+        "tax_calculator"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-006",
+      "task_id": "eco-006",
+      "question": "Personalized cross-sell suggestions for user 8801.",
+      "expected_first_tool": "recommendation_api",
+      "expected_tool_sequence": [
+        "recommendation_api"
+      ],
+      "acceptable_alternatives": [
+        "catalog_search",
+        "seller_reputation"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-007",
+      "task_id": "eco-007",
+      "question": "Quote shipping cost and ETA for order to Boston.",
+      "expected_first_tool": "shipment_quote",
+      "expected_tool_sequence": [
+        "shipment_quote"
+      ],
+      "acceptable_alternatives": [
+        "route_optimizer",
+        "inventory_realtime"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-008",
+      "task_id": "eco-008",
+      "question": "Optimize split shipment plan for multi-warehouse order.",
+      "expected_first_tool": "route_optimizer",
+      "expected_tool_sequence": [
+        "route_optimizer"
+      ],
+      "acceptable_alternatives": [
+        "shipment_quote",
+        "inventory_realtime"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-009",
+      "task_id": "eco-009",
+      "question": "Authorize payment for order 55019 using stored card.",
+      "expected_first_tool": "payment_auth",
+      "expected_tool_sequence": [
+        "payment_auth"
+      ],
+      "acceptable_alternatives": [
+        "fraud_signal_api",
+        "tax_calculator"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-010",
+      "task_id": "eco-010",
+      "question": "Evaluate fraud risk on order 55019 before capture.",
+      "expected_first_tool": "fraud_signal_api",
+      "expected_tool_sequence": [
+        "fraud_signal_api"
+      ],
+      "acceptable_alternatives": [
+        "payment_auth",
+        "seller_reputation"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-011",
+      "task_id": "eco-011",
+      "question": "Create return label for damaged blender item.",
+      "expected_first_tool": "return_authorization",
+      "expected_tool_sequence": [
+        "return_authorization"
+      ],
+      "acceptable_alternatives": [
+        "promotion_eligibility",
+        "shipment_quote"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-012",
+      "task_id": "eco-012",
+      "question": "What supplier ETA do we have for sku B92 backlog?",
+      "expected_first_tool": "vendor_eta_feed",
+      "expected_tool_sequence": [
+        "vendor_eta_feed"
+      ],
+      "acceptable_alternatives": [
+        "inventory_forecast",
+        "inventory_realtime"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-013",
+      "task_id": "eco-013",
+      "question": "Calculate tax for CA order subtotal 89 dollars.",
+      "expected_first_tool": "tax_calculator",
+      "expected_tool_sequence": [
+        "tax_calculator"
+      ],
+      "acceptable_alternatives": [
+        "currency_fx",
+        "pricing_engine"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-014",
+      "task_id": "eco-014",
+      "question": "Convert 149 EUR to USD for checkout display.",
+      "expected_first_tool": "currency_fx",
+      "expected_tool_sequence": [
+        "currency_fx"
+      ],
+      "acceptable_alternatives": [
+        "tax_calculator",
+        "pricing_engine"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-015",
+      "task_id": "eco-015",
+      "question": "Check if seller S-77 has trust or risk flags.",
+      "expected_first_tool": "seller_reputation",
+      "expected_tool_sequence": [
+        "seller_reputation"
+      ],
+      "acceptable_alternatives": [
+        "fraud_signal_api",
+        "catalog_search"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-016",
+      "task_id": "eco-016",
+      "question": "Draft severe ops incident update for delayed shipments.",
+      "expected_first_tool": "ops_alert_drafter",
+      "expected_tool_sequence": [
+        "ops_alert_drafter"
+      ],
+      "acceptable_alternatives": [
+        "shipment_quote",
+        "route_optimizer"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-017",
+      "task_id": "eco-017",
+      "question": "Find low-stock products likely to stock out this week.",
+      "expected_first_tool": "inventory_forecast",
+      "expected_tool_sequence": [
+        "inventory_forecast"
+      ],
+      "acceptable_alternatives": [
+        "inventory_realtime",
+        "vendor_eta_feed"
+      ]
+    },
+    {
+      "case_id": "ecommerce_ops-eco-018",
+      "task_id": "eco-018",
+      "question": "Can we approve payment and still run fraud checks quickly?",
+      "expected_first_tool": "fraud_signal_api",
+      "expected_tool_sequence": [
+        "fraud_signal_api"
+      ],
+      "acceptable_alternatives": [
+        "payment_auth",
+        "seller_reputation"
+      ]
+    }
+  ]
+}

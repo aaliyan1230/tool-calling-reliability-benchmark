@@ -208,3 +208,110 @@ The notebook writes a combined frontier figure to:
 - Add confidence intervals via multi-seed runs
 - Add plotting notebook for report-ready figures
 - Add base-vs-fine-tuned model benchmarking across target and open toolchains
+
+## Enriched Multi-Toolset Workflow
+
+To align with a realistic north star, this repo now supports richer mock tool ecosystems with question-level expected tool-call labels.
+
+Generate enriched mock toolsets and eval cases:
+
+```bash
+uv run python scripts/generate_enriched_toolsets.py
+```
+
+This writes:
+
+- `workloads/enriched/*.json` (3 toolsets, each 16 tools, 18 tasks)
+- `workloads/eval_cases/*_eval_cases.json` (question + expected tool labels)
+- `workloads/enriched/manifest.json` (index of generated toolsets)
+
+Run benchmark on one toolset:
+
+```bash
+uv run tcrb run --config configs/baseline.json --workload workloads/enriched/customer_support.json --label cs-baseline
+```
+
+Score actual calls against expected tool labels:
+
+```bash
+uv run tcrb eval-cases-score --result-json runs/cs-baseline/result.json --eval-cases-json workloads/eval_cases/customer_support_eval_cases.json --output-json runs/cs-baseline/eval_case_score.json
+```
+
+Recommended experiment loop per toolset:
+
+1. Run base model planner on one enriched toolset.
+2. Export finetune data from the same toolset run.
+3. Fine-tune one model (LoRA/QLoRA) for that single toolset.
+4. Re-run benchmark on same toolset and compare deltas.
+5. Run open transfer checks on the other toolsets.
+6. Report both policy metrics and eval-case first-tool accuracy.
+
+### Cross-Toolset Transfer Matrix (Base vs Finetuned)
+
+To evaluate one target-toolset finetune against other toolsets (open transfer):
+
+```bash
+uv run python scripts/run_transfer_matrix.py \
+   --manifest workloads/enriched/manifest.json \
+   --config configs/baseline.json \
+   --base-planner-config configs/planners/ollama_qwen2_5_3b.json \
+   --ft-planner-config configs/planners/finetuned_qwen2_5_3b_example.json \
+   --target-toolset customer_support \
+   --label matrix-customer-support
+```
+
+For strict smoke runs with heavier local model planners, limit scope first:
+
+```bash
+uv run python scripts/run_transfer_matrix.py \
+   --manifest workloads/enriched/manifest.json \
+   --config configs/baseline.json \
+   --base-planner-config configs/planners/ollama_qwen3_4b_strict.json \
+   --ft-planner-config configs/planners/ollama_qwen3_4b_strict.json \
+   --target-toolset customer_support \
+   --toolsets customer_support \
+   --max-tasks 1 \
+   --label matrix-qwen3-4b-strict-smoke
+```
+
+Reference planner configs for this flow:
+
+- `configs/planners/ollama_qwen2_5_3b.json`
+- `configs/planners/finetuned_qwen2_5_3b_example.json`
+
+Outputs are written under `runs/<label>/`:
+
+- per-toolset base/ft benchmark artifacts
+- per-toolset eval-case scores
+- `matrix.json` with gate-ready deltas
+- `matrix_summary.md` with a compact transfer table
+
+Eval-case gate defaults:
+
+- target split: delta first-tool >= +0.03 and delta sequence >= +0.03
+- open splits: delta first-tool >= -0.03 and delta sequence >= -0.03
+
+### Create Real `qwen3:4b-ft` Tag From Kaggle QLoRA Adapter
+
+After Kaggle QLoRA PEFT training, download adapter artifacts (for example `outputs/ft-notebook/final`) to local and create an Ollama finetuned tag:
+
+```bash
+uv run python scripts/create_ollama_adapter_tag.py \
+   --base-model qwen3:4b \
+   --adapter-dir outputs/ft-notebook/final \
+   --tag qwen3:4b-ft \
+   --modelfile models/ollama/Modelfile.qwen3-4b-ft \
+   --create
+```
+
+Then run strict base-vs-ft matrix:
+
+```bash
+uv run python scripts/run_transfer_matrix.py \
+   --manifest workloads/enriched/manifest.json \
+   --config configs/baseline.json \
+   --base-planner-config configs/planners/ollama_qwen3_4b_strict.json \
+   --ft-planner-config configs/planners/finetuned_qwen3_4b_strict_tag.json \
+   --target-toolset customer_support \
+   --label matrix-qwen3-4b-fttag-strict
+```

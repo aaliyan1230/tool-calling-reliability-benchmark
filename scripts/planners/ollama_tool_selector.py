@@ -97,22 +97,40 @@ def main() -> int:
         default="primary",
         help="Fallback when model output cannot be parsed",
     )
+    parser.add_argument(
+        "--strict-errors",
+        action="store_true",
+        help="Exit non-zero on Ollama request/parsing failures instead of returning empty",
+    )
     args = parser.parse_args()
 
     payload = json.load(sys.stdin)
     prompt = _build_prompt(payload)
 
+    query_failed = False
     try:
         raw = _query_ollama(
             host=args.host, model=args.model, prompt=prompt, timeout=args.timeout
         )
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        query_failed = True
+        if args.strict_errors:
+            print(f"ollama query failed: {exc}", file=sys.stderr)
+            return 2
         raw = ""
 
     tool_name = _extract_tool_name(raw)
+    if not tool_name and query_failed and args.strict_errors:
+        print("ollama returned no parsable tool output", file=sys.stderr)
+        return 3
+
     if not tool_name and args.fallback_mode == "primary":
         task = payload.get("task", {})
         tool_name = str(task.get("primary_tool", "")).strip()
+
+    if not tool_name and args.strict_errors:
+        print("no tool_name parsed from model output", file=sys.stderr)
+        return 4
 
     print(tool_name)
     return 0

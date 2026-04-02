@@ -1,0 +1,511 @@
+{
+  "toolset_id": "ecommerce_ops",
+  "tools": [
+    {
+      "name": "catalog_search",
+      "description": "Search product catalog by text, attributes, and sku.",
+      "base_latency_ms": 300,
+      "jitter_ms": 100,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "products",
+        "query",
+        "count",
+        "confidence"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.1
+      }
+    },
+    {
+      "name": "inventory_realtime",
+      "description": "Fetch real-time inventory at warehouse and store level.",
+      "base_latency_ms": 230,
+      "jitter_ms": 75,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "sku",
+        "available",
+        "location",
+        "reserved"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.2
+      }
+    },
+    {
+      "name": "inventory_forecast",
+      "description": "Predict restock date and stockout risk.",
+      "base_latency_ms": 410,
+      "jitter_ms": 120,
+      "timeout_ms": 1200,
+      "schema_fields": [
+        "sku",
+        "restock_eta",
+        "stockout_risk"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "pricing_engine",
+      "description": "Compute dynamic selling price from strategy rules.",
+      "base_latency_ms": 270,
+      "jitter_ms": 80,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "sku",
+        "price",
+        "currency",
+        "reason"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "promotion_eligibility",
+      "description": "Determine if order qualifies for campaign discounts.",
+      "base_latency_ms": 240,
+      "jitter_ms": 80,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "eligible",
+        "campaign_id",
+        "reason"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    },
+    {
+      "name": "recommendation_api",
+      "description": "Generate personalized product recommendations.",
+      "base_latency_ms": 380,
+      "jitter_ms": 130,
+      "timeout_ms": 1150,
+      "schema_fields": [
+        "user_id",
+        "recommendations",
+        "confidence"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "shipment_quote",
+      "description": "Estimate shipping rates and delivery windows.",
+      "base_latency_ms": 310,
+      "jitter_ms": 95,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "carrier",
+        "cost",
+        "eta",
+        "service_level"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.3
+      }
+    },
+    {
+      "name": "route_optimizer",
+      "description": "Optimize fulfillment route and split shipments.",
+      "base_latency_ms": 470,
+      "jitter_ms": 140,
+      "timeout_ms": 1300,
+      "schema_fields": [
+        "route",
+        "cost",
+        "eta",
+        "split_plan"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.3
+      }
+    },
+    {
+      "name": "payment_auth",
+      "description": "Authorize payment and return authorization token.",
+      "base_latency_ms": 260,
+      "jitter_ms": 85,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "approved",
+        "auth_id",
+        "risk_score"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.2
+      }
+    },
+    {
+      "name": "fraud_signal_api",
+      "description": "Return fraud score and reasons for an order.",
+      "base_latency_ms": 350,
+      "jitter_ms": 110,
+      "timeout_ms": 1050,
+      "schema_fields": [
+        "score",
+        "reasons",
+        "decision"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    },
+    {
+      "name": "return_authorization",
+      "description": "Issue return authorization and shipping label.",
+      "base_latency_ms": 290,
+      "jitter_ms": 90,
+      "timeout_ms": 950,
+      "schema_fields": [
+        "rma_id",
+        "label_url",
+        "expires_at"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "vendor_eta_feed",
+      "description": "Pull supplier ETA and backlog for sku replenishment.",
+      "base_latency_ms": 430,
+      "jitter_ms": 120,
+      "timeout_ms": 1250,
+      "schema_fields": [
+        "sku",
+        "supplier_eta",
+        "backlog_units"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.4
+      }
+    },
+    {
+      "name": "tax_calculator",
+      "description": "Compute tax jurisdiction and total tax amount.",
+      "base_latency_ms": 220,
+      "jitter_ms": 70,
+      "timeout_ms": 800,
+      "schema_fields": [
+        "tax_amount",
+        "jurisdiction",
+        "rate"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "currency_fx",
+      "description": "Convert amount using latest market FX rates.",
+      "base_latency_ms": 190,
+      "jitter_ms": 60,
+      "timeout_ms": 700,
+      "schema_fields": [
+        "base",
+        "quote",
+        "rate",
+        "converted_amount"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.1
+      }
+    },
+    {
+      "name": "seller_reputation",
+      "description": "Score seller reliability from fulfillment history.",
+      "base_latency_ms": 280,
+      "jitter_ms": 90,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "seller_id",
+        "reputation",
+        "flags"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.1
+      }
+    },
+    {
+      "name": "ops_alert_drafter",
+      "description": "Draft operations incident update for stakeholders.",
+      "base_latency_ms": 320,
+      "jitter_ms": 100,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "subject",
+        "body",
+        "severity"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.3
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "eco-001",
+      "user_query": "Is sku A11 in stock right now in Dallas warehouse?",
+      "primary_tool": "inventory_realtime",
+      "fallback_tools": [
+        "inventory_forecast",
+        "catalog_search"
+      ],
+      "required_schema": [
+        "sku",
+        "available",
+        "location",
+        "reserved"
+      ]
+    },
+    {
+      "task_id": "eco-002",
+      "user_query": "When will sku B92 be restocked and risk of stockout?",
+      "primary_tool": "inventory_forecast",
+      "fallback_tools": [
+        "vendor_eta_feed",
+        "inventory_realtime"
+      ],
+      "required_schema": [
+        "sku",
+        "restock_eta",
+        "stockout_risk"
+      ]
+    },
+    {
+      "task_id": "eco-003",
+      "user_query": "Search running shoes under 120 dollars with high rating.",
+      "primary_tool": "catalog_search",
+      "fallback_tools": [
+        "recommendation_api",
+        "pricing_engine"
+      ],
+      "required_schema": [
+        "products",
+        "query",
+        "count",
+        "confidence"
+      ]
+    },
+    {
+      "task_id": "eco-004",
+      "user_query": "Compute dynamic price for sku C12 flash sale now.",
+      "primary_tool": "pricing_engine",
+      "fallback_tools": [
+        "promotion_eligibility",
+        "tax_calculator"
+      ],
+      "required_schema": [
+        "sku",
+        "price",
+        "currency",
+        "reason"
+      ]
+    },
+    {
+      "task_id": "eco-005",
+      "user_query": "Check if cart qualifies for summer campaign discount.",
+      "primary_tool": "promotion_eligibility",
+      "fallback_tools": [
+        "pricing_engine",
+        "tax_calculator"
+      ],
+      "required_schema": [
+        "eligible",
+        "campaign_id",
+        "reason"
+      ]
+    },
+    {
+      "task_id": "eco-006",
+      "user_query": "Personalized cross-sell suggestions for user 8801.",
+      "primary_tool": "recommendation_api",
+      "fallback_tools": [
+        "catalog_search",
+        "seller_reputation"
+      ],
+      "required_schema": [
+        "user_id",
+        "recommendations",
+        "confidence"
+      ]
+    },
+    {
+      "task_id": "eco-007",
+      "user_query": "Quote shipping cost and ETA for order to Boston.",
+      "primary_tool": "shipment_quote",
+      "fallback_tools": [
+        "route_optimizer",
+        "inventory_realtime"
+      ],
+      "required_schema": [
+        "carrier",
+        "cost",
+        "eta",
+        "service_level"
+      ]
+    },
+    {
+      "task_id": "eco-008",
+      "user_query": "Optimize split shipment plan for multi-warehouse order.",
+      "primary_tool": "route_optimizer",
+      "fallback_tools": [
+        "shipment_quote",
+        "inventory_realtime"
+      ],
+      "required_schema": [
+        "route",
+        "cost",
+        "eta",
+        "split_plan"
+      ]
+    },
+    {
+      "task_id": "eco-009",
+      "user_query": "Authorize payment for order 55019 using stored card.",
+      "primary_tool": "payment_auth",
+      "fallback_tools": [
+        "fraud_signal_api",
+        "tax_calculator"
+      ],
+      "required_schema": [
+        "approved",
+        "auth_id",
+        "risk_score"
+      ]
+    },
+    {
+      "task_id": "eco-010",
+      "user_query": "Evaluate fraud risk on order 55019 before capture.",
+      "primary_tool": "fraud_signal_api",
+      "fallback_tools": [
+        "payment_auth",
+        "seller_reputation"
+      ],
+      "required_schema": [
+        "score",
+        "reasons",
+        "decision"
+      ]
+    },
+    {
+      "task_id": "eco-011",
+      "user_query": "Create return label for damaged blender item.",
+      "primary_tool": "return_authorization",
+      "fallback_tools": [
+        "promotion_eligibility",
+        "shipment_quote"
+      ],
+      "required_schema": [
+        "rma_id",
+        "label_url",
+        "expires_at"
+      ]
+    },
+    {
+      "task_id": "eco-012",
+      "user_query": "What supplier ETA do we have for sku B92 backlog?",
+      "primary_tool": "vendor_eta_feed",
+      "fallback_tools": [
+        "inventory_forecast",
+        "inventory_realtime"
+      ],
+      "required_schema": [
+        "sku",
+        "supplier_eta",
+        "backlog_units"
+      ]
+    },
+    {
+      "task_id": "eco-013",
+      "user_query": "Calculate tax for CA order subtotal 89 dollars.",
+      "primary_tool": "tax_calculator",
+      "fallback_tools": [
+        "currency_fx",
+        "pricing_engine"
+      ],
+      "required_schema": [
+        "tax_amount",
+        "jurisdiction",
+        "rate"
+      ]
+    },
+    {
+      "task_id": "eco-014",
+      "user_query": "Convert 149 EUR to USD for checkout display.",
+      "primary_tool": "currency_fx",
+      "fallback_tools": [
+        "tax_calculator",
+        "pricing_engine"
+      ],
+      "required_schema": [
+        "base",
+        "quote",
+        "rate",
+        "converted_amount"
+      ]
+    },
+    {
+      "task_id": "eco-015",
+      "user_query": "Check if seller S-77 has trust or risk flags.",
+      "primary_tool": "seller_reputation",
+      "fallback_tools": [
+        "fraud_signal_api",
+        "catalog_search"
+      ],
+      "required_schema": [
+        "seller_id",
+        "reputation",
+        "flags"
+      ]
+    },
+    {
+      "task_id": "eco-016",
+      "user_query": "Draft severe ops incident update for delayed shipments.",
+      "primary_tool": "ops_alert_drafter",
+      "fallback_tools": [
+        "shipment_quote",
+        "route_optimizer"
+      ],
+      "required_schema": [
+        "subject",
+        "body",
+        "severity"
+      ]
+    },
+    {
+      "task_id": "eco-017",
+      "user_query": "Find low-stock products likely to stock out this week.",
+      "primary_tool": "inventory_forecast",
+      "fallback_tools": [
+        "inventory_realtime",
+        "vendor_eta_feed"
+      ],
+      "required_schema": [
+        "sku",
+        "restock_eta",
+        "stockout_risk"
+      ]
+    },
+    {
+      "task_id": "eco-018",
+      "user_query": "Can we approve payment and still run fraud checks quickly?",
+      "primary_tool": "fraud_signal_api",
+      "fallback_tools": [
+        "payment_auth",
+        "seller_reputation"
+      ],
+      "required_schema": [
+        "score",
+        "reasons",
+        "decision"
+      ]
+    }
+  ]
+}

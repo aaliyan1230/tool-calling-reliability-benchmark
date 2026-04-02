@@ -1,0 +1,239 @@
+{
+  "toolset_id": "customer_support",
+  "cases": [
+    {
+      "case_id": "customer_support-cs-001",
+      "task_id": "cs-001",
+      "question": "Customer asks where order 88271 package is right now.",
+      "expected_first_tool": "order_status_api",
+      "expected_tool_sequence": [
+        "order_status_api"
+      ],
+      "acceptable_alternatives": [
+        "shipment_trace_api",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-002",
+      "task_id": "cs-002",
+      "question": "Customer says tracking is stale and wants live carrier events.",
+      "expected_first_tool": "shipment_trace_api",
+      "expected_tool_sequence": [
+        "shipment_trace_api"
+      ],
+      "acceptable_alternatives": [
+        "order_status_api",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-003",
+      "task_id": "cs-003",
+      "question": "Customer requests refund for delayed package under premium plan.",
+      "expected_first_tool": "refund_policy_checker",
+      "expected_tool_sequence": [
+        "refund_policy_checker"
+      ],
+      "acceptable_alternatives": [
+        "order_status_api",
+        "account_entitlement_check"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-004",
+      "task_id": "cs-004",
+      "question": "Customer asks if their plan includes priority phone support.",
+      "expected_first_tool": "account_entitlement_check",
+      "expected_tool_sequence": [
+        "account_entitlement_check"
+      ],
+      "acceptable_alternatives": [
+        "sla_policy_resolver",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-005",
+      "task_id": "cs-005",
+      "question": "Agent needs SLA response and resolution windows for sev2 incident.",
+      "expected_first_tool": "sla_policy_resolver",
+      "expected_tool_sequence": [
+        "sla_policy_resolver"
+      ],
+      "acceptable_alternatives": [
+        "account_entitlement_check",
+        "priority_router"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-006",
+      "task_id": "cs-006",
+      "question": "Customer cannot login and asks if account was breached.",
+      "expected_first_tool": "auth_log_reader",
+      "expected_tool_sequence": [
+        "auth_log_reader"
+      ],
+      "acceptable_alternatives": [
+        "identity_verification",
+        "incident_status_feed"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-007",
+      "task_id": "cs-007",
+      "question": "Customer forgot password and needs secure identity verification.",
+      "expected_first_tool": "identity_verification",
+      "expected_tool_sequence": [
+        "identity_verification"
+      ],
+      "acceptable_alternatives": [
+        "auth_log_reader",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-008",
+      "task_id": "cs-008",
+      "question": "Customer asks if current outage explains checkout errors.",
+      "expected_first_tool": "incident_status_feed",
+      "expected_tool_sequence": [
+        "incident_status_feed"
+      ],
+      "acceptable_alternatives": [
+        "ticket_search",
+        "kb_semantic_search"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-009",
+      "task_id": "cs-009",
+      "question": "Agent wants best help-center answer for invoice mismatch question.",
+      "expected_first_tool": "kb_semantic_search",
+      "expected_tool_sequence": [
+        "kb_semantic_search"
+      ],
+      "acceptable_alternatives": [
+        "kb_keyword_search",
+        "ticket_search"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-010",
+      "task_id": "cs-010",
+      "question": "Agent needs exact policy doc for return window keyword search.",
+      "expected_first_tool": "kb_keyword_search",
+      "expected_tool_sequence": [
+        "kb_keyword_search"
+      ],
+      "acceptable_alternatives": [
+        "kb_semantic_search",
+        "ticket_search"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-011",
+      "task_id": "cs-011",
+      "question": "Find similar old tickets about duplicate billing charge.",
+      "expected_first_tool": "ticket_search",
+      "expected_tool_sequence": [
+        "ticket_search"
+      ],
+      "acceptable_alternatives": [
+        "ticket_lookup",
+        "kb_semantic_search"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-012",
+      "task_id": "cs-012",
+      "question": "Open ticket details for ticket TCK-29011.",
+      "expected_first_tool": "ticket_lookup",
+      "expected_tool_sequence": [
+        "ticket_lookup"
+      ],
+      "acceptable_alternatives": [
+        "ticket_search",
+        "priority_router"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-013",
+      "task_id": "cs-013",
+      "question": "Route this angry enterprise customer issue to correct queue.",
+      "expected_first_tool": "priority_router",
+      "expected_tool_sequence": [
+        "priority_router"
+      ],
+      "acceptable_alternatives": [
+        "customer_sentiment_model",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-014",
+      "task_id": "cs-014",
+      "question": "Assess urgency from customer message that says app is unusable.",
+      "expected_first_tool": "customer_sentiment_model",
+      "expected_tool_sequence": [
+        "customer_sentiment_model"
+      ],
+      "acceptable_alternatives": [
+        "priority_router",
+        "chat_reply_drafter"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-015",
+      "task_id": "cs-015",
+      "question": "Draft concise in-chat response confirming we are investigating.",
+      "expected_first_tool": "chat_reply_drafter",
+      "expected_tool_sequence": [
+        "chat_reply_drafter"
+      ],
+      "acceptable_alternatives": [
+        "email_drafter",
+        "incident_status_feed"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-016",
+      "task_id": "cs-016",
+      "question": "Draft complete follow-up email with apology and next actions.",
+      "expected_first_tool": "email_drafter",
+      "expected_tool_sequence": [
+        "email_drafter"
+      ],
+      "acceptable_alternatives": [
+        "chat_reply_drafter",
+        "ticket_lookup"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-017",
+      "task_id": "cs-017",
+      "question": "Customer asks for owner and priority of existing escalation ticket.",
+      "expected_first_tool": "ticket_lookup",
+      "expected_tool_sequence": [
+        "ticket_lookup"
+      ],
+      "acceptable_alternatives": [
+        "priority_router",
+        "ticket_search"
+      ]
+    },
+    {
+      "case_id": "customer_support-cs-018",
+      "task_id": "cs-018",
+      "question": "Agent needs KB answer plus references before replying to customer.",
+      "expected_first_tool": "kb_semantic_search",
+      "expected_tool_sequence": [
+        "kb_semantic_search"
+      ],
+      "acceptable_alternatives": [
+        "kb_keyword_search",
+        "email_drafter"
+      ]
+    }
+  ]
+}
