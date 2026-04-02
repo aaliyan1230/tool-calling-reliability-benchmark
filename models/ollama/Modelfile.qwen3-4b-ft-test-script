@@ -1,3 +1,0 @@
-FROM qwen3:4b
-ADAPTER /Users/aaliyan/aaliyan/tool-calling-reliability-benchmark/outputs/ft-notebook/final
-PARAMETER temperature 0
