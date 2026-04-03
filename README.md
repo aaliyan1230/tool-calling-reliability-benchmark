@@ -45,6 +45,12 @@ uv run tcrb run --config configs/baseline.json --workload workloads/sample_tasks
 uv run python scripts/run_northstar_hf.py
 ```
 
+With post-run anti-flatline gating:
+
+```bash
+uv run python scripts/run_northstar_hf.py --run-study-gate --study-gate-require-matrix-signal --study-gate-fail-on-violation
+```
+
 Default planner configs:
 
 - base: `configs/planners/hf_qwen2_5_3b_base.json`
@@ -82,6 +88,12 @@ Base vs finetuned delta:
 
 ```bash
 uv run tcrb eval-delta --base-run runs/ms-model-base-target/multi_seed.json --finetuned-run runs/ms-model-ft-target/multi_seed.json --output-json runs/ms-model-ft-target/delta.json
+```
+
+Anti-flatline study gate:
+
+```bash
+uv run tcrb study-gate --base-run runs/ms-model-base-target/multi_seed.json --finetuned-run runs/ms-model-ft-target/multi_seed.json --matrix-json runs/matrix-hf/matrix.json --require-matrix-signal --output-json runs/ms-model-ft-target/study_gate.json --fail-on-violation
 ```
 
 ## Planner Types
