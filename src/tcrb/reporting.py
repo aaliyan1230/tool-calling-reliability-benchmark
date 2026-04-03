@@ -194,3 +194,76 @@ def render_delta_markdown(payload: dict) -> str:
         _append_table("Open Workload", open_payload)
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def render_study_gate_markdown(payload: dict) -> str:
+    lines = [
+        "## Study Gate Report",
+        "",
+        f"Verdict: {payload.get('verdict', 'FAIL')}",
+        "",
+        "### Checks",
+        "",
+        "| check | status | value | threshold | detail |",
+        "|---|---|---:|---:|---|",
+    ]
+
+    checks = list(payload.get("checks", []))
+    if not checks:
+        lines.append("| n/a | FAIL | n/a | n/a | no checks were evaluated |")
+    else:
+        for check in checks:
+            status = "PASS" if bool(check.get("passed")) else "FAIL"
+            lines.append(
+                "| "
+                f"{check.get('name', 'check')} | "
+                f"{status} | "
+                f"{check.get('value', 'n/a')} | "
+                f"{check.get('threshold', 'n/a')} | "
+                f"{check.get('detail', '')} |"
+            )
+
+    base_vs_ft = payload.get("base_vs_finetuned")
+    if isinstance(base_vs_ft, dict):
+        lines.extend(
+            [
+                "",
+                "### Base vs Finetuned Signal",
+                "",
+                f"- policy_rows: {base_vs_ft.get('policy_rows', 0)}",
+                f"- mean_success_delta: {float(base_vs_ft.get('mean_success_delta', 0.0)):+.4f}",
+                f"- mean_invalid_delta: {float(base_vs_ft.get('mean_invalid_delta', 0.0)):+.4f}",
+                f"- max_abs_core_delta: {float(base_vs_ft.get('max_abs_core_delta', 0.0)):.6f}",
+            ]
+        )
+
+    null_summary = payload.get("null_control")
+    if isinstance(null_summary, dict):
+        lines.extend(
+            [
+                "",
+                "### Null Control Signal",
+                "",
+                f"- policies_compared: {null_summary.get('policies_compared', 0)}",
+                f"- mean_advantage_success_delta: {float(null_summary.get('mean_advantage_success_delta', 0.0)):+.4f}",
+                f"- mean_advantage_invalid_delta: {float(null_summary.get('mean_advantage_invalid_delta', 0.0)):+.4f}",
+                f"- max_abs_advantage_delta: {float(null_summary.get('max_abs_advantage_delta', 0.0)):.6f}",
+            ]
+        )
+
+    matrix_summary = payload.get("matrix")
+    if isinstance(matrix_summary, dict):
+        lines.extend(
+            [
+                "",
+                "### Transfer Matrix Signal",
+                "",
+                f"- rows_total: {matrix_summary.get('rows_total', 0)}",
+                f"- portfolio_verdict: {matrix_summary.get('portfolio_verdict', '')}",
+                f"- max_abs_delta: {float(matrix_summary.get('max_abs_delta', 0.0)):.6f}",
+                f"- mean_abs_first_delta: {float(matrix_summary.get('mean_abs_first_delta', 0.0)):.6f}",
+                f"- mean_abs_sequence_delta: {float(matrix_summary.get('mean_abs_sequence_delta', 0.0)):.6f}",
+            ]
+        )
+
+    return "\n".join(lines).rstrip() + "\n"

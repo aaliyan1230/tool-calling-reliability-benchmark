@@ -97,6 +97,64 @@ def parse_args() -> argparse.Namespace:
         default="northstar-hf",
         help="Run label prefix",
     )
+    parser.add_argument(
+        "--run-study-gate",
+        action="store_true",
+        help="Run tcrb study-gate after base/ft/delta/matrix stages",
+    )
+    parser.add_argument(
+        "--study-gate-null-run",
+        default=None,
+        help="Optional null-control run JSON path for study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-matrix-json",
+        default=None,
+        help="Optional matrix JSON path override for study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-flatline-epsilon",
+        type=float,
+        default=1e-4,
+        help="Flatline epsilon threshold for study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-min-effect-vs-null",
+        type=float,
+        default=3e-3,
+        help="Min effect-vs-null threshold for study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-matrix-flatline-epsilon",
+        type=float,
+        default=1e-4,
+        help="Transfer-matrix flatline epsilon for study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-require-matrix-signal",
+        action="store_true",
+        help="Require non-flat transfer-matrix signal in study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-require-matrix-not-fail",
+        action="store_true",
+        help="Require transfer-matrix portfolio verdict != FAIL in study-gate",
+    )
+    parser.add_argument(
+        "--study-gate-fail-on-violation",
+        action="store_true",
+        help="Return non-zero exit code when study-gate verdict is FAIL",
+    )
+    parser.add_argument(
+        "--study-gate-output-json",
+        default=None,
+        help="Optional output JSON path for study-gate report",
+    )
+    parser.add_argument(
+        "--study-gate-output-report",
+        default=None,
+        help="Optional output markdown path for study-gate report",
+    )
     return parser.parse_args()
 
 
@@ -114,6 +172,9 @@ def main() -> int:
     delta_json = f"runs/{args.label_prefix}-delta/delta-ms.json"
     delta_md = f"runs/{args.label_prefix}-delta/delta-ms.md"
     matrix_label = f"{args.label_prefix}-matrix"
+    base_ms_json = f"runs/{base_ms_label}/multi_seed.json"
+    ft_ms_json = f"runs/{ft_ms_label}/multi_seed.json"
+    matrix_json = f"runs/{matrix_label}/matrix.json"
 
     run_cmd(
         [
@@ -162,9 +223,9 @@ def main() -> int:
             "tcrb",
             "eval-delta",
             "--base-run",
-            f"runs/{base_ms_label}/multi_seed.json",
+            base_ms_json,
             "--finetuned-run",
-            f"runs/{ft_ms_label}/multi_seed.json",
+            ft_ms_json,
             "--output-json",
             delta_json,
             "--output-report",
@@ -199,13 +260,63 @@ def main() -> int:
         cwd=repo_root,
     )
 
+    study_gate_json: str | None = None
+    study_gate_report: str | None = None
+    if args.run_study_gate:
+        study_gate_json = (
+            args.study_gate_output_json
+            if args.study_gate_output_json
+            else f"runs/{args.label_prefix}-study-gate/study_gate.json"
+        )
+        study_gate_report = args.study_gate_output_report
+        matrix_input = (
+            args.study_gate_matrix_json if args.study_gate_matrix_json else matrix_json
+        )
+
+        study_gate_cmd = [
+            "uv",
+            "run",
+            "tcrb",
+            "study-gate",
+            "--base-run",
+            base_ms_json,
+            "--finetuned-run",
+            ft_ms_json,
+            "--matrix-json",
+            matrix_input,
+            "--flatline-epsilon",
+            str(args.study_gate_flatline_epsilon),
+            "--min-effect-vs-null",
+            str(args.study_gate_min_effect_vs_null),
+            "--matrix-flatline-epsilon",
+            str(args.study_gate_matrix_flatline_epsilon),
+            "--output-json",
+            study_gate_json,
+        ]
+        if args.study_gate_null_run:
+            study_gate_cmd.extend(["--null-run", args.study_gate_null_run])
+        if study_gate_report:
+            study_gate_cmd.extend(["--output-report", study_gate_report])
+        if args.study_gate_require_matrix_signal:
+            study_gate_cmd.append("--require-matrix-signal")
+        if args.study_gate_require_matrix_not_fail:
+            study_gate_cmd.append("--require-matrix-not-fail")
+        if args.study_gate_fail_on_violation:
+            study_gate_cmd.append("--fail-on-violation")
+
+        run_cmd(study_gate_cmd, cwd=repo_root)
+
     print("[northstar] Done")
-    print("[northstar] Base multi-seed:", f"runs/{base_ms_label}/multi_seed.json")
-    print("[northstar] FT multi-seed:", f"runs/{ft_ms_label}/multi_seed.json")
+    print("[northstar] Base multi-seed:", base_ms_json)
+    print("[northstar] FT multi-seed:", ft_ms_json)
     print("[northstar] Delta JSON:", delta_json)
     print("[northstar] Delta report:", delta_md)
-    print("[northstar] Matrix JSON:", f"runs/{matrix_label}/matrix.json")
+    print("[northstar] Matrix JSON:", matrix_json)
     print("[northstar] Matrix report:", f"runs/{matrix_label}/matrix_summary.md")
+    if study_gate_json:
+        print("[northstar] Study gate JSON:", study_gate_json)
+        if study_gate_report:
+            print("[northstar] Study gate report:", study_gate_report)
     return 0
 
 
