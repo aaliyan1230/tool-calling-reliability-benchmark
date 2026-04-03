@@ -44,7 +44,9 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Tool-calling reliability benchmark")
+    parser = argparse.ArgumentParser(
+        description="Tool-calling reliability benchmark and evaluation toolkit"
+    )
     _add_run_args(parser)
     subparsers = parser.add_subparsers(dest="command")
 
@@ -106,7 +108,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     finetune_data_parser = subparsers.add_parser(
-        "finetune-data", help="Build finetuning JSONL data from benchmark result JSON"
+        "finetune-data",
+        help="Build training/evaluation JSONL data from benchmark result JSON (legacy workflow)",
     )
     finetune_data_parser.add_argument(
         "--input-json",
@@ -142,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     eval_delta_parser = subparsers.add_parser(
-        "eval-delta", help="Compare base vs finetuned run payloads"
+        "eval-delta", help="Compare two run payloads and compute metric deltas"
     )
     eval_delta_parser.add_argument(
         "--base-run",
@@ -152,7 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_delta_parser.add_argument(
         "--finetuned-run",
         required=True,
-        help="Path to finetuned result JSON (result.json or multi_seed.json)",
+        help="Path to comparison result JSON (result.json or multi_seed.json)",
     )
     eval_delta_parser.add_argument(
         "--open-base-run",
@@ -162,7 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_delta_parser.add_argument(
         "--open-finetuned-run",
         default=None,
-        help="Optional finetuned run JSON for held-out open workload",
+        help="Optional comparison run JSON for held-out open workload",
     )
     eval_delta_parser.add_argument(
         "--output-json",
@@ -176,7 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     study_gate_parser = subparsers.add_parser(
-        "study-gate", help="Run anti-flatline study gate checks"
+        "study-gate", help="Run signal-quality and anti-flatline gate checks"
     )
     study_gate_parser.add_argument(
         "--base-run",
@@ -186,7 +189,7 @@ def build_parser() -> argparse.ArgumentParser:
     study_gate_parser.add_argument(
         "--finetuned-run",
         required=True,
-        help="Path to finetuned result JSON (result.json or multi_seed.json)",
+        help="Path to comparison result JSON (result.json or multi_seed.json)",
     )
     study_gate_parser.add_argument(
         "--null-run",

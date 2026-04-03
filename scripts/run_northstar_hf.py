@@ -44,7 +44,7 @@ def load_env_file(repo_root: Path) -> bool:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run HF-only north-star pipeline: multi-seed base/ft, delta, and transfer matrix"
+        description="Run HF north-star comparison pipeline: baseline vs comparison, delta, and transfer matrix"
     )
     parser.add_argument(
         "--workload",
@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ft-planner-config",
         default="configs/planners/hf_qwen2_5_3b_ft.json",
-        help="Finetuned planner config",
+        help="Comparison planner config (legacy default points to adapter variant)",
     )
     parser.add_argument(
         "--matrix-manifest",
@@ -124,12 +124,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--run-study-gate",
         action="store_true",
-        help="Run tcrb study-gate after base/ft/delta/matrix stages",
+        help="Run tcrb study-gate after baseline/comparison/delta/matrix stages",
     )
     parser.add_argument(
         "--study-gate-null-run",
         default=None,
-        help="Optional null-control run JSON path for study-gate",
+        help="Optional null-control comparator run JSON path for study-gate",
     )
     parser.add_argument(
         "--study-gate-matrix-json",
@@ -140,13 +140,13 @@ def parse_args() -> argparse.Namespace:
         "--study-gate-flatline-epsilon",
         type=float,
         default=1e-4,
-        help="Flatline epsilon threshold for study-gate",
+        help="Flatline epsilon threshold for study-gate signal checks",
     )
     parser.add_argument(
         "--study-gate-min-effect-vs-null",
         type=float,
         default=3e-3,
-        help="Min effect-vs-null threshold for study-gate",
+        help="Minimum effect-vs-null threshold for study-gate",
     )
     parser.add_argument(
         "--study-gate-matrix-flatline-epsilon",
@@ -157,7 +157,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--study-gate-require-matrix-signal",
         action="store_true",
-        help="Require non-flat transfer-matrix signal in study-gate",
+        help="Require non-flat transfer-matrix signal in study-gate checks",
     )
     parser.add_argument(
         "--study-gate-require-matrix-not-fail",
@@ -340,7 +340,7 @@ def main() -> int:
 
     print("[northstar] Done")
     print("[northstar] Base multi-seed:", base_ms_json)
-    print("[northstar] FT multi-seed:", ft_ms_json)
+    print("[northstar] Comparison multi-seed:", ft_ms_json)
     print("[northstar] Delta JSON:", delta_json)
     print("[northstar] Delta report:", delta_md)
     print("[northstar] Matrix JSON:", matrix_json)
