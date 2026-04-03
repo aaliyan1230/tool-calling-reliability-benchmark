@@ -1,0 +1,5 @@
+{
+  "type": "hf_local",
+  "name": "hf_qwen2_5_3b_ft_nulladapter",
+  "base_model": "Qwen/Qwen2.5-3B-Instruct"
+}
