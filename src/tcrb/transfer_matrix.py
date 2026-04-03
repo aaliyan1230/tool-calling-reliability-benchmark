@@ -91,7 +91,7 @@ def render_transfer_matrix_markdown(
         "",
         f"Target toolset: {target_toolset_id}",
         "",
-        "| toolset | split | base_first | ft_first | delta_first | base_seq | ft_seq | delta_seq | verdict |",
+        "| toolset | split | base_first | comparison_first | delta_first | base_seq | comparison_seq | delta_seq | verdict |",
         "|---|---|---:|---:|---:|---:|---:|---:|---|",
     ]
 
@@ -101,10 +101,10 @@ def render_transfer_matrix_markdown(
             f"{row.get('toolset_id', 'unknown')} | "
             f"{row.get('split', 'open')} | "
             f"{float(row.get('base_first_tool_accuracy', 0.0)):.4f} | "
-            f"{float(row.get('ft_first_tool_accuracy', 0.0)):.4f} | "
+            f"{float(row.get('comparison_first_tool_accuracy', 0.0)):.4f} | "
             f"{float(row.get('delta_first_tool_accuracy', 0.0)):+.4f} | "
             f"{float(row.get('base_sequence_prefix_accuracy', 0.0)):.4f} | "
-            f"{float(row.get('ft_sequence_prefix_accuracy', 0.0)):.4f} | "
+            f"{float(row.get('comparison_sequence_prefix_accuracy', 0.0)):.4f} | "
             f"{float(row.get('delta_sequence_prefix_accuracy', 0.0)):+.4f} | "
             f"{row.get('verdict', 'FAIL')} |"
         )

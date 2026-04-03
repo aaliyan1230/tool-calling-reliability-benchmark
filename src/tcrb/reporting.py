@@ -143,9 +143,9 @@ def write_markdown_text(text: str, output_path: str | Path) -> None:
 
 def render_delta_markdown(payload: dict) -> str:
     lines = [
-        "## Base vs Finetuned Delta",
+        "## Base vs Comparison Delta",
         "",
-        "Delta is computed as finetuned - base.",
+        "Delta is computed as comparison - base.",
         "",
     ]
 
@@ -223,17 +223,17 @@ def render_study_gate_markdown(payload: dict) -> str:
                 f"{check.get('detail', '')} |"
             )
 
-    base_vs_ft = payload.get("base_vs_finetuned")
-    if isinstance(base_vs_ft, dict):
+    base_vs_comparison = payload.get("base_vs_comparison")
+    if isinstance(base_vs_comparison, dict):
         lines.extend(
             [
                 "",
-                "### Base vs Finetuned Signal",
+                "### Base vs Comparison Signal",
                 "",
-                f"- policy_rows: {base_vs_ft.get('policy_rows', 0)}",
-                f"- mean_success_delta: {float(base_vs_ft.get('mean_success_delta', 0.0)):+.4f}",
-                f"- mean_invalid_delta: {float(base_vs_ft.get('mean_invalid_delta', 0.0)):+.4f}",
-                f"- max_abs_core_delta: {float(base_vs_ft.get('max_abs_core_delta', 0.0)):.6f}",
+                f"- policy_rows: {base_vs_comparison.get('policy_rows', 0)}",
+                f"- mean_success_delta: {float(base_vs_comparison.get('mean_success_delta', 0.0)):+.4f}",
+                f"- mean_invalid_delta: {float(base_vs_comparison.get('mean_invalid_delta', 0.0)):+.4f}",
+                f"- max_abs_core_delta: {float(base_vs_comparison.get('max_abs_core_delta', 0.0)):.6f}",
             ]
         )
 

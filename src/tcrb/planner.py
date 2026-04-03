@@ -357,69 +357,10 @@ class CommandPlanner:
             rng=rng,
         )
 
-
-@dataclass
-class FinetunedPlanner:
-    planner_id: str = "finetuned"
-    base_model: str = ""
-    adapter_path: str = ""
-    base_command: str = ""
-    timeout_seconds: float = 15.0
-    strict_mode: bool = False
-    fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
-
-    def resolved_command(self) -> str:
-        command = str(self.base_command)
-        command = command.replace("{base_model}", self.base_model)
-        command = command.replace("{adapter_path}", self.adapter_path)
-        return command
-
-    def choose_tool(
-        self,
-        *,
-        task: TaskSpec,
-        workload: Workload,
-        policy: str,
-        attempt_number: int,
-        attempted_tools: set[str],
-        last_status: str | None,
-        rng: random.Random,
-    ) -> str:
-        command = self.resolved_command().strip()
-        if not command:
-            return self.fallback.choose_tool(
-                task=task,
-                workload=workload,
-                policy=policy,
-                attempt_number=attempt_number,
-                attempted_tools=attempted_tools,
-                last_status=last_status,
-                rng=rng,
-            )
-
-        delegate = CommandPlanner(
-            planner_id=self.planner_id,
-            command=command,
-            timeout_seconds=self.timeout_seconds,
-            strict_mode=self.strict_mode,
-            fallback=self.fallback,
-        )
-        return delegate.choose_tool(
-            task=task,
-            workload=workload,
-            policy=policy,
-            attempt_number=attempt_number,
-            attempted_tools=attempted_tools,
-            last_status=last_status,
-            rng=rng,
-        )
-
-
 @dataclass
 class HFLocalPlanner:
     planner_id: str = "hf_local"
     base_model: str = ""
-    adapter_path: str = ""
     fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
     _core: object | None = field(default=None, init=False, repr=False)
 
@@ -430,13 +371,11 @@ class HFLocalPlanner:
                 raise RuntimeError(
                     f"{self.planner_id}: base_model is required for hf_local planner"
                 )
-            adapter = str(self.adapter_path).strip()
             from .hf_planner import HFLocalPlannerCore
 
             self._core = HFLocalPlannerCore(
                 planner_id=self.planner_id,
                 base_model_id=model_name,
-                adapter_path=adapter,
             )
         return self._core
 
@@ -505,21 +444,10 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
             strict_mode=bool(payload.get("strict_mode", False)),
             fallback=PolicyNativePlanner(),
         )
-    if planner_type == "finetuned":
-        return FinetunedPlanner(
-            planner_id=planner_id,
-            base_model=str(payload.get("base_model", "")),
-            adapter_path=str(payload.get("adapter_path", "")),
-            base_command=str(payload.get("base_command", "")),
-            timeout_seconds=float(payload.get("timeout_seconds", 15.0)),
-            strict_mode=bool(payload.get("strict_mode", False)),
-            fallback=PolicyNativePlanner(),
-        )
     if planner_type == "hf_local":
         return HFLocalPlanner(
             planner_id=planner_id,
             base_model=str(payload.get("base_model", "")),
-            adapter_path=str(payload.get("adapter_path", "")),
             fallback=PolicyNativePlanner(),
         )
 
