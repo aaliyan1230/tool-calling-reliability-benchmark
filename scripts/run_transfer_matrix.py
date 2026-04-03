@@ -19,7 +19,9 @@ from tcrb.transfer_matrix import (
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run toolset transfer matrix with eval-case gates")
+    parser = argparse.ArgumentParser(
+        description="Run toolset transfer matrix with eval-case gate checks"
+    )
     parser.add_argument(
         "--manifest",
         default="workloads/enriched/manifest.json",
@@ -33,12 +35,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--base-planner-config",
         default="configs/planners/policy_native.json",
-        help="Planner config for base model/planner",
+        help="Planner config for baseline model/planner",
     )
     parser.add_argument(
-        "--ft-planner-config",
+        "--comparison-planner-config",
         required=True,
-        help="Planner config for finetuned model/planner",
+        help="Planner config for comparison model/planner",
     )
     parser.add_argument(
         "--target-toolset",
@@ -152,7 +154,7 @@ def main() -> int:
     manifest_path = (repo_root / args.manifest).resolve()
     config_path = (repo_root / args.config).resolve()
     base_planner_config_path = (repo_root / args.base_planner_config).resolve()
-    ft_planner_config_path = (repo_root / args.ft_planner_config).resolve()
+    comparison_planner_config_path = (repo_root / args.comparison_planner_config).resolve()
 
     entries = _read_manifest(manifest_path)
     selected_toolsets = None
@@ -194,8 +196,8 @@ def main() -> int:
 
         base_result_path = toolset_dir / "base.result.json"
         base_summary_path = toolset_dir / "base.summary.md"
-        ft_result_path = toolset_dir / "ft.result.json"
-        ft_summary_path = toolset_dir / "ft.summary.md"
+        comparison_result_path = toolset_dir / "comparison.result.json"
+        comparison_summary_path = toolset_dir / "comparison.summary.md"
 
         workload_for_scores = load_workload(workload_path)
         workload_for_scores = _maybe_limit_workload(
@@ -213,13 +215,13 @@ def main() -> int:
             summary_path=base_summary_path,
             skip_benchmark=bool(args.skip_benchmark),
         )
-        ft_result_payload = _run_or_load_result(
+        comparison_result_payload = _run_or_load_result(
             workload_path=workload_path,
             workload=workload_for_scores,
             config_path=config_path,
-            planner_config_path=ft_planner_config_path,
-            result_path=ft_result_path,
-            summary_path=ft_summary_path,
+            planner_config_path=comparison_planner_config_path,
+            result_path=comparison_result_path,
+            summary_path=comparison_summary_path,
             skip_benchmark=bool(args.skip_benchmark),
         )
 
@@ -230,18 +232,20 @@ def main() -> int:
                 task_ids=limited_task_ids,
             )
         base_score = score_eval_cases(base_result_payload, eval_cases_payload)
-        ft_score = score_eval_cases(ft_result_payload, eval_cases_payload)
+        comparison_score = score_eval_cases(comparison_result_payload, eval_cases_payload)
 
         base_score_path = toolset_dir / "base.eval_case_score.json"
-        ft_score_path = toolset_dir / "ft.eval_case_score.json"
+        comparison_score_path = toolset_dir / "comparison.eval_case_score.json"
         write_json_file(base_score, base_score_path)
-        write_json_file(ft_score, ft_score_path)
+        write_json_file(comparison_score, comparison_score_path)
 
         base_summary = summarize_eval_case_score(base_score)
-        ft_summary = summarize_eval_case_score(ft_score)
+        comparison_summary = summarize_eval_case_score(comparison_score)
 
-        delta_first = float(ft_summary.first_tool_accuracy - base_summary.first_tool_accuracy)
-        delta_seq = float(ft_summary.sequence_prefix_accuracy - base_summary.sequence_prefix_accuracy)
+        delta_first = float(comparison_summary.first_tool_accuracy - base_summary.first_tool_accuracy)
+        delta_seq = float(
+            comparison_summary.sequence_prefix_accuracy - base_summary.sequence_prefix_accuracy
+        )
 
         split = "target" if toolset_id == target_toolset else "open"
         verdict = gate_eval_case_delta(
@@ -257,17 +261,19 @@ def main() -> int:
                 "split": split,
                 "cases_total": int(base_summary.cases_total),
                 "base_first_tool_accuracy": float(base_summary.first_tool_accuracy),
-                "ft_first_tool_accuracy": float(ft_summary.first_tool_accuracy),
+                "comparison_first_tool_accuracy": float(comparison_summary.first_tool_accuracy),
                 "delta_first_tool_accuracy": delta_first,
                 "base_sequence_prefix_accuracy": float(base_summary.sequence_prefix_accuracy),
-                "ft_sequence_prefix_accuracy": float(ft_summary.sequence_prefix_accuracy),
+                "comparison_sequence_prefix_accuracy": float(
+                    comparison_summary.sequence_prefix_accuracy
+                ),
                 "delta_sequence_prefix_accuracy": delta_seq,
                 "verdict": verdict,
                 "artifacts": {
                     "base_result": str(base_result_path.relative_to(repo_root)),
-                    "ft_result": str(ft_result_path.relative_to(repo_root)),
+                    "comparison_result": str(comparison_result_path.relative_to(repo_root)),
                     "base_eval_case_score": str(base_score_path.relative_to(repo_root)),
-                    "ft_eval_case_score": str(ft_score_path.relative_to(repo_root)),
+                    "comparison_eval_case_score": str(comparison_score_path.relative_to(repo_root)),
                 },
             }
         )
@@ -283,7 +289,7 @@ def main() -> int:
         "target_toolset": target_toolset,
         "manifest": str(manifest_path.relative_to(repo_root)),
         "base_planner_config": str(base_planner_config_path.relative_to(repo_root)),
-        "ft_planner_config": str(ft_planner_config_path.relative_to(repo_root)),
+        "comparison_planner_config": str(comparison_planner_config_path.relative_to(repo_root)),
         "thresholds": {
             "target_first_tool_min_delta": thresholds.target_first_tool_min_delta,
             "target_sequence_min_delta": thresholds.target_sequence_min_delta,

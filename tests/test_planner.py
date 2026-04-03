@@ -1,8 +1,9 @@
 import random
 
+import pytest
+
 from tcrb.models import TaskSpec, ToolSpec, Workload
 from tcrb.planner import (
-    FinetunedPlanner,
     HeuristicPlanner,
     PolicyNativePlanner,
     ReplayPlanner,
@@ -116,39 +117,6 @@ def test_replay_uses_sequence_then_fallback():
     assert chosen_second == "a"
 
 
-def test_finetuned_planner_from_dict_resolves_command_template():
-    planner = planner_from_dict(
-        {
-            "type": "finetuned",
-            "name": "llama-ft",
-            "base_model": "llama3.1:8b",
-            "adapter_path": "finetuned-models/llama-ft-v1/adapter",
-            "base_command": "python scripts/planners/tool_selector.py --model {base_model} --adapter {adapter_path}",
-            "timeout_seconds": 9.0,
-        }
-    )
-
-    assert isinstance(planner, FinetunedPlanner)
-    assert planner.planner_id == "llama-ft"
-    assert planner.timeout_seconds == 9.0
-    assert planner.resolved_command() == (
-        "python scripts/planners/tool_selector.py "
-        "--model llama3.1:8b --adapter finetuned-models/llama-ft-v1/adapter"
-    )
-
-
-def test_finetuned_planner_from_dict_parses_strict_mode():
-    planner = planner_from_dict(
-        {
-            "type": "finetuned",
-            "name": "llama-ft-strict",
-            "base_model": "llama3.1:8b",
-            "adapter_path": "finetuned-models/llama-ft-v1/adapter",
-            "base_command": "python scripts/planners/tool_selector.py --model {base_model} --adapter {adapter_path}",
-            "timeout_seconds": 9.0,
-            "strict_mode": True,
-        }
-    )
-
-    assert isinstance(planner, FinetunedPlanner)
-    assert planner.strict_mode is True
+def test_deprecated_planner_type_is_not_supported():
+    with pytest.raises(ValueError):
+        planner_from_dict({"type": "deprecated", "name": "deprecated"})
