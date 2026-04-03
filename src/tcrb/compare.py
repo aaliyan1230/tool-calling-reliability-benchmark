@@ -52,28 +52,28 @@ def _normalize_policy_metrics(payload: dict[str, Any]) -> dict[str, dict[str, fl
 
 def compare_run_payloads(
     base_payload: dict[str, Any],
-    finetuned_payload: dict[str, Any],
+    comparison_payload: dict[str, Any],
 ) -> dict[str, Any]:
     base = _normalize_policy_metrics(base_payload)
-    finetuned = _normalize_policy_metrics(finetuned_payload)
+    comparison = _normalize_policy_metrics(comparison_payload)
 
-    policies = sorted(set(base.keys()) | set(finetuned.keys()))
+    policies = sorted(set(base.keys()) | set(comparison.keys()))
     rows: list[dict[str, Any]] = []
     for policy in policies:
         base_metrics = base.get(policy, {})
-        ft_metrics = finetuned.get(policy, {})
+        comp_metrics = comparison.get(policy, {})
 
         delta = {}
         for metric in METRIC_NAMES:
             b = base_metrics.get(metric)
-            f = ft_metrics.get(metric)
-            delta[metric] = None if (b is None or f is None) else float(f - b)
+            c = comp_metrics.get(metric)
+            delta[metric] = None if (b is None or c is None) else float(c - b)
 
         rows.append(
             {
                 "policy": policy,
                 "base": base_metrics,
-                "finetuned": ft_metrics,
+                "comparison": comp_metrics,
                 "delta": delta,
             }
         )

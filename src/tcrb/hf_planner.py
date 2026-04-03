@@ -49,7 +49,6 @@ def heuristic_pick(
 class HFLocalPlannerCore:
     planner_id: str
     base_model_id: str
-    adapter_path: str = ""
 
     def __post_init__(self) -> None:
         hf_token = str(os.environ.get("HF_TOKEN", "")).strip()
@@ -75,17 +74,7 @@ class HFLocalPlannerCore:
             **model_kwargs,
         )
 
-        adapter = str(self.adapter_path or "").strip()
-        if adapter:
-            try:
-                from peft import PeftModel
-            except Exception as exc:  # pragma: no cover - dependency/runtime guard
-                raise RuntimeError(
-                    "peft is required for adapter-based HF planner but is unavailable"
-                ) from exc
-            self.model = PeftModel.from_pretrained(base_model, adapter)
-        else:
-            self.model = base_model
+        self.model = base_model
 
         self.model.eval()
 

@@ -21,7 +21,7 @@ def _multi_seed_payload(policy_rows: dict[str, dict[str, float]]) -> dict:
     }
 
 
-def test_study_gate_fails_on_base_vs_ft_flatline():
+def test_study_gate_fails_on_base_vs_comparison_flatline():
     base = _multi_seed_payload(
         {
             "naive_retry": {
@@ -30,7 +30,7 @@ def test_study_gate_fails_on_base_vs_ft_flatline():
             }
         }
     )
-    ft = _multi_seed_payload(
+    comparison = _multi_seed_payload(
         {
             "naive_retry": {
                 "task_success_rate": 0.45,
@@ -41,16 +41,16 @@ def test_study_gate_fails_on_base_vs_ft_flatline():
 
     payload = evaluate_study_gates(
         base_payload=base,
-        finetuned_payload=ft,
+        comparison_payload=comparison,
         thresholds=StudyGateThresholds(flatline_epsilon=1e-4),
     )
 
     assert payload["verdict"] == "FAIL"
-    assert payload["checks"][0]["name"] == "base_vs_ft_nonflatline"
+    assert payload["checks"][0]["name"] == "base_vs_comparison_nonflatline"
     assert payload["checks"][0]["passed"] is False
 
 
-def test_study_gate_passes_with_nonflat_base_vs_ft_signal():
+def test_study_gate_passes_with_nonflat_base_vs_comparison_signal():
     base = _multi_seed_payload(
         {
             "naive_retry": {
@@ -59,7 +59,7 @@ def test_study_gate_passes_with_nonflat_base_vs_ft_signal():
             }
         }
     )
-    ft = _multi_seed_payload(
+    comparison = _multi_seed_payload(
         {
             "naive_retry": {
                 "task_success_rate": 0.52,
@@ -70,7 +70,7 @@ def test_study_gate_passes_with_nonflat_base_vs_ft_signal():
 
     payload = evaluate_study_gates(
         base_payload=base,
-        finetuned_payload=ft,
+        comparison_payload=comparison,
         thresholds=StudyGateThresholds(flatline_epsilon=1e-4),
     )
 
@@ -78,7 +78,7 @@ def test_study_gate_passes_with_nonflat_base_vs_ft_signal():
     assert payload["checks"][0]["passed"] is True
 
 
-def test_study_gate_fails_when_ft_matches_null_control_effect():
+def test_study_gate_fails_when_comparison_matches_null_control_effect():
     base = _multi_seed_payload(
         {
             "naive_retry": {
@@ -87,7 +87,7 @@ def test_study_gate_fails_when_ft_matches_null_control_effect():
             }
         }
     )
-    ft = _multi_seed_payload(
+    comparison = _multi_seed_payload(
         {
             "naive_retry": {
                 "task_success_rate": 0.52,
@@ -106,7 +106,7 @@ def test_study_gate_fails_when_ft_matches_null_control_effect():
 
     payload = evaluate_study_gates(
         base_payload=base,
-        finetuned_payload=ft,
+        comparison_payload=comparison,
         null_payload=null_control,
         thresholds=StudyGateThresholds(
             flatline_epsilon=1e-4,
@@ -116,9 +116,11 @@ def test_study_gate_fails_when_ft_matches_null_control_effect():
 
     assert payload["verdict"] == "FAIL"
     check_names = [check["name"] for check in payload["checks"]]
-    assert "ft_distinct_from_null_control" in check_names
+    assert "comparison_distinct_from_null_control" in check_names
     null_check = next(
-        check for check in payload["checks"] if check["name"] == "ft_distinct_from_null_control"
+        check
+        for check in payload["checks"]
+        if check["name"] == "comparison_distinct_from_null_control"
     )
     assert null_check["passed"] is False
 
@@ -132,7 +134,7 @@ def test_study_gate_fails_when_matrix_signal_required_and_missing():
             }
         }
     )
-    ft = _multi_seed_payload(
+    comparison = _multi_seed_payload(
         {
             "naive_retry": {
                 "task_success_rate": 0.52,
@@ -143,7 +145,7 @@ def test_study_gate_fails_when_matrix_signal_required_and_missing():
 
     payload = evaluate_study_gates(
         base_payload=base,
-        finetuned_payload=ft,
+        comparison_payload=comparison,
         thresholds=StudyGateThresholds(
             flatline_epsilon=1e-4,
             require_matrix_signal=True,
