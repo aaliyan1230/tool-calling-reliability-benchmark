@@ -15,10 +15,12 @@ from .planner import load_tool_planner
 from .reporting import (
     render_delta_markdown,
     render_multi_seed_markdown,
+    render_study_gate_markdown,
     render_sweep_markdown,
     write_markdown_summary,
     write_markdown_text,
 )
+from .study_gate import StudyGateThresholds, evaluate_study_gates
 
 
 def _add_run_args(parser: argparse.ArgumentParser) -> None:
@@ -171,6 +173,73 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-report",
         default=None,
         help="Optional output path for markdown report (defaults next to output JSON)",
+    )
+
+    study_gate_parser = subparsers.add_parser(
+        "study-gate", help="Run anti-flatline study gate checks"
+    )
+    study_gate_parser.add_argument(
+        "--base-run",
+        required=True,
+        help="Path to base result JSON (result.json or multi_seed.json)",
+    )
+    study_gate_parser.add_argument(
+        "--finetuned-run",
+        required=True,
+        help="Path to finetuned result JSON (result.json or multi_seed.json)",
+    )
+    study_gate_parser.add_argument(
+        "--null-run",
+        default=None,
+        help="Optional null-control run JSON for comparator checks",
+    )
+    study_gate_parser.add_argument(
+        "--matrix-json",
+        default=None,
+        help="Optional transfer matrix JSON for matrix-level checks",
+    )
+    study_gate_parser.add_argument(
+        "--flatline-epsilon",
+        type=float,
+        default=1e-4,
+        help="Minimum absolute delta to avoid flatline verdict",
+    )
+    study_gate_parser.add_argument(
+        "--min-effect-vs-null",
+        type=float,
+        default=3e-3,
+        help="Minimum max abs effect vs null-control delta",
+    )
+    study_gate_parser.add_argument(
+        "--matrix-flatline-epsilon",
+        type=float,
+        default=1e-4,
+        help="Minimum transfer-matrix delta when matrix signal is required",
+    )
+    study_gate_parser.add_argument(
+        "--require-matrix-signal",
+        action="store_true",
+        help="Require transfer-matrix deltas to be non-flat",
+    )
+    study_gate_parser.add_argument(
+        "--require-matrix-not-fail",
+        action="store_true",
+        help="Require transfer-matrix portfolio verdict to not be FAIL",
+    )
+    study_gate_parser.add_argument(
+        "--output-json",
+        default=None,
+        help="Optional output path for study gate JSON",
+    )
+    study_gate_parser.add_argument(
+        "--output-report",
+        default=None,
+        help="Optional output path for markdown summary",
+    )
+    study_gate_parser.add_argument(
+        "--fail-on-violation",
+        action="store_true",
+        help="Return exit code 1 if any gate fails",
     )
 
     eval_cases_parser = subparsers.add_parser(
@@ -345,6 +414,55 @@ def _run_eval_delta(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_study_gate(args: argparse.Namespace) -> int:
+    base_payload = load_json_payload(args.base_run)
+    finetuned_payload = load_json_payload(args.finetuned_run)
+    null_payload = load_json_payload(args.null_run) if args.null_run else None
+    matrix_payload = load_json_payload(args.matrix_json) if args.matrix_json else None
+
+    thresholds = StudyGateThresholds(
+        flatline_epsilon=float(args.flatline_epsilon),
+        min_effect_vs_null=float(args.min_effect_vs_null),
+        matrix_flatline_epsilon=float(args.matrix_flatline_epsilon),
+        require_matrix_signal=bool(args.require_matrix_signal),
+        require_matrix_not_fail=bool(args.require_matrix_not_fail),
+    )
+
+    report_payload = evaluate_study_gates(
+        base_payload=base_payload,
+        finetuned_payload=finetuned_payload,
+        null_payload=null_payload,
+        matrix_payload=matrix_payload,
+        thresholds=thresholds,
+    )
+
+    output_json = Path(args.output_json) if args.output_json else None
+    if output_json is not None:
+        write_json(report_payload, output_json)
+        print(f"Wrote study gate JSON: {output_json}")
+
+    output_report = Path(args.output_report) if args.output_report else None
+    if output_report is None and output_json is not None:
+        output_report = output_json.with_suffix(".md")
+    if output_report is not None:
+        write_markdown_text(render_study_gate_markdown(report_payload), output_report)
+        print(f"Wrote study gate markdown: {output_report}")
+
+    print(f"Study gate verdict: {report_payload.get('verdict', 'FAIL')}")
+    for check in report_payload.get("checks", []):
+        status = "PASS" if bool(check.get("passed")) else "FAIL"
+        value = check.get("value")
+        threshold = check.get("threshold")
+        print(
+            f"- {check.get('name', 'check')}: {status} "
+            f"(value={value}, threshold={threshold})"
+        )
+
+    if bool(args.fail_on_violation) and str(report_payload.get("verdict")) != "PASS":
+        return 1
+    return 0
+
+
 def _run_eval_cases_score(args: argparse.Namespace) -> int:
     result_payload = load_json_payload(args.result_json)
     eval_cases_payload = load_eval_cases(args.eval_cases_json)
@@ -374,6 +492,8 @@ def main() -> int:
         return _run_finetune_data(args)
     if args.command == "eval-delta":
         return _run_eval_delta(args)
+    if args.command == "study-gate":
+        return _run_study_gate(args)
     if args.command == "eval-cases-score":
         return _run_eval_cases_score(args)
 
