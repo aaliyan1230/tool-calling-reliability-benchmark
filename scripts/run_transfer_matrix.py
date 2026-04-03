@@ -19,7 +19,9 @@ from tcrb.transfer_matrix import (
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run toolset transfer matrix with eval-case gates")
+    parser = argparse.ArgumentParser(
+        description="Run toolset transfer matrix with eval-case gate checks"
+    )
     parser.add_argument(
         "--manifest",
         default="workloads/enriched/manifest.json",
@@ -33,12 +35,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--base-planner-config",
         default="configs/planners/policy_native.json",
-        help="Planner config for base model/planner",
+        help="Planner config for baseline model/planner",
     )
     parser.add_argument(
         "--ft-planner-config",
         required=True,
-        help="Planner config for finetuned model/planner",
+        help="Planner config for comparison model/planner",
     )
     parser.add_argument(
         "--target-toolset",
