@@ -67,9 +67,9 @@ def parse_args() -> argparse.Namespace:
         help="Base planner config",
     )
     parser.add_argument(
-        "--ft-planner-config",
-        default="configs/planners/hf_qwen2_5_3b_ft.json",
-        help="Comparison planner config (legacy default points to adapter variant)",
+        "--comparison-planner-config",
+        default="configs/planners/hf_qwen2_5_3b_comparison.json",
+        help="Comparison planner config",
     )
     parser.add_argument(
         "--matrix-manifest",
@@ -192,12 +192,12 @@ def main() -> int:
     print("[northstar] HF_TOKEN set:", bool(os.environ.get("HF_TOKEN")), flush=True)
 
     base_ms_label = f"{args.label_prefix}-base-ms"
-    ft_ms_label = f"{args.label_prefix}-ft-ms"
+    comparison_ms_label = f"{args.label_prefix}-comparison-ms"
     delta_json = f"runs/{args.label_prefix}-delta/delta-ms.json"
     delta_md = f"runs/{args.label_prefix}-delta/delta-ms.md"
     matrix_label = f"{args.label_prefix}-matrix"
     base_ms_json = f"runs/{base_ms_label}/multi_seed.json"
-    ft_ms_json = f"runs/{ft_ms_label}/multi_seed.json"
+    comparison_ms_json = f"runs/{comparison_ms_label}/multi_seed.json"
     matrix_json = f"runs/{matrix_label}/matrix.json"
 
     run_cmd(
@@ -233,9 +233,9 @@ def main() -> int:
             "--seeds",
             args.seeds,
             "--planner-config",
-            args.ft_planner_config,
+            args.comparison_planner_config,
             "--label",
-            ft_ms_label,
+            comparison_ms_label,
         ],
         cwd=repo_root,
     )
@@ -248,8 +248,8 @@ def main() -> int:
             "eval-delta",
             "--base-run",
             base_ms_json,
-            "--finetuned-run",
-            ft_ms_json,
+            "--comparison-run",
+            comparison_ms_json,
             "--output-json",
             delta_json,
             "--output-report",
@@ -270,8 +270,8 @@ def main() -> int:
             args.config,
             "--base-planner-config",
             args.base_planner_config,
-            "--ft-planner-config",
-            args.ft_planner_config,
+            "--comparison-planner-config",
+            args.comparison_planner_config,
             "--target-toolset",
             args.matrix_target_toolset,
             "--toolsets",
@@ -312,8 +312,8 @@ def main() -> int:
             "study-gate",
             "--base-run",
             base_ms_json,
-            "--finetuned-run",
-            ft_ms_json,
+            "--comparison-run",
+            comparison_ms_json,
             "--matrix-json",
             matrix_input,
             "--flatline-epsilon",
@@ -340,7 +340,7 @@ def main() -> int:
 
     print("[northstar] Done")
     print("[northstar] Base multi-seed:", base_ms_json)
-    print("[northstar] Comparison multi-seed:", ft_ms_json)
+    print("[northstar] Comparison multi-seed:", comparison_ms_json)
     print("[northstar] Delta JSON:", delta_json)
     print("[northstar] Delta report:", delta_md)
     print("[northstar] Matrix JSON:", matrix_json)

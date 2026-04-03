@@ -6,11 +6,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .benchmark import run_benchmark, write_result_json
+from .compare import compare_run_payloads, load_json_payload
 from .config import load_benchmark_config, load_workload
 from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
 from .eval_cases import load_eval_cases, score_eval_cases
-from .finetune.dataset import build_examples_from_result_payload, split_examples, write_jsonl
-from .finetune.evaluate import compare_run_payloads, load_json_payload
 from .planner import load_tool_planner
 from .reporting import (
     render_delta_markdown,
@@ -107,43 +106,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional tool planner JSON config",
     )
 
-    finetune_data_parser = subparsers.add_parser(
-        "finetune-data",
-        help="Build training/evaluation JSONL data from benchmark result JSON (legacy workflow)",
-    )
-    finetune_data_parser.add_argument(
-        "--input-json",
-        required=True,
-        help="Path to runs/<label>/result.json",
-    )
-    finetune_data_parser.add_argument(
-        "--output-dir",
-        default="finetuned-models/training",
-        help="Directory where train/eval JSONL files are written",
-    )
-    finetune_data_parser.add_argument(
-        "--validation-split",
-        type=float,
-        default=0.2,
-        help="Validation set fraction in [0.0, 1.0)",
-    )
-    finetune_data_parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Shuffle seed for train/eval split",
-    )
-    finetune_data_parser.add_argument(
-        "--workload",
-        default=None,
-        help="Optional workload JSON used to enrich prompt context",
-    )
-    finetune_data_parser.add_argument(
-        "--include-failure-attempts",
-        action="store_true",
-        help="Include non-success attempts as labels (invalid tool calls are always excluded)",
-    )
-
     eval_delta_parser = subparsers.add_parser(
         "eval-delta", help="Compare two run payloads and compute metric deltas"
     )
@@ -153,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to base result JSON (result.json or multi_seed.json)",
     )
     eval_delta_parser.add_argument(
-        "--finetuned-run",
+        "--comparison-run",
         required=True,
         help="Path to comparison result JSON (result.json or multi_seed.json)",
     )
@@ -163,7 +125,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional base run JSON for held-out open workload",
     )
     eval_delta_parser.add_argument(
-        "--open-finetuned-run",
+        "--open-comparison-run",
         default=None,
         help="Optional comparison run JSON for held-out open workload",
     )
@@ -187,7 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to base result JSON (result.json or multi_seed.json)",
     )
     study_gate_parser.add_argument(
-        "--finetuned-run",
+        "--comparison-run",
         required=True,
         help="Path to comparison result JSON (result.json or multi_seed.json)",
     )
@@ -353,50 +315,20 @@ def _run_sweep(args: argparse.Namespace) -> int:
     return 0
 
 
-def _run_finetune_data(args: argparse.Namespace) -> int:
-    payload = load_json_payload(args.input_json)
-    workload = load_workload(args.workload) if args.workload else None
-
-    examples = build_examples_from_result_payload(
-        payload,
-        workload=workload,
-        include_failure_attempts=bool(args.include_failure_attempts),
-    )
-    train_rows, eval_rows = split_examples(
-        examples,
-        validation_split=float(args.validation_split),
-        seed=int(args.seed),
-    )
-
-    output_dir = Path(args.output_dir)
-    train_path = output_dir / "train_dataset.jsonl"
-    eval_path = output_dir / "eval_dataset.jsonl"
-
-    write_jsonl(train_rows, train_path)
-    write_jsonl(eval_rows, eval_path)
-
-    print(f"Examples total: {len(examples)}")
-    print(f"Train examples: {len(train_rows)}")
-    print(f"Eval examples: {len(eval_rows)}")
-    print(f"Wrote train dataset: {train_path}")
-    print(f"Wrote eval dataset: {eval_path}")
-    return 0
-
-
 def _run_eval_delta(args: argparse.Namespace) -> int:
     base_payload = load_json_payload(args.base_run)
-    finetuned_payload = load_json_payload(args.finetuned_run)
+    comparison_payload = load_json_payload(args.comparison_run)
 
     report_payload: dict = {
-        "target": compare_run_payloads(base_payload, finetuned_payload),
+        "target": compare_run_payloads(base_payload, comparison_payload),
     }
 
-    has_open_pair = args.open_base_run and args.open_finetuned_run
+    has_open_pair = args.open_base_run and args.open_comparison_run
     if has_open_pair:
         open_base_payload = load_json_payload(args.open_base_run)
-        open_finetuned_payload = load_json_payload(args.open_finetuned_run)
+        open_comparison_payload = load_json_payload(args.open_comparison_run)
         report_payload["open"] = compare_run_payloads(
-            open_base_payload, open_finetuned_payload
+            open_base_payload, open_comparison_payload
         )
 
     output_json = Path(args.output_json) if args.output_json else None
@@ -419,7 +351,7 @@ def _run_eval_delta(args: argparse.Namespace) -> int:
 
 def _run_study_gate(args: argparse.Namespace) -> int:
     base_payload = load_json_payload(args.base_run)
-    finetuned_payload = load_json_payload(args.finetuned_run)
+    comparison_payload = load_json_payload(args.comparison_run)
     null_payload = load_json_payload(args.null_run) if args.null_run else None
     matrix_payload = load_json_payload(args.matrix_json) if args.matrix_json else None
 
@@ -433,7 +365,7 @@ def _run_study_gate(args: argparse.Namespace) -> int:
 
     report_payload = evaluate_study_gates(
         base_payload=base_payload,
-        finetuned_payload=finetuned_payload,
+        comparison_payload=comparison_payload,
         null_payload=null_payload,
         matrix_payload=matrix_payload,
         thresholds=thresholds,
@@ -491,8 +423,6 @@ def main() -> int:
         return _run_multi_seed(args)
     if args.command == "sweep":
         return _run_sweep(args)
-    if args.command == "finetune-data":
-        return _run_finetune_data(args)
     if args.command == "eval-delta":
         return _run_eval_delta(args)
     if args.command == "study-gate":

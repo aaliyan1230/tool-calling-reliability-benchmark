@@ -4,7 +4,7 @@ import statistics
 from dataclasses import dataclass
 from typing import Any
 
-from .finetune.evaluate import compare_run_payloads
+from .compare import compare_run_payloads
 
 
 CORE_METRICS = ("task_success_rate", "invalid_tool_call_rate")
@@ -60,30 +60,30 @@ def summarize_delta_signal(comparison_payload: dict[str, Any]) -> dict[str, Any]
 
 
 def summarize_advantage_vs_null(
-    ft_vs_base_payload: dict[str, Any],
+    comparison_vs_base_payload: dict[str, Any],
     null_vs_base_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    ft_map = {
+    comparison_map = {
         str(row.get("policy", "")): dict(row.get("delta", {}))
-        for row in ft_vs_base_payload.get("policies", [])
+        for row in comparison_vs_base_payload.get("policies", [])
     }
     null_map = {
         str(row.get("policy", "")): dict(row.get("delta", {}))
         for row in null_vs_base_payload.get("policies", [])
     }
-    policies = sorted(set(ft_map.keys()) & set(null_map.keys()))
+    policies = sorted(set(comparison_map.keys()) & set(null_map.keys()))
 
     advantage_values: list[float] = []
     by_metric: dict[str, list[float]] = {metric: [] for metric in CORE_METRICS}
     for policy in policies:
-        ft_delta = ft_map.get(policy, {})
+        comparison_delta = comparison_map.get(policy, {})
         null_delta = null_map.get(policy, {})
         for metric in CORE_METRICS:
-            ft_value = ft_delta.get(metric)
+            comparison_value = comparison_delta.get(metric)
             null_value = null_delta.get(metric)
-            if ft_value is None or null_value is None:
+            if comparison_value is None or null_value is None:
                 continue
-            advantage = float(ft_value) - float(null_value)
+            advantage = float(comparison_value) - float(null_value)
             by_metric[metric].append(advantage)
             advantage_values.append(advantage)
 
@@ -125,22 +125,24 @@ def summarize_matrix_signal(matrix_payload: dict[str, Any]) -> dict[str, Any]:
 def evaluate_study_gates(
     *,
     base_payload: dict[str, Any],
-    finetuned_payload: dict[str, Any],
+    comparison_payload: dict[str, Any],
     thresholds: StudyGateThresholds,
     null_payload: dict[str, Any] | None = None,
     matrix_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    ft_vs_base = compare_run_payloads(base_payload, finetuned_payload)
-    ft_summary = summarize_delta_signal(ft_vs_base)
+    comparison_vs_base = compare_run_payloads(base_payload, comparison_payload)
+    comparison_summary = summarize_delta_signal(comparison_vs_base)
 
     checks: list[dict[str, Any]] = []
 
-    base_vs_ft_nonflat = bool(ft_summary["max_abs_core_delta"] > thresholds.flatline_epsilon)
+    base_vs_comparison_nonflat = bool(
+        comparison_summary["max_abs_core_delta"] > thresholds.flatline_epsilon
+    )
     checks.append(
         {
-            "name": "base_vs_ft_nonflatline",
-            "passed": base_vs_ft_nonflat,
-            "value": float(ft_summary["max_abs_core_delta"]),
+            "name": "base_vs_comparison_nonflatline",
+            "passed": base_vs_comparison_nonflat,
+            "value": float(comparison_summary["max_abs_core_delta"]),
             "threshold": float(thresholds.flatline_epsilon),
             "detail": "max abs core delta must exceed flatline epsilon",
         }
@@ -149,17 +151,17 @@ def evaluate_study_gates(
     null_summary: dict[str, Any] | None = None
     if null_payload is not None:
         null_vs_base = compare_run_payloads(base_payload, null_payload)
-        null_summary = summarize_advantage_vs_null(ft_vs_base, null_vs_base)
+        null_summary = summarize_advantage_vs_null(comparison_vs_base, null_vs_base)
         effect_vs_null = bool(
             null_summary["max_abs_advantage_delta"] >= thresholds.min_effect_vs_null
         )
         checks.append(
             {
-                "name": "ft_distinct_from_null_control",
+                "name": "comparison_distinct_from_null_control",
                 "passed": effect_vs_null,
                 "value": float(null_summary["max_abs_advantage_delta"]),
                 "threshold": float(thresholds.min_effect_vs_null),
-                "detail": "max abs (ft-base) - (null-base) must exceed min effect",
+                "detail": "max abs (comparison-base) - (null-base) must exceed min effect",
             }
         )
 
@@ -212,7 +214,7 @@ def evaluate_study_gates(
             "require_matrix_signal": bool(thresholds.require_matrix_signal),
             "require_matrix_not_fail": bool(thresholds.require_matrix_not_fail),
         },
-        "base_vs_finetuned": ft_summary,
+        "base_vs_comparison": comparison_summary,
         "null_control": null_summary,
         "matrix": matrix_summary,
         "checks": checks,
