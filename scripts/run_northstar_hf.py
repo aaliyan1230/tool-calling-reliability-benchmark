@@ -93,6 +93,30 @@ def parse_args() -> argparse.Namespace:
         help="Max tasks per toolset for transfer matrix",
     )
     parser.add_argument(
+        "--matrix-target-first-min-delta",
+        type=float,
+        default=0.03,
+        help="Target split min delta for first-tool accuracy in transfer matrix",
+    )
+    parser.add_argument(
+        "--matrix-target-seq-min-delta",
+        type=float,
+        default=0.03,
+        help="Target split min delta for sequence-prefix accuracy in transfer matrix",
+    )
+    parser.add_argument(
+        "--matrix-open-first-min-delta",
+        type=float,
+        default=-0.03,
+        help="Open split min delta for first-tool accuracy in transfer matrix",
+    )
+    parser.add_argument(
+        "--matrix-open-seq-min-delta",
+        type=float,
+        default=-0.03,
+        help="Open split min delta for sequence-prefix accuracy in transfer matrix",
+    )
+    parser.add_argument(
         "--label-prefix",
         default="northstar-hf",
         help="Run label prefix",
@@ -254,6 +278,14 @@ def main() -> int:
             args.matrix_toolsets,
             "--max-tasks",
             str(args.matrix_max_tasks),
+            "--target-first-min-delta",
+            str(args.matrix_target_first_min_delta),
+            "--target-seq-min-delta",
+            str(args.matrix_target_seq_min_delta),
+            "--open-first-min-delta",
+            str(args.matrix_open_first_min_delta),
+            "--open-seq-min-delta",
+            str(args.matrix_open_seq_min_delta),
             "--label",
             matrix_label,
         ],
