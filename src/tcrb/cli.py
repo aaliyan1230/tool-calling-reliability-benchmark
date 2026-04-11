@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
 from .eval_cases import load_eval_cases, score_eval_cases
 from .planner import load_tool_planner
 from .reporting import (
+    render_analysis_markdown,
     render_delta_markdown,
     render_multi_seed_markdown,
     render_study_gate_markdown,
@@ -20,6 +22,11 @@ from .reporting import (
     write_markdown_text,
 )
 from .study_gate import StudyGateThresholds, evaluate_study_gates
+from .visualization import (
+    load_analysis_payloads,
+    render_analysis_plots,
+    resolve_analysis_artifacts,
+)
 
 
 def _add_run_args(parser: argparse.ArgumentParser) -> None:
@@ -39,6 +46,34 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
         "--planner-config",
         default=None,
         help="Optional tool planner JSON config",
+    )
+
+
+def _add_analysis_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--run-dir",
+        default=None,
+        help="Directory containing standard analysis artifact JSON files",
+    )
+    parser.add_argument(
+        "--multi-seed-json",
+        default=None,
+        help="Path to multi_seed.json artifact",
+    )
+    parser.add_argument(
+        "--delta-json",
+        default=None,
+        help="Path to delta-ms.json artifact",
+    )
+    parser.add_argument(
+        "--matrix-json",
+        default=None,
+        help="Path to matrix.json artifact",
+    )
+    parser.add_argument(
+        "--study-gate-json",
+        default=None,
+        help="Path to study_gate.json artifact",
     )
 
 
@@ -227,6 +262,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional output path for scored eval-case JSON",
     )
 
+    render_plots_parser = subparsers.add_parser(
+        "render-plots",
+        help="Render PNG analysis assets from existing artifact JSON files",
+    )
+    _add_analysis_args(render_plots_parser)
+    render_plots_parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for rendered plot assets",
+    )
+
+    summarize_run_parser = subparsers.add_parser(
+        "summarize-run",
+        help="Write a compact markdown summary for an existing run or artifact set",
+    )
+    _add_analysis_args(summarize_run_parser)
+    summarize_run_parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for rendered plot assets",
+    )
+    summarize_run_parser.add_argument(
+        "--output-report",
+        default=None,
+        help="Path to write the markdown analysis summary",
+    )
+
     return parser
 
 
@@ -413,6 +475,89 @@ def _run_eval_cases_score(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_output_dir(args: argparse.Namespace, *, fallback_run_dir: Path | None) -> Path:
+    if args.output_dir:
+        return Path(args.output_dir)
+    if fallback_run_dir is not None:
+        return fallback_run_dir
+
+    for candidate in (
+        args.multi_seed_json,
+        args.delta_json,
+        args.matrix_json,
+        args.study_gate_json,
+    ):
+        if candidate:
+            return Path(candidate).parent
+
+    raise ValueError("Unable to infer output directory; provide --output-dir or --run-dir")
+
+
+def _run_render_plots(args: argparse.Namespace) -> int:
+    artifacts = resolve_analysis_artifacts(
+        run_dir=args.run_dir,
+        multi_seed_json=args.multi_seed_json,
+        delta_json=args.delta_json,
+        matrix_json=args.matrix_json,
+        study_gate_json=args.study_gate_json,
+    )
+    payloads = load_analysis_payloads(artifacts)
+    output_dir = _resolve_output_dir(args, fallback_run_dir=artifacts.run_dir)
+    outputs = render_analysis_plots(payloads, output_dir)
+
+    if not outputs:
+        raise ValueError("No plottable payloads were provided. Supply multi-seed, delta, or matrix artifacts.")
+
+    for name, path in outputs.items():
+        print(f"Wrote {name} plot: {path}")
+    return 0
+
+
+def _run_summarize_run(args: argparse.Namespace) -> int:
+    artifacts = resolve_analysis_artifacts(
+        run_dir=args.run_dir,
+        multi_seed_json=args.multi_seed_json,
+        delta_json=args.delta_json,
+        matrix_json=args.matrix_json,
+        study_gate_json=args.study_gate_json,
+    )
+    payloads = load_analysis_payloads(artifacts)
+    output_dir = _resolve_output_dir(args, fallback_run_dir=artifacts.run_dir)
+    plot_outputs = render_analysis_plots(payloads, output_dir)
+
+    output_report = Path(args.output_report) if args.output_report else output_dir / "analysis_summary.md"
+    source_paths = {
+        name: str(path)
+        for name, path in {
+            "multi_seed_json": artifacts.multi_seed_json,
+            "delta_json": artifacts.delta_json,
+            "matrix_json": artifacts.matrix_json,
+            "study_gate_json": artifacts.study_gate_json,
+        }.items()
+        if path is not None
+    }
+    plot_paths = {
+        name: os.path.relpath(path, output_report.parent)
+        for name, path in plot_outputs.items()
+    }
+    markdown = render_analysis_markdown(
+        multi_seed_payload=payloads.multi_seed,
+        delta_payload=payloads.delta,
+        matrix_payload=payloads.matrix,
+        study_gate_payload=payloads.study_gate,
+        source_paths=source_paths,
+        plot_paths=plot_paths,
+    )
+    write_markdown_text(markdown, output_report)
+
+    print(f"Wrote analysis summary: {output_report}")
+    if payloads.study_gate is not None:
+        print(f"Study gate verdict: {payloads.study_gate.get('verdict', 'FAIL')}")
+    if payloads.matrix is not None:
+        print(f"Matrix portfolio verdict: {payloads.matrix.get('portfolio_verdict', 'n/a')}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -429,6 +574,10 @@ def main() -> int:
         return _run_study_gate(args)
     if args.command == "eval-cases-score":
         return _run_eval_cases_score(args)
+    if args.command == "render-plots":
+        return _run_render_plots(args)
+    if args.command == "summarize-run":
+        return _run_summarize_run(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 2
