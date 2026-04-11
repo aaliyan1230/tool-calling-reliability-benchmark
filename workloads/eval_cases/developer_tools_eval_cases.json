@@ -1,0 +1,239 @@
+{
+  "toolset_id": "developer_tools",
+  "cases": [
+    {
+      "case_id": "developer_tools-dev-001",
+      "task_id": "dev-001",
+      "question": "Find where SymbolRouter is defined and referenced.",
+      "expected_first_tool": "ast_symbol_index",
+      "expected_tool_sequence": [
+        "ast_symbol_index"
+      ],
+      "acceptable_alternatives": [
+        "repo_code_search",
+        "dependency_graph"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-002",
+      "task_id": "dev-002",
+      "question": "Search for all call sites of render_transfer_matrix_markdown.",
+      "expected_first_tool": "repo_code_search",
+      "expected_tool_sequence": [
+        "repo_code_search"
+      ],
+      "acceptable_alternatives": [
+        "ast_symbol_index",
+        "dependency_graph"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-003",
+      "task_id": "dev-003",
+      "question": "Explain why the build failed for the docs-check target.",
+      "expected_first_tool": "build_log_parser",
+      "expected_tool_sequence": [
+        "build_log_parser"
+      ],
+      "acceptable_alternatives": [
+        "ci_status_reader",
+        "test_failure_locator"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-004",
+      "task_id": "dev-004",
+      "question": "Which tests failed in the last CI run and where did they fail?",
+      "expected_first_tool": "test_failure_locator",
+      "expected_tool_sequence": [
+        "test_failure_locator"
+      ],
+      "acceptable_alternatives": [
+        "ci_status_reader",
+        "build_log_parser"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-005",
+      "task_id": "dev-005",
+      "question": "Suggest the lint fix for rule F401 in src/app.py.",
+      "expected_first_tool": "linter_fix_hint",
+      "expected_tool_sequence": [
+        "linter_fix_hint"
+      ],
+      "acceptable_alternatives": [
+        "repo_code_search",
+        "build_log_parser"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-006",
+      "task_id": "dev-006",
+      "question": "Show the dependency graph around package tcrb and any cycles.",
+      "expected_first_tool": "dependency_graph",
+      "expected_tool_sequence": [
+        "dependency_graph"
+      ],
+      "acceptable_alternatives": [
+        "repo_code_search",
+        "ast_symbol_index"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-007",
+      "task_id": "dev-007",
+      "question": "Did the API schema change break any clients in this release?",
+      "expected_first_tool": "api_schema_diff",
+      "expected_tool_sequence": [
+        "api_schema_diff"
+      ],
+      "acceptable_alternatives": [
+        "migration_guide_lookup",
+        "release_note_drafter"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-008",
+      "task_id": "dev-008",
+      "question": "What are the migration caveats from framework 4.2 to 5.0?",
+      "expected_first_tool": "migration_guide_lookup",
+      "expected_tool_sequence": [
+        "migration_guide_lookup"
+      ],
+      "acceptable_alternatives": [
+        "api_schema_diff",
+        "config_key_resolver"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-009",
+      "task_id": "dev-009",
+      "question": "Which CI jobs are failing and what failed step should I inspect first?",
+      "expected_first_tool": "ci_status_reader",
+      "expected_tool_sequence": [
+        "ci_status_reader"
+      ],
+      "acceptable_alternatives": [
+        "build_log_parser",
+        "test_failure_locator"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-010",
+      "task_id": "dev-010",
+      "question": "Which files have the biggest coverage gaps after the latest test run?",
+      "expected_first_tool": "coverage_mapper",
+      "expected_tool_sequence": [
+        "coverage_mapper"
+      ],
+      "acceptable_alternatives": [
+        "test_failure_locator",
+        "repo_code_search"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-011",
+      "task_id": "dev-011",
+      "question": "Summarize the top latency hotspots from this runtime trace.",
+      "expected_first_tool": "perf_trace_summarizer",
+      "expected_tool_sequence": [
+        "perf_trace_summarizer"
+      ],
+      "acceptable_alternatives": [
+        "query_plan_inspector",
+        "incident_runbook_lookup"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-012",
+      "task_id": "dev-012",
+      "question": "Where is FEATURE_X_TIMEOUT configured and what overrides exist?",
+      "expected_first_tool": "config_key_resolver",
+      "expected_tool_sequence": [
+        "config_key_resolver"
+      ],
+      "acceptable_alternatives": [
+        "feature_flag_audit",
+        "repo_code_search"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-013",
+      "task_id": "dev-013",
+      "question": "Draft release notes for the last merge batch with any breaking changes.",
+      "expected_first_tool": "release_note_drafter",
+      "expected_tool_sequence": [
+        "release_note_drafter"
+      ],
+      "acceptable_alternatives": [
+        "api_schema_diff",
+        "migration_guide_lookup"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-014",
+      "task_id": "dev-014",
+      "question": "Find the runbook for elevated 500s in the deployment pipeline.",
+      "expected_first_tool": "incident_runbook_lookup",
+      "expected_tool_sequence": [
+        "incident_runbook_lookup"
+      ],
+      "acceptable_alternatives": [
+        "ci_status_reader",
+        "perf_trace_summarizer"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-015",
+      "task_id": "dev-015",
+      "question": "Inspect why this query plan is slow and which indexes matter.",
+      "expected_first_tool": "query_plan_inspector",
+      "expected_tool_sequence": [
+        "query_plan_inspector"
+      ],
+      "acceptable_alternatives": [
+        "perf_trace_summarizer",
+        "repo_code_search"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-016",
+      "task_id": "dev-016",
+      "question": "Who owns the payment_retry flag and what dependencies block rollout?",
+      "expected_first_tool": "feature_flag_audit",
+      "expected_tool_sequence": [
+        "feature_flag_audit"
+      ],
+      "acceptable_alternatives": [
+        "config_key_resolver",
+        "repo_code_search"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-017",
+      "task_id": "dev-017",
+      "question": "Which source file defines the failing config key mentioned by CI?",
+      "expected_first_tool": "config_key_resolver",
+      "expected_tool_sequence": [
+        "config_key_resolver"
+      ],
+      "acceptable_alternatives": [
+        "build_log_parser",
+        "repo_code_search"
+      ]
+    },
+    {
+      "case_id": "developer_tools-dev-018",
+      "task_id": "dev-018",
+      "question": "Identify likely downstream breakage from a changed public symbol.",
+      "expected_first_tool": "ast_symbol_index",
+      "expected_tool_sequence": [
+        "ast_symbol_index"
+      ],
+      "acceptable_alternatives": [
+        "api_schema_diff",
+        "dependency_graph"
+      ]
+    }
+  ]
+}
