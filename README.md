@@ -170,10 +170,13 @@ uv run tcrb summarize-run --multi-seed-json runs/entrypoint-core-20260403-192104
 
 Planner extension notes are in `docs/extending-planners.md`.
 
+The lowest-friction custom-planner starting point is `configs/planners/minimal.json` plus `examples/custom_planner_minimal.py`.
+
 ## Planner Types
 
 - `policy_native`
 - `heuristic`
+- `minimal`
 - `stochastic`
 - `replay`
 - `command`

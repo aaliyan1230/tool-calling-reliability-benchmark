@@ -16,6 +16,7 @@ from tcrb.transfer_matrix import (
     render_transfer_matrix_markdown,
     summarize_eval_case_score,
 )
+from tcrb.visualization import write_transfer_matrix_plot
 
 
 def _parse_args() -> argparse.Namespace:
@@ -302,12 +303,23 @@ def main() -> int:
 
     matrix_json_path = run_root / "matrix.json"
     matrix_md_path = run_root / "matrix_summary.md"
+    matrix_plot_path = run_root / "transfer_matrix.png"
     write_json_file(output_payload, matrix_json_path)
+
+    asset_paths: dict[str, str] | None = None
+    try:
+        write_transfer_matrix_plot(output_payload, matrix_plot_path)
+        asset_paths = {"matrix_plot": matrix_plot_path.name}
+        print(f"Wrote transfer matrix plot: {matrix_plot_path}")
+    except RuntimeError:
+        asset_paths = None
+
     write_markdown_text(
         render_transfer_matrix_markdown(
             target_toolset_id=target_toolset,
             rows=matrix_rows,
             thresholds=thresholds,
+            asset_paths=asset_paths,
         ),
         matrix_md_path,
     )

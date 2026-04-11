@@ -9,6 +9,7 @@ from tcrb.planner import (
     ReplayPlanner,
     StochasticPlanner,
     planner_from_dict,
+        MinimalPlanner,
 )
 
 
@@ -115,6 +116,30 @@ def test_replay_uses_sequence_then_fallback():
 
     assert chosen_first == "b"
     assert chosen_second == "a"
+
+    def test_minimal_planner_prefers_primary_tool():
+        workload = _workload()
+        task = workload.tasks[0]
+        planner = MinimalPlanner()
+
+        chosen = planner.choose_tool(
+            task=task,
+            workload=workload,
+            policy="naive_retry",
+            attempt_number=1,
+            attempted_tools={"b"},
+            last_status="network_failure",
+            rng=random.Random(5),
+        )
+
+        assert chosen == "a"
+
+
+    def test_planner_from_dict_supports_minimal_type():
+        planner = planner_from_dict({"type": "minimal", "name": "minimal_v1"})
+
+        assert isinstance(planner, MinimalPlanner)
+        assert planner.planner_id == "minimal_v1"
 
 
 def test_deprecated_planner_type_is_not_supported():

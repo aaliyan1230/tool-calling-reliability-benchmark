@@ -85,15 +85,55 @@ def render_transfer_matrix_markdown(
     target_toolset_id: str,
     rows: list[dict[str, Any]],
     thresholds: MatrixThresholds,
+    asset_paths: dict[str, str] | None = None,
 ) -> str:
+    portfolio_verdict = "PASS"
+    if any(str(row.get("verdict", "FAIL")).upper() == "FAIL" for row in rows):
+        portfolio_verdict = "FAIL"
+    elif any(str(row.get("verdict", "FAIL")).upper() == "HOLD" for row in rows):
+        portfolio_verdict = "HOLD"
+
+    worst_row = None
+    if rows:
+        worst_row = min(
+            rows,
+            key=lambda row: min(
+                float(row.get("delta_first_tool_accuracy", 0.0)),
+                float(row.get("delta_sequence_prefix_accuracy", 0.0)),
+            ),
+        )
+
     lines = [
         "## Toolset Transfer Matrix",
         "",
         f"Target toolset: {target_toolset_id}",
         "",
+        "### Verdict Snapshot",
+        "",
+        f"- portfolio_verdict: {portfolio_verdict}",
+        f"- rows_total: {len(rows)}",
+    ]
+
+    if isinstance(worst_row, dict):
+        lines.append(
+            f"- worst_toolset: {worst_row.get('toolset_id', 'unknown')} (first={float(worst_row.get('delta_first_tool_accuracy', 0.0)):+.4f}, sequence={float(worst_row.get('delta_sequence_prefix_accuracy', 0.0)):+.4f})"
+        )
+
+    if asset_paths:
+        lines.extend(["", "### Assets", ""])
+        for label, path in asset_paths.items():
+            lines.append(f"- {label}: `{path}`")
+        for path in asset_paths.values():
+            if str(path).lower().endswith(".png"):
+                lines.extend(["", f"![Transfer matrix asset]({path})"])
+
+    lines.extend(
+        [
+        "",
         "| toolset | split | base_first | comparison_first | delta_first | base_seq | comparison_seq | delta_seq | verdict |",
         "|---|---|---:|---:|---:|---:|---:|---:|---|",
-    ]
+        ]
+    )
 
     for row in rows:
         lines.append(

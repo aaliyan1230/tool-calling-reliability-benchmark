@@ -133,6 +133,34 @@ class HeuristicPlanner:
 
 
 @dataclass
+class MinimalPlanner:
+    planner_id: str = "minimal"
+    prefer_primary: bool = True
+
+    def choose_tool(
+        self,
+        *,
+        task: TaskSpec,
+        workload: Workload,
+        policy: str,
+        attempt_number: int,
+        attempted_tools: set[str],
+        last_status: str | None,
+        rng: random.Random,
+    ) -> str:
+        del policy, attempt_number, last_status, rng
+        options = candidate_tools(task, workload)
+        if not options:
+            return ""
+        if self.prefer_primary:
+            return options[0]
+        for name in options:
+            if name not in attempted_tools:
+                return name
+        return options[0]
+
+
+@dataclass
 class StochasticPlanner:
     planner_id: str = "stochastic"
     off_catalog_probability: float = 0.0
@@ -413,6 +441,11 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
             planner_id=planner_id,
             prefer_schema=bool(payload.get("prefer_schema", True)),
             avoid_reusing_attempted=bool(payload.get("avoid_reusing_attempted", True)),
+        )
+    if planner_type == "minimal":
+        return MinimalPlanner(
+            planner_id=planner_id,
+            prefer_primary=bool(payload.get("prefer_primary", True)),
         )
     if planner_type == "stochastic":
         return StochasticPlanner(
