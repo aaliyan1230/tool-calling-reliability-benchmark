@@ -1,0 +1,533 @@
+{
+  "toolset_id": "developer_tools",
+  "tools": [
+    {
+      "name": "repo_code_search",
+      "description": "Search repository code by symbol, text, and file pattern.",
+      "base_latency_ms": 280,
+      "jitter_ms": 85,
+      "timeout_ms": 950,
+      "schema_fields": [
+        "matches",
+        "query",
+        "paths",
+        "count"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.1
+      }
+    },
+    {
+      "name": "ast_symbol_index",
+      "description": "Resolve symbol definitions, references, and signatures from an AST index.",
+      "base_latency_ms": 340,
+      "jitter_ms": 100,
+      "timeout_ms": 1050,
+      "schema_fields": [
+        "symbol",
+        "definition",
+        "references",
+        "signature"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.2
+      }
+    },
+    {
+      "name": "build_log_parser",
+      "description": "Parse build output and extract failing targets, files, and error summaries.",
+      "base_latency_ms": 300,
+      "jitter_ms": 90,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "target",
+        "errors",
+        "warnings",
+        "summary"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    },
+    {
+      "name": "test_failure_locator",
+      "description": "Identify failing tests and map them to source files and stack traces.",
+      "base_latency_ms": 320,
+      "jitter_ms": 100,
+      "timeout_ms": 1050,
+      "schema_fields": [
+        "tests",
+        "stack_traces",
+        "files",
+        "summary"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.1
+      }
+    },
+    {
+      "name": "linter_fix_hint",
+      "description": "Suggest likely lint fixes and formatting actions from diagnostics.",
+      "base_latency_ms": 260,
+      "jitter_ms": 80,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "rule_id",
+        "message",
+        "suggested_fix",
+        "file"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.3
+      }
+    },
+    {
+      "name": "dependency_graph",
+      "description": "Resolve package dependency and import graph relationships.",
+      "base_latency_ms": 410,
+      "jitter_ms": 120,
+      "timeout_ms": 1200,
+      "schema_fields": [
+        "nodes",
+        "edges",
+        "entrypoints",
+        "cycles"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "api_schema_diff",
+      "description": "Compare API schemas and report breaking vs non-breaking changes.",
+      "base_latency_ms": 360,
+      "jitter_ms": 110,
+      "timeout_ms": 1100,
+      "schema_fields": [
+        "breaking_changes",
+        "additions",
+        "removals",
+        "version"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.3
+      }
+    },
+    {
+      "name": "migration_guide_lookup",
+      "description": "Retrieve migration notes and upgrade caveats for a package or framework.",
+      "base_latency_ms": 290,
+      "jitter_ms": 90,
+      "timeout_ms": 950,
+      "schema_fields": [
+        "version",
+        "notes",
+        "breaking_changes",
+        "links"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.2
+      }
+    },
+    {
+      "name": "ci_status_reader",
+      "description": "Read CI job states, failed steps, and job metadata.",
+      "base_latency_ms": 240,
+      "jitter_ms": 75,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "jobs",
+        "status",
+        "failed_steps",
+        "run_id"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.3
+      }
+    },
+    {
+      "name": "coverage_mapper",
+      "description": "Map test coverage gaps to files, functions, and uncovered branches.",
+      "base_latency_ms": 370,
+      "jitter_ms": 110,
+      "timeout_ms": 1100,
+      "schema_fields": [
+        "files",
+        "functions",
+        "branches",
+        "coverage_percent"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "perf_trace_summarizer",
+      "description": "Summarize runtime trace hotspots and latency contributors.",
+      "base_latency_ms": 450,
+      "jitter_ms": 130,
+      "timeout_ms": 1300,
+      "schema_fields": [
+        "hotspots",
+        "latency_ms",
+        "calls",
+        "recommendations"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.3
+      }
+    },
+    {
+      "name": "config_key_resolver",
+      "description": "Find configuration keys, defaults, and environment overrides.",
+      "base_latency_ms": 230,
+      "jitter_ms": 70,
+      "timeout_ms": 800,
+      "schema_fields": [
+        "key",
+        "default",
+        "source",
+        "overrides"
+      ],
+      "fault_multipliers": {
+        "contract_drift": 1.1
+      }
+    },
+    {
+      "name": "release_note_drafter",
+      "description": "Draft release notes from merged changes and labels.",
+      "base_latency_ms": 330,
+      "jitter_ms": 100,
+      "timeout_ms": 1000,
+      "schema_fields": [
+        "title",
+        "highlights",
+        "breaking_changes",
+        "audience"
+      ],
+      "fault_multipliers": {
+        "malformed_schema": 1.2
+      }
+    },
+    {
+      "name": "incident_runbook_lookup",
+      "description": "Look up engineering incident runbook sections by symptom.",
+      "base_latency_ms": 250,
+      "jitter_ms": 80,
+      "timeout_ms": 850,
+      "schema_fields": [
+        "runbook",
+        "steps",
+        "owners",
+        "links"
+      ],
+      "fault_multipliers": {
+        "network_failure": 1.1
+      }
+    },
+    {
+      "name": "query_plan_inspector",
+      "description": "Inspect database query plans and identify slow operators.",
+      "base_latency_ms": 390,
+      "jitter_ms": 115,
+      "timeout_ms": 1150,
+      "schema_fields": [
+        "plan",
+        "cost",
+        "slow_operators",
+        "indexes"
+      ],
+      "fault_multipliers": {
+        "timeout": 1.2
+      }
+    },
+    {
+      "name": "feature_flag_audit",
+      "description": "Retrieve feature flag ownership, rollout state, and dependencies.",
+      "base_latency_ms": 270,
+      "jitter_ms": 85,
+      "timeout_ms": 900,
+      "schema_fields": [
+        "flag",
+        "owner",
+        "rollout",
+        "dependencies"
+      ],
+      "fault_multipliers": {
+        "rate_limit": 1.1
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "dev-001",
+      "user_query": "Find where SymbolRouter is defined and referenced.",
+      "primary_tool": "ast_symbol_index",
+      "fallback_tools": [
+        "repo_code_search",
+        "dependency_graph"
+      ],
+      "required_schema": [
+        "symbol",
+        "definition",
+        "references",
+        "signature"
+      ]
+    },
+    {
+      "task_id": "dev-002",
+      "user_query": "Search for all call sites of render_transfer_matrix_markdown.",
+      "primary_tool": "repo_code_search",
+      "fallback_tools": [
+        "ast_symbol_index",
+        "dependency_graph"
+      ],
+      "required_schema": [
+        "matches",
+        "query",
+        "paths",
+        "count"
+      ]
+    },
+    {
+      "task_id": "dev-003",
+      "user_query": "Explain why the build failed for the docs-check target.",
+      "primary_tool": "build_log_parser",
+      "fallback_tools": [
+        "ci_status_reader",
+        "test_failure_locator"
+      ],
+      "required_schema": [
+        "target",
+        "errors",
+        "warnings",
+        "summary"
+      ]
+    },
+    {
+      "task_id": "dev-004",
+      "user_query": "Which tests failed in the last CI run and where did they fail?",
+      "primary_tool": "test_failure_locator",
+      "fallback_tools": [
+        "ci_status_reader",
+        "build_log_parser"
+      ],
+      "required_schema": [
+        "tests",
+        "stack_traces",
+        "files",
+        "summary"
+      ]
+    },
+    {
+      "task_id": "dev-005",
+      "user_query": "Suggest the lint fix for rule F401 in src/app.py.",
+      "primary_tool": "linter_fix_hint",
+      "fallback_tools": [
+        "repo_code_search",
+        "build_log_parser"
+      ],
+      "required_schema": [
+        "rule_id",
+        "message",
+        "suggested_fix",
+        "file"
+      ]
+    },
+    {
+      "task_id": "dev-006",
+      "user_query": "Show the dependency graph around package tcrb and any cycles.",
+      "primary_tool": "dependency_graph",
+      "fallback_tools": [
+        "repo_code_search",
+        "ast_symbol_index"
+      ],
+      "required_schema": [
+        "nodes",
+        "edges",
+        "entrypoints",
+        "cycles"
+      ]
+    },
+    {
+      "task_id": "dev-007",
+      "user_query": "Did the API schema change break any clients in this release?",
+      "primary_tool": "api_schema_diff",
+      "fallback_tools": [
+        "migration_guide_lookup",
+        "release_note_drafter"
+      ],
+      "required_schema": [
+        "breaking_changes",
+        "additions",
+        "removals",
+        "version"
+      ]
+    },
+    {
+      "task_id": "dev-008",
+      "user_query": "What are the migration caveats from framework 4.2 to 5.0?",
+      "primary_tool": "migration_guide_lookup",
+      "fallback_tools": [
+        "api_schema_diff",
+        "config_key_resolver"
+      ],
+      "required_schema": [
+        "version",
+        "notes",
+        "breaking_changes",
+        "links"
+      ]
+    },
+    {
+      "task_id": "dev-009",
+      "user_query": "Which CI jobs are failing and what failed step should I inspect first?",
+      "primary_tool": "ci_status_reader",
+      "fallback_tools": [
+        "build_log_parser",
+        "test_failure_locator"
+      ],
+      "required_schema": [
+        "jobs",
+        "status",
+        "failed_steps",
+        "run_id"
+      ]
+    },
+    {
+      "task_id": "dev-010",
+      "user_query": "Which files have the biggest coverage gaps after the latest test run?",
+      "primary_tool": "coverage_mapper",
+      "fallback_tools": [
+        "test_failure_locator",
+        "repo_code_search"
+      ],
+      "required_schema": [
+        "files",
+        "functions",
+        "branches",
+        "coverage_percent"
+      ]
+    },
+    {
+      "task_id": "dev-011",
+      "user_query": "Summarize the top latency hotspots from this runtime trace.",
+      "primary_tool": "perf_trace_summarizer",
+      "fallback_tools": [
+        "query_plan_inspector",
+        "incident_runbook_lookup"
+      ],
+      "required_schema": [
+        "hotspots",
+        "latency_ms",
+        "calls",
+        "recommendations"
+      ]
+    },
+    {
+      "task_id": "dev-012",
+      "user_query": "Where is FEATURE_X_TIMEOUT configured and what overrides exist?",
+      "primary_tool": "config_key_resolver",
+      "fallback_tools": [
+        "feature_flag_audit",
+        "repo_code_search"
+      ],
+      "required_schema": [
+        "key",
+        "default",
+        "source",
+        "overrides"
+      ]
+    },
+    {
+      "task_id": "dev-013",
+      "user_query": "Draft release notes for the last merge batch with any breaking changes.",
+      "primary_tool": "release_note_drafter",
+      "fallback_tools": [
+        "api_schema_diff",
+        "migration_guide_lookup"
+      ],
+      "required_schema": [
+        "title",
+        "highlights",
+        "breaking_changes",
+        "audience"
+      ]
+    },
+    {
+      "task_id": "dev-014",
+      "user_query": "Find the runbook for elevated 500s in the deployment pipeline.",
+      "primary_tool": "incident_runbook_lookup",
+      "fallback_tools": [
+        "ci_status_reader",
+        "perf_trace_summarizer"
+      ],
+      "required_schema": [
+        "runbook",
+        "steps",
+        "owners",
+        "links"
+      ]
+    },
+    {
+      "task_id": "dev-015",
+      "user_query": "Inspect why this query plan is slow and which indexes matter.",
+      "primary_tool": "query_plan_inspector",
+      "fallback_tools": [
+        "perf_trace_summarizer",
+        "repo_code_search"
+      ],
+      "required_schema": [
+        "plan",
+        "cost",
+        "slow_operators",
+        "indexes"
+      ]
+    },
+    {
+      "task_id": "dev-016",
+      "user_query": "Who owns the payment_retry flag and what dependencies block rollout?",
+      "primary_tool": "feature_flag_audit",
+      "fallback_tools": [
+        "config_key_resolver",
+        "repo_code_search"
+      ],
+      "required_schema": [
+        "flag",
+        "owner",
+        "rollout",
+        "dependencies"
+      ]
+    },
+    {
+      "task_id": "dev-017",
+      "user_query": "Which source file defines the failing config key mentioned by CI?",
+      "primary_tool": "config_key_resolver",
+      "fallback_tools": [
+        "build_log_parser",
+        "repo_code_search"
+      ],
+      "required_schema": [
+        "key",
+        "default",
+        "source",
+        "overrides"
+      ]
+    },
+    {
+      "task_id": "dev-018",
+      "user_query": "Identify likely downstream breakage from a changed public symbol.",
+      "primary_tool": "ast_symbol_index",
+      "fallback_tools": [
+        "api_schema_diff",
+        "dependency_graph"
+      ],
+      "required_schema": [
+        "symbol",
+        "definition",
+        "references",
+        "signature"
+      ]
+    }
+  ]
+}

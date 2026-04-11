@@ -225,6 +225,66 @@ def _build_fintech_risk_suite() -> tuple[dict, dict]:
     return workload, eval_cases
 
 
+def _build_developer_tools_suite() -> tuple[dict, dict]:
+    toolset_id = "developer_tools"
+    tools = [
+        _tool("repo_code_search", "Search repository code by symbol, text, and file pattern.", 280, 85, 950, ["matches", "query", "paths", "count"], {"rate_limit": 1.1}),
+        _tool("ast_symbol_index", "Resolve symbol definitions, references, and signatures from an AST index.", 340, 100, 1050, ["symbol", "definition", "references", "signature"], {"contract_drift": 1.2}),
+        _tool("build_log_parser", "Parse build output and extract failing targets, files, and error summaries.", 300, 90, 1000, ["target", "errors", "warnings", "summary"], {"malformed_schema": 1.2}),
+        _tool("test_failure_locator", "Identify failing tests and map them to source files and stack traces.", 320, 100, 1050, ["tests", "stack_traces", "files", "summary"], {"timeout": 1.1}),
+        _tool("linter_fix_hint", "Suggest likely lint fixes and formatting actions from diagnostics.", 260, 80, 900, ["rule_id", "message", "suggested_fix", "file"], {"malformed_schema": 1.3}),
+        _tool("dependency_graph", "Resolve package dependency and import graph relationships.", 410, 120, 1200, ["nodes", "edges", "entrypoints", "cycles"], {"timeout": 1.2}),
+        _tool("api_schema_diff", "Compare API schemas and report breaking vs non-breaking changes.", 360, 110, 1100, ["breaking_changes", "additions", "removals", "version"], {"contract_drift": 1.3}),
+        _tool("migration_guide_lookup", "Retrieve migration notes and upgrade caveats for a package or framework.", 290, 90, 950, ["version", "notes", "breaking_changes", "links"], {"network_failure": 1.2}),
+        _tool("ci_status_reader", "Read CI job states, failed steps, and job metadata.", 240, 75, 850, ["jobs", "status", "failed_steps", "run_id"], {"network_failure": 1.3}),
+        _tool("coverage_mapper", "Map test coverage gaps to files, functions, and uncovered branches.", 370, 110, 1100, ["files", "functions", "branches", "coverage_percent"], {"timeout": 1.2}),
+        _tool("perf_trace_summarizer", "Summarize runtime trace hotspots and latency contributors.", 450, 130, 1300, ["hotspots", "latency_ms", "calls", "recommendations"], {"timeout": 1.3}),
+        _tool("config_key_resolver", "Find configuration keys, defaults, and environment overrides.", 230, 70, 800, ["key", "default", "source", "overrides"], {"contract_drift": 1.1}),
+        _tool("release_note_drafter", "Draft release notes from merged changes and labels.", 330, 100, 1000, ["title", "highlights", "breaking_changes", "audience"], {"malformed_schema": 1.2}),
+        _tool("incident_runbook_lookup", "Look up engineering incident runbook sections by symptom.", 250, 80, 850, ["runbook", "steps", "owners", "links"], {"network_failure": 1.1}),
+        _tool("query_plan_inspector", "Inspect database query plans and identify slow operators.", 390, 115, 1150, ["plan", "cost", "slow_operators", "indexes"], {"timeout": 1.2}),
+        _tool("feature_flag_audit", "Retrieve feature flag ownership, rollout state, and dependencies.", 270, 85, 900, ["flag", "owner", "rollout", "dependencies"], {"rate_limit": 1.1}),
+    ]
+
+    tasks = [
+        _task("dev-001", "Find where SymbolRouter is defined and referenced.", "ast_symbol_index", ["repo_code_search", "dependency_graph"], ["symbol", "definition", "references", "signature"]),
+        _task("dev-002", "Search for all call sites of render_transfer_matrix_markdown.", "repo_code_search", ["ast_symbol_index", "dependency_graph"], ["matches", "query", "paths", "count"]),
+        _task("dev-003", "Explain why the build failed for the docs-check target.", "build_log_parser", ["ci_status_reader", "test_failure_locator"], ["target", "errors", "warnings", "summary"]),
+        _task("dev-004", "Which tests failed in the last CI run and where did they fail?", "test_failure_locator", ["ci_status_reader", "build_log_parser"], ["tests", "stack_traces", "files", "summary"]),
+        _task("dev-005", "Suggest the lint fix for rule F401 in src/app.py.", "linter_fix_hint", ["repo_code_search", "build_log_parser"], ["rule_id", "message", "suggested_fix", "file"]),
+        _task("dev-006", "Show the dependency graph around package tcrb and any cycles.", "dependency_graph", ["repo_code_search", "ast_symbol_index"], ["nodes", "edges", "entrypoints", "cycles"]),
+        _task("dev-007", "Did the API schema change break any clients in this release?", "api_schema_diff", ["migration_guide_lookup", "release_note_drafter"], ["breaking_changes", "additions", "removals", "version"]),
+        _task("dev-008", "What are the migration caveats from framework 4.2 to 5.0?", "migration_guide_lookup", ["api_schema_diff", "config_key_resolver"], ["version", "notes", "breaking_changes", "links"]),
+        _task("dev-009", "Which CI jobs are failing and what failed step should I inspect first?", "ci_status_reader", ["build_log_parser", "test_failure_locator"], ["jobs", "status", "failed_steps", "run_id"]),
+        _task("dev-010", "Which files have the biggest coverage gaps after the latest test run?", "coverage_mapper", ["test_failure_locator", "repo_code_search"], ["files", "functions", "branches", "coverage_percent"]),
+        _task("dev-011", "Summarize the top latency hotspots from this runtime trace.", "perf_trace_summarizer", ["query_plan_inspector", "incident_runbook_lookup"], ["hotspots", "latency_ms", "calls", "recommendations"]),
+        _task("dev-012", "Where is FEATURE_X_TIMEOUT configured and what overrides exist?", "config_key_resolver", ["feature_flag_audit", "repo_code_search"], ["key", "default", "source", "overrides"]),
+        _task("dev-013", "Draft release notes for the last merge batch with any breaking changes.", "release_note_drafter", ["api_schema_diff", "migration_guide_lookup"], ["title", "highlights", "breaking_changes", "audience"]),
+        _task("dev-014", "Find the runbook for elevated 500s in the deployment pipeline.", "incident_runbook_lookup", ["ci_status_reader", "perf_trace_summarizer"], ["runbook", "steps", "owners", "links"]),
+        _task("dev-015", "Inspect why this query plan is slow and which indexes matter.", "query_plan_inspector", ["perf_trace_summarizer", "repo_code_search"], ["plan", "cost", "slow_operators", "indexes"]),
+        _task("dev-016", "Who owns the payment_retry flag and what dependencies block rollout?", "feature_flag_audit", ["config_key_resolver", "repo_code_search"], ["flag", "owner", "rollout", "dependencies"]),
+        _task("dev-017", "Which source file defines the failing config key mentioned by CI?", "config_key_resolver", ["build_log_parser", "repo_code_search"], ["key", "default", "source", "overrides"]),
+        _task("dev-018", "Identify likely downstream breakage from a changed public symbol.", "ast_symbol_index", ["api_schema_diff", "dependency_graph"], ["symbol", "definition", "references", "signature"]),
+    ]
+
+    eval_cases = {
+        "toolset_id": toolset_id,
+        "cases": [
+            {
+                "case_id": f"{toolset_id}-{task['task_id']}",
+                "task_id": task["task_id"],
+                "question": task["user_query"],
+                "expected_first_tool": task["primary_tool"],
+                "expected_tool_sequence": [task["primary_tool"]],
+                "acceptable_alternatives": task["fallback_tools"],
+            }
+            for task in tasks
+        ],
+    }
+    workload = {"toolset_id": toolset_id, "tools": tools, "tasks": tasks}
+    return workload, eval_cases
+
+
 def main() -> int:
     WORKLOAD_DIR.mkdir(parents=True, exist_ok=True)
     EVAL_DIR.mkdir(parents=True, exist_ok=True)
@@ -233,6 +293,7 @@ def main() -> int:
         _build_customer_support_suite,
         _build_ecommerce_ops_suite,
         _build_fintech_risk_suite,
+        _build_developer_tools_suite,
     ]
 
     manifest = []

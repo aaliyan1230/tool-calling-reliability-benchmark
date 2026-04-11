@@ -20,6 +20,13 @@
       "eval_cases": "workloads/eval_cases/fintech_risk_eval_cases.json",
       "tools": 16,
       "tasks": 18
+    },
+    {
+      "toolset_id": "developer_tools",
+      "workload": "workloads/enriched/developer_tools.json",
+      "eval_cases": "workloads/eval_cases/developer_tools_eval_cases.json",
+      "tools": 16,
+      "tasks": 18
     }
   ]
 }

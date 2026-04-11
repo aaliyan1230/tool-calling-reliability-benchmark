@@ -1,178 +1,224 @@
 # Tool-Calling Reliability Benchmark
 
-Tool-Calling Reliability Benchmark (TCRB) is a fault-injection benchmark for tool-calling agents and planners. The point of the repo is not just to run tasks. It is to answer a harder question: when a planner looks better, is that a real reliability improvement, or just noise, overfitting, or metric blindness?
+This repository studies a simple but important question: if one tool-calling planner looks better than another, did it actually become more reliable, or did it just get lucky on a narrow slice of tasks?
 
-This repository is organized around two deliverables:
+Tool-Calling Reliability Benchmark (TCRB) answers that question with reproducible runs, fault injection, side-by-side comparisons, transfer checks, and plain-language reports. The goal is not only to produce scores. The goal is to produce evidence that a human reader can understand.
 
-- reproducible reliability measurements under controlled failures
-- interpretable evidence that distinguishes real gains from flat or regressive changes
+Detailed project criteria live in `docs/core-goals.md`.
 
-Detailed success criteria live in `docs/core-goals.md`.
+## In Plain English
 
-## What This Repo Has Achieved
+What this repo does:
 
-TCRB already demonstrates an end-to-end evaluation loop with checked-in artifacts:
+- runs planners against tool-calling workloads under controlled failures
+- compares a baseline planner against a modified planner
+- checks whether the modified planner really improved on the target tasks
+- checks whether that improvement transfers to other toolsets or falls apart
+- writes markdown reports and plots so you do not need to inspect raw JSON by hand
 
-- controlled failure benchmarking across timeout, rate-limit, malformed-schema, contract-drift, and network-failure conditions
-- multi-seed aggregation so comparisons are not based on a single lucky run
-- pairwise delta reports that show exactly how a comparison planner moved core metrics
-- transfer-matrix checks that ask whether target improvements generalize or collapse off-target
-- study-gate checks that fail flatline experiments and surface regressions explicitly
+What this repo has achieved already:
 
-The important outcome is methodological, not cosmetic: this repo can prove when an apparent improvement is real, and it can also prove when that improvement does not transfer.
+- a full local benchmark and reporting loop
+- reusable plot generation from existing artifacts
+- asset-backed markdown summaries
+- a transfer matrix over four toolsets
+- a contributor-friendly minimal planner path for extension work
 
-## Representative Outcome
+## The Main Finding From This Repo
 
-One checked-in entrypoint run shows the benchmark doing exactly what it is supposed to do: detect a meaningful in-domain improvement while also catching transfer failure.
+The clearest fresh result in this repository is a local study comparing the built-in `heuristic` planner against `policy_native`.
 
-Source artifacts:
+In short:
 
-- `runs/entrypoint-core-20260403-192104-base-ms/multi_seed_summary.md`
-- `runs/entrypoint-core-20260403-192104-comparison-ms/multi_seed_summary.md`
-- `runs/entrypoint-core-20260403-192104-delta/delta-ms.md`
-- `runs/entrypoint-core-20260403-192104-matrix/matrix_summary.md`
-- `runs/entrypoint-core-20260403-192104-study-gate/study_gate.md`
+- the heuristic planner improved target-workload success
+- it reduced invalid tool calls on that same target workload
+- the effect was strong enough to pass the study-gate check
+- but it still failed the transfer-matrix portfolio check
 
-### Outcome Snapshot
+That is not a contradiction. It is the point of the benchmark. A planner can improve on one slice and still fail as a generally better policy.
 
-| signal | result | why it matters |
+## What We Ran
+
+The end-to-end study artifacts are here:
+
+- `runs/study-heuristic-vs-native-base-ms/multi_seed_summary.md`
+- `runs/study-heuristic-vs-native-comparison-ms/multi_seed_summary.md`
+- `runs/study-heuristic-vs-native-delta/delta-ms.md`
+- `runs/study-heuristic-vs-native-matrix/matrix_summary.md`
+- `runs/study-heuristic-vs-native-study-gate/study_gate.md`
+- `runs/study-heuristic-vs-native-analysis/analysis_summary.md`
+
+The transfer study now covers four toolsets:
+
+- `customer_support`
+- `ecommerce_ops`
+- `fintech_risk`
+- `developer_tools`
+
+The fourth toolset is new in this repo and was added to make transfer claims less tied to the original three domains.
+
+## Findings
+
+### High-Level Outcome
+
+| signal | result | plain-language meaning |
 |---|---:|---|
-| mean target success delta | +0.1944 | comparison planner improved task success on the target workload |
-| mean target invalid-call delta | -0.1743 | invalid tool calls dropped materially |
-| study-gate verdict | PASS | the change is observably non-flat and therefore measurable |
-| transfer-matrix portfolio verdict | FAIL | the same change does not generalize across toolsets |
-| max absolute matrix delta | 0.5833 | transfer regression is large enough to be obvious, not marginal |
+| mean target success delta | +0.1944 | the comparison planner solved more target tasks |
+| mean target invalid-call delta | -0.1743 | it made fewer bad tool calls |
+| study-gate verdict | PASS | the change is real enough to observe, not just flat noise |
+| matrix portfolio verdict | FAIL | the comparison planner is not an across-the-board upgrade |
+| rows in transfer matrix | 4 | the transfer check now spans four toolsets |
+| worst transfer row | customer_support at -0.1111 | the target transfer threshold was still missed |
 
-That is the intended behavior of the benchmark. It does not merely reward a bigger target metric. It separates:
+### What That Means
 
-- target improvement
-- signal existence
-- transfer robustness
+For a reader who is new to this kind of benchmark:
 
-In this run, the comparison planner improved several target-workload policies substantially:
+- `PASS` in the study gate is good: it means the comparison produced observable movement.
+- `FAIL` in the transfer matrix is not a broken run: it means the benchmark caught a limitation in the planner change.
+- Seeing both together is useful. It means the benchmark can distinguish “better somewhere” from “better overall.”
 
-- `exponential_backoff_jitter`: success +0.2778, invalid calls -0.2063
-- `naive_retry`: success +0.2778, invalid calls -0.2050
-- `timeout_budget_early_abort`: success +0.2222, invalid calls -0.2857
+### Policy-Level Result
 
-At the same time, transfer degraded sharply:
+On the target workload, the heuristic planner improved the strongest policies by a visible margin:
 
-- `customer_support` target delta: first-tool -0.4167, sequence -0.4167
-- `ecommerce_ops` open delta: first-tool -0.5694, sequence -0.5694
-- `fintech_risk` open delta: first-tool -0.5833, sequence -0.5833
+- `exponential_backoff_jitter`: success `+0.2778`, invalid calls `-0.2063`
+- `naive_retry`: success `+0.2778`, invalid calls `-0.2050`
+- `timeout_budget_early_abort`: success `+0.2222`, invalid calls `-0.2857`
 
-So the benchmark is already doing useful scientific work: it can show a planner got better on one slice while getting worse as a general policy.
+So the benchmark is not merely saying “different.” It is showing exactly where the planner got better.
 
-## Visual Evidence
+## Visual Walkthrough
 
-The repo includes a notebook that walks through the core outcome flow and renders plots from a checked-in run:
+If you only look at three things in this repo, look at these.
 
-- `notebooks/entrypoint_outcomes.ipynb`
+### 1. Overall Comparison View
 
-Static versions of two of those plots are included below for quick inspection.
+This figure summarizes the comparison planner on the target workload across the main metrics.
 
-### Delta by Policy
+![Multi-seed overview](runs/study-heuristic-vs-native-analysis/multi_seed_overview.png)
 
-![Success and invalid-call deltas by policy](docs/assets/entrypoint-delta.png)
+### 2. Did The Comparison Planner Improve?
 
-### Transfer Matrix
+This figure shows the direct change from `policy_native` to `heuristic` for each policy. In this chart:
 
-![Transfer matrix deltas by toolset](docs/assets/entrypoint-matrix.png)
+- bars above zero in success are good
+- bars below zero in invalid calls are also good
 
-The combination matters more than either chart alone: the first figure shows genuine target-side improvement, while the second makes the transfer failure impossible to miss.
+![Delta policy view](runs/study-heuristic-vs-native-analysis/delta_policy.png)
+
+### 3. Did The Improvement Transfer?
+
+This figure is the transfer matrix. Values near zero mean little change. Negative values mean the comparison planner got worse on that toolset for that metric.
+
+![Transfer matrix view](runs/study-heuristic-vs-native-analysis/transfer_matrix.png)
+
+The important read is simple: the comparison planner improved the target benchmark summary, but it still missed the target-domain transfer threshold and therefore does not qualify as a clean overall win.
 
 ## Methodology
 
-TCRB evaluates planners in layers.
+The benchmark is intentionally layered so that each claim has a corresponding proof artifact.
 
-### 1. Run Under Controlled Faults
+### 1. Run Under Controlled Failures
 
-Policies are exercised against workloads where failures are injected deliberately rather than observed opportunistically. The benchmark makes tradeoffs visible across:
+Planners are evaluated under injected failures such as:
 
-- task success rate
-- invalid tool-call rate
-- latency
-- retries per success
-- cost per success
+- timeouts
+- rate limits
+- malformed schemas
+- contract drift
+- network failures
+
+This makes the benchmark about reliability under stress, not just ideal-path behavior.
 
 ### 2. Aggregate Across Seeds
 
-Single-run results are too brittle for claims about reliability. Multi-seed runs produce confidence-bounded summaries and reduce the chance of over-reading variance.
+We do not trust one run. Multi-seed summaries reduce the chance that a result is just randomness.
 
-### 3. Compare Base vs Comparison Directly
+### 3. Compare Baseline vs Comparison Directly
 
-Delta reports compute `comparison - base` on the same workload so improvement and regression are explicit rather than inferred from separate tables.
+We compute `comparison - base` so the size and direction of a change are explicit.
 
-### 4. Check Transfer Instead of Only Target Fit
+### 4. Test Transfer Across Toolsets
 
-Transfer-matrix runs compare target-toolset behavior with open-toolset behavior. This is where over-specialization shows up.
+A planner that improves on one workload but collapses elsewhere should not be treated as a generally better planner. The transfer matrix is where that gets caught.
 
-### 5. Gate on Signal Quality
+### 5. Gate On Signal Quality
 
-Study-gate checks exist to prevent weak claims. They catch flatline deltas, missing matrix movement, and other cases where a run should not be treated as evidence.
+The study gate exists to reject flatline or weak results. It is there to stop overclaiming.
 
-## Artifact Model
+## How To Read The Artifacts
 
-The repo writes human-readable outputs under `runs/<label>/`.
+The repo writes a few stable artifact types under `runs/<label>/`.
 
-| artifact | purpose |
+| artifact | what it tells you |
 |---|---|
-| `result.json`, `summary.md` | single-run benchmark outputs |
-| `multi_seed.json`, `multi_seed_summary.md` | aggregate metrics across seeds |
-| `delta-ms.json`, `delta-ms.md` | base-vs-comparison metric deltas |
-| `matrix.json`, `matrix_summary.md` | transfer and generalization behavior |
-| `study_gate.json`, `study_gate.md` | pass/fail signal validation |
+| `result.json`, `summary.md` | one run, one planner, one workload |
+| `multi_seed.json`, `multi_seed_summary.md` | average behavior across several seeds |
+| `delta-ms.json`, `delta-ms.md` | exactly how comparison differs from baseline |
+| `matrix.json`, `matrix_summary.md` | whether gains transfer across toolsets |
+| `study_gate.json`, `study_gate.md` | whether the result is strong enough to count as evidence |
+| `analysis_summary.md` | one compact markdown summary with embedded visuals |
 
-If a result matters, it should be visible in both JSON and markdown without manual interpretation.
+If you want a single artifact to open first, start with `runs/study-heuristic-vs-native-analysis/analysis_summary.md`.
 
-## Minimal Reproduction
+## What Changed In This Project
 
-Setup is intentionally small. The benchmark is useful only if results are easy to reproduce from checked-in configs.
+This repo now includes more than the original benchmark loop.
+
+- reusable plot rendering from stored artifact JSON
+- markdown reports that can reference nearby visuals
+- a fourth enriched toolset: `developer_tools`
+- a minimal deterministic planner path for contributors
+
+Those changes make the project easier to inspect as a research artifact, not just as code.
+
+## Run It Yourself
+
+Local setup is small:
 
 ```bash
 uv sync --extra dev
 uv run pytest
 ```
 
-Fastest end-to-end paths:
+To reproduce the kind of study shown above:
 
 ```bash
-uv run python scripts/run_northstar_hf.py
+uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3 --planner-config configs/planners/policy_native.json --label base-ms
 ```
 
 ```bash
-uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3 --label ms-baseline
+uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3 --planner-config configs/planners/heuristic.json --label comparison-ms
 ```
 
 ```bash
-uv run tcrb eval-delta --base-run runs/ms-base/multi_seed.json --comparison-run runs/ms-comparison/multi_seed.json --output-json runs/ms-comparison/delta-ms.json --output-report runs/ms-comparison/delta-ms.md
+uv run tcrb eval-delta --base-run runs/base-ms/multi_seed.json --comparison-run runs/comparison-ms/multi_seed.json --output-json runs/delta/delta-ms.json --output-report runs/delta/delta-ms.md
 ```
 
 ```bash
-uv run python scripts/run_transfer_matrix.py --manifest workloads/enriched/manifest.json --config configs/baseline.json --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/heuristic.json --target-toolset customer_support --max-tasks 0 --label matrix-example
+uv run python scripts/run_transfer_matrix.py --manifest workloads/enriched/manifest.json --config configs/baseline.json --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/heuristic.json --target-toolset customer_support --label matrix-study
 ```
 
 ```bash
-uv run tcrb study-gate --base-run runs/ms-base/multi_seed.json --comparison-run runs/ms-comparison/multi_seed.json --matrix-json runs/matrix-example/matrix.json --require-matrix-signal --output-json runs/ms-comparison/study_gate.json --output-report runs/ms-comparison/study_gate.md
-```
-
-If you want the compact walkthrough rather than raw CLI steps, open `notebooks/entrypoint_outcomes.ipynb`.
-
-Artifact-first analysis from existing runs:
-
-```bash
-uv run tcrb render-plots --delta-json runs/entrypoint-core-20260403-192104-delta/delta-ms.json --matrix-json runs/entrypoint-core-20260403-192104-matrix/matrix.json --multi-seed-json runs/entrypoint-core-20260403-192104-comparison-ms/multi_seed.json --output-dir runs/entrypoint-core-20260403-192104-analysis
+uv run tcrb study-gate --base-run runs/base-ms/multi_seed.json --comparison-run runs/comparison-ms/multi_seed.json --matrix-json runs/matrix-study/matrix.json --require-matrix-signal --output-json runs/study-gate/study_gate.json --output-report runs/study-gate/study_gate.md
 ```
 
 ```bash
-uv run tcrb summarize-run --multi-seed-json runs/entrypoint-core-20260403-192104-comparison-ms/multi_seed.json --delta-json runs/entrypoint-core-20260403-192104-delta/delta-ms.json --matrix-json runs/entrypoint-core-20260403-192104-matrix/matrix.json --study-gate-json runs/entrypoint-core-20260403-192104-study-gate/study_gate.json --output-dir runs/entrypoint-core-20260403-192104-analysis --output-report runs/entrypoint-core-20260403-192104-analysis/analysis_summary.md
+uv run tcrb summarize-run --multi-seed-json runs/comparison-ms/multi_seed.json --delta-json runs/delta/delta-ms.json --matrix-json runs/matrix-study/matrix.json --study-gate-json runs/study-gate/study_gate.json --output-dir runs/analysis --output-report runs/analysis/analysis_summary.md
 ```
 
-Planner extension notes are in `docs/extending-planners.md`.
+If you prefer a notebook walkthrough, `notebooks/entrypoint_outcomes.ipynb` still exists, but the main reporting path is now artifact-first and works locally without depending on notebook execution.
 
-The lowest-friction custom-planner starting point is `configs/planners/minimal.json` plus `examples/custom_planner_minimal.py`.
+## If You Want To Extend The Repo
 
-## Planner Types
+The easiest place to start is the minimal planner path:
+
+- `configs/planners/minimal.json`
+- `examples/custom_planner_minimal.py`
+- `docs/extending-planners.md`
+
+Current planner families in the repo:
 
 - `policy_native`
 - `heuristic`
@@ -181,3 +227,5 @@ The lowest-friction custom-planner starting point is `configs/planners/minimal.j
 - `replay`
 - `command`
 - `hf_local`
+
+`hf_local` is the advanced path. The rest of the benchmark and reporting workflow can be run locally without GPU requirements.
