@@ -402,7 +402,14 @@ def _run_eval_delta(args: argparse.Namespace) -> int:
     if output_report is None and output_json is not None:
         output_report = output_json.with_suffix(".md")
     if output_report is not None:
-        write_markdown_text(render_delta_markdown(report_payload), output_report)
+        asset_paths: dict[str, str] = {}
+        delta_plot = output_report.parent / "delta_policy.png"
+        if delta_plot.exists():
+            asset_paths["delta_plot"] = delta_plot.name
+        write_markdown_text(
+            render_delta_markdown(report_payload, asset_paths=asset_paths or None),
+            output_report,
+        )
         print(f"Wrote delta report: {output_report}")
 
     if output_json is None and output_report is None:
@@ -442,7 +449,17 @@ def _run_study_gate(args: argparse.Namespace) -> int:
     if output_report is None and output_json is not None:
         output_report = output_json.with_suffix(".md")
     if output_report is not None:
-        write_markdown_text(render_study_gate_markdown(report_payload), output_report)
+        asset_paths: dict[str, str] = {}
+        delta_plot = output_report.parent / "delta_policy.png"
+        matrix_plot = output_report.parent / "transfer_matrix.png"
+        if delta_plot.exists():
+            asset_paths["delta_plot"] = delta_plot.name
+        if matrix_plot.exists():
+            asset_paths["matrix_plot"] = matrix_plot.name
+        write_markdown_text(
+            render_study_gate_markdown(report_payload, asset_paths=asset_paths or None),
+            output_report,
+        )
         print(f"Wrote study gate markdown: {output_report}")
 
     print(f"Study gate verdict: {report_payload.get('verdict', 'FAIL')}")

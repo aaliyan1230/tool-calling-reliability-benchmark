@@ -11,6 +11,24 @@ def _fmt_float(value: float, digits: int = 4) -> str:
     return f"{value:.{digits}f}"
 
 
+def _append_asset_section(lines: list[str], asset_paths: dict[str, str] | None) -> None:
+    if not asset_paths:
+        return
+
+    lines.extend(["", "### Assets", ""])
+    for label, path in asset_paths.items():
+        lines.append(f"- {label}: `{path}`")
+
+
+def _append_asset_images(lines: list[str], asset_paths: dict[str, str] | None) -> None:
+    if not asset_paths:
+        return
+
+    for label, path in asset_paths.items():
+        if str(path).lower().endswith(".png"):
+            lines.extend(["", f"![{label}]({path})"])
+
+
 def policy_metrics_table(metrics: list[PolicyMetrics]) -> str:
     lines = [
         "| policy | success_rate | invalid_call_rate | mean_ms | p95_ms | retries_per_success | cost_per_success_usd |",
@@ -48,8 +66,15 @@ def failure_taxonomy(result: BenchmarkResult) -> list[tuple[str, int]]:
 
 def render_markdown_summary(result: BenchmarkResult) -> str:
     taxonomy = failure_taxonomy(result)
+    best_success = max(result.policy_metrics, key=lambda row: row.task_success_rate)
+    lowest_invalid = min(result.policy_metrics, key=lambda row: row.invalid_tool_call_rate)
     lines = [
         "## Benchmark Summary",
+        "",
+        "### Verdict Snapshot",
+        "",
+        f"- best_success_policy: {best_success.policy} ({best_success.task_success_rate:.4f})",
+        f"- lowest_invalid_policy: {lowest_invalid.policy} ({lowest_invalid.invalid_tool_call_rate:.4f})",
         "",
         policy_metrics_table(result.policy_metrics),
         "",
@@ -75,11 +100,22 @@ def _fmt_ci(stats: dict[str, Any], digits: int = 4) -> str:
     return f"{mean:.{digits}f} +/- {ci:.{digits}f}"
 
 
-def render_multi_seed_markdown(payload: dict) -> str:
+def render_multi_seed_markdown(
+    payload: dict,
+    *,
+    asset_paths: dict[str, str] | None = None,
+) -> str:
+    summary = summarize_multi_seed_payload(payload)
     lines = [
         "## Multi-Seed Aggregate",
         "",
         f"Seeds: {', '.join(str(seed) for seed in payload.get('seeds', []))}",
+        "",
+        "### Verdict Snapshot",
+        "",
+        f"- policy_count: {summary.get('policy_count', 0)}",
+        f"- best_success_policy: {summary.get('best_success_policy', 'n/a')} ({float(summary.get('best_success_rate', 0.0)):.4f})",
+        f"- lowest_invalid_policy: {summary.get('lowest_invalid_policy', 'n/a')} ({float(summary.get('lowest_invalid_rate', 0.0)):.4f})",
         "",
         "| policy | success_rate (mean+/-ci95) | invalid_call_rate (mean+/-ci95) | mean_ms (mean+/-ci95) | p95_ms (mean+/-ci95) | retries_per_success (mean+/-ci95) | cost_per_success_usd (mean+/-ci95) |",
         "|---|---:|---:|---:|---:|---:|---:|",
@@ -99,6 +135,8 @@ def render_multi_seed_markdown(payload: dict) -> str:
             f"{_fmt_ci(metrics.get('estimated_cost_per_successful_task_usd', {}), 6)} |"
         )
 
+    _append_asset_section(lines, asset_paths)
+    _append_asset_images(lines, asset_paths)
     return "\n".join(lines) + "\n"
 
 
@@ -141,11 +179,24 @@ def write_markdown_text(text: str, output_path: str | Path) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def render_delta_markdown(payload: dict) -> str:
+def render_delta_markdown(
+    payload: dict,
+    *,
+    asset_paths: dict[str, str] | None = None,
+) -> str:
+    summary = summarize_delta_payload(payload)
     lines = [
         "## Base vs Comparison Delta",
         "",
         "Delta is computed as comparison - base.",
+        "",
+        "### Verdict Snapshot",
+        "",
+        f"- compared_policies: {summary.get('policy_rows', 0)}",
+        f"- mean_success_delta: {float(summary.get('mean_success_delta', 0.0)):+.4f}",
+        f"- mean_invalid_delta: {float(summary.get('mean_invalid_delta', 0.0)):+.4f}",
+        f"- best_success_policy: {summary.get('best_success_policy', 'n/a')} ({float(summary.get('best_success_delta', 0.0)):+.4f})",
+        f"- max_abs_core_delta: {float(summary.get('max_abs_core_delta', 0.0)):.6f}",
         "",
     ]
 
@@ -193,10 +244,16 @@ def render_delta_markdown(payload: dict) -> str:
     if isinstance(open_payload, dict):
         _append_table("Open Workload", open_payload)
 
+    _append_asset_section(lines, asset_paths)
+    _append_asset_images(lines, asset_paths)
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_study_gate_markdown(payload: dict) -> str:
+def render_study_gate_markdown(
+    payload: dict,
+    *,
+    asset_paths: dict[str, str] | None = None,
+) -> str:
     lines = [
         "## Study Gate Report",
         "",
@@ -266,6 +323,8 @@ def render_study_gate_markdown(payload: dict) -> str:
             ]
         )
 
+    _append_asset_section(lines, asset_paths)
+    _append_asset_images(lines, asset_paths)
     return "\n".join(lines).rstrip() + "\n"
 
 
