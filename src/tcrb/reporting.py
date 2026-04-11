@@ -267,3 +267,202 @@ def render_study_gate_markdown(payload: dict) -> str:
         )
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def summarize_multi_seed_payload(payload: dict) -> dict[str, Any]:
+    rows = list(payload.get("aggregate_policy_metrics", []))
+    if not rows:
+        return {
+            "policy_count": 0,
+            "best_success_policy": None,
+            "lowest_invalid_policy": None,
+        }
+
+    def _mean(row: dict, metric_name: str) -> float:
+        return float(row.get("metrics", {}).get(metric_name, {}).get("mean", 0.0) or 0.0)
+
+    best_success = max(rows, key=lambda row: _mean(row, "task_success_rate"))
+    lowest_invalid = min(rows, key=lambda row: _mean(row, "invalid_tool_call_rate"))
+    return {
+        "policy_count": len(rows),
+        "best_success_policy": str(best_success.get("policy", "unknown")),
+        "best_success_rate": _mean(best_success, "task_success_rate"),
+        "lowest_invalid_policy": str(lowest_invalid.get("policy", "unknown")),
+        "lowest_invalid_rate": _mean(lowest_invalid, "invalid_tool_call_rate"),
+    }
+
+
+def summarize_delta_payload(payload: dict) -> dict[str, Any]:
+    target = payload.get("target", {})
+    rows = list(target.get("policies", [])) if isinstance(target, dict) else []
+    success_values = [
+        float(row.get("delta", {}).get("task_success_rate"))
+        for row in rows
+        if row.get("delta", {}).get("task_success_rate") is not None
+    ]
+    invalid_values = [
+        float(row.get("delta", {}).get("invalid_tool_call_rate"))
+        for row in rows
+        if row.get("delta", {}).get("invalid_tool_call_rate") is not None
+    ]
+    best_policy = None
+    if rows:
+        best_policy = max(
+            rows,
+            key=lambda row: float(row.get("delta", {}).get("task_success_rate", float("-inf")) or float("-inf")),
+        )
+
+    core_deltas = success_values + invalid_values
+    return {
+        "policy_rows": len(rows),
+        "mean_success_delta": sum(success_values) / len(success_values) if success_values else 0.0,
+        "mean_invalid_delta": sum(invalid_values) / len(invalid_values) if invalid_values else 0.0,
+        "max_abs_core_delta": max((abs(value) for value in core_deltas), default=0.0),
+        "best_success_policy": (
+            str(best_policy.get("policy", "unknown")) if isinstance(best_policy, dict) else None
+        ),
+        "best_success_delta": (
+            float(best_policy.get("delta", {}).get("task_success_rate", 0.0) or 0.0)
+            if isinstance(best_policy, dict)
+            else 0.0
+        ),
+    }
+
+
+def summarize_transfer_matrix_payload(payload: dict) -> dict[str, Any]:
+    rows = list(payload.get("rows", []))
+    if not rows:
+        return {
+            "rows_total": 0,
+            "portfolio_verdict": str(payload.get("portfolio_verdict", "")),
+            "max_abs_delta": 0.0,
+            "worst_toolset": None,
+        }
+
+    max_abs_delta = 0.0
+    worst_row = None
+    worst_score = float("inf")
+    for row in rows:
+        first = float(row.get("delta_first_tool_accuracy", 0.0) or 0.0)
+        seq = float(row.get("delta_sequence_prefix_accuracy", 0.0) or 0.0)
+        max_abs_delta = max(max_abs_delta, abs(first), abs(seq))
+        row_score = min(first, seq)
+        if row_score < worst_score:
+            worst_score = row_score
+            worst_row = row
+
+    return {
+        "rows_total": len(rows),
+        "portfolio_verdict": str(payload.get("portfolio_verdict", "")),
+        "max_abs_delta": max_abs_delta,
+        "worst_toolset": (
+            str(worst_row.get("toolset_id", "unknown")) if isinstance(worst_row, dict) else None
+        ),
+        "worst_first_delta": (
+            float(worst_row.get("delta_first_tool_accuracy", 0.0) or 0.0)
+            if isinstance(worst_row, dict)
+            else 0.0
+        ),
+        "worst_sequence_delta": (
+            float(worst_row.get("delta_sequence_prefix_accuracy", 0.0) or 0.0)
+            if isinstance(worst_row, dict)
+            else 0.0
+        ),
+    }
+
+
+def render_analysis_markdown(
+    *,
+    multi_seed_payload: dict | None = None,
+    delta_payload: dict | None = None,
+    matrix_payload: dict | None = None,
+    study_gate_payload: dict | None = None,
+    source_paths: dict[str, str] | None = None,
+    plot_paths: dict[str, str] | None = None,
+) -> str:
+    lines = [
+        "# Run Analysis Summary",
+        "",
+        "Generated from checked-in benchmark artifacts.",
+    ]
+
+    if source_paths:
+        lines.extend(["", "## Inputs", ""])
+        for name, path in source_paths.items():
+            lines.append(f"- {name}: `{path}`")
+
+    lines.extend(["", "## Snapshot", ""])
+    if study_gate_payload is not None:
+        lines.append(f"- study_gate_verdict: {study_gate_payload.get('verdict', 'FAIL')}")
+    if matrix_payload is not None:
+        matrix_summary = summarize_transfer_matrix_payload(matrix_payload)
+        lines.append(
+            f"- matrix_portfolio_verdict: {matrix_summary.get('portfolio_verdict', '') or 'n/a'}"
+        )
+    if delta_payload is not None:
+        delta_summary = summarize_delta_payload(delta_payload)
+        lines.append(
+            f"- mean_target_success_delta: {float(delta_summary.get('mean_success_delta', 0.0)):+.4f}"
+        )
+        lines.append(
+            f"- mean_target_invalid_delta: {float(delta_summary.get('mean_invalid_delta', 0.0)):+.4f}"
+        )
+    if multi_seed_payload is None and delta_payload is None and matrix_payload is None and study_gate_payload is None:
+        lines.append("- no supported payloads were provided")
+
+    if multi_seed_payload is not None:
+        summary = summarize_multi_seed_payload(multi_seed_payload)
+        lines.extend(
+            [
+                "",
+                "## Multi-Seed Overview",
+                "",
+                f"- policy_count: {summary.get('policy_count', 0)}",
+                f"- best_success_policy: {summary.get('best_success_policy', 'n/a')} ({float(summary.get('best_success_rate', 0.0)):.4f})",
+                f"- lowest_invalid_policy: {summary.get('lowest_invalid_policy', 'n/a')} ({float(summary.get('lowest_invalid_rate', 0.0)):.4f})",
+            ]
+        )
+        if plot_paths and plot_paths.get("multi_seed"):
+            lines.extend(["", f"![Multi-seed overview]({plot_paths['multi_seed']})"])
+
+    if delta_payload is not None:
+        summary = summarize_delta_payload(delta_payload)
+        lines.extend(
+            [
+                "",
+                "## Delta Overview",
+                "",
+                f"- compared_policies: {summary.get('policy_rows', 0)}",
+                f"- mean_success_delta: {float(summary.get('mean_success_delta', 0.0)):+.4f}",
+                f"- mean_invalid_delta: {float(summary.get('mean_invalid_delta', 0.0)):+.4f}",
+                f"- best_success_policy: {summary.get('best_success_policy', 'n/a')} ({float(summary.get('best_success_delta', 0.0)):+.4f})",
+            ]
+        )
+        if plot_paths and plot_paths.get("delta"):
+            lines.extend(["", f"![Delta policy view]({plot_paths['delta']})"])
+
+    if matrix_payload is not None:
+        summary = summarize_transfer_matrix_payload(matrix_payload)
+        lines.extend(
+            [
+                "",
+                "## Transfer Matrix Overview",
+                "",
+                f"- portfolio_verdict: {summary.get('portfolio_verdict', 'n/a') or 'n/a'}",
+                f"- rows_total: {summary.get('rows_total', 0)}",
+                f"- max_abs_delta: {float(summary.get('max_abs_delta', 0.0)):.4f}",
+                f"- worst_toolset: {summary.get('worst_toolset', 'n/a')} (first={float(summary.get('worst_first_delta', 0.0)):+.4f}, sequence={float(summary.get('worst_sequence_delta', 0.0)):+.4f})",
+            ]
+        )
+        if plot_paths and plot_paths.get("matrix"):
+            lines.extend(["", f"![Transfer matrix view]({plot_paths['matrix']})"])
+
+    if study_gate_payload is not None:
+        lines.extend(["", "## Study Gate", ""])
+        for check in study_gate_payload.get("checks", []):
+            status = "PASS" if bool(check.get("passed")) else "FAIL"
+            lines.append(
+                f"- {check.get('name', 'check')}: {status} (value={check.get('value', 'n/a')}, threshold={check.get('threshold', 'n/a')})"
+            )
+
+    return "\n".join(lines).rstrip() + "\n"

@@ -158,6 +158,18 @@ uv run tcrb study-gate --base-run runs/ms-base/multi_seed.json --comparison-run 
 
 If you want the compact walkthrough rather than raw CLI steps, open `notebooks/entrypoint_outcomes.ipynb`.
 
+Artifact-first analysis from existing runs:
+
+```bash
+uv run tcrb render-plots --delta-json runs/entrypoint-core-20260403-192104-delta/delta-ms.json --matrix-json runs/entrypoint-core-20260403-192104-matrix/matrix.json --multi-seed-json runs/entrypoint-core-20260403-192104-comparison-ms/multi_seed.json --output-dir runs/entrypoint-core-20260403-192104-analysis
+```
+
+```bash
+uv run tcrb summarize-run --multi-seed-json runs/entrypoint-core-20260403-192104-comparison-ms/multi_seed.json --delta-json runs/entrypoint-core-20260403-192104-delta/delta-ms.json --matrix-json runs/entrypoint-core-20260403-192104-matrix/matrix.json --study-gate-json runs/entrypoint-core-20260403-192104-study-gate/study_gate.json --output-dir runs/entrypoint-core-20260403-192104-analysis --output-report runs/entrypoint-core-20260403-192104-analysis/analysis_summary.md
+```
+
+Planner extension notes are in `docs/extending-planners.md`.
+
 ## Planner Types
 
 - `policy_native`
