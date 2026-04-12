@@ -6,6 +6,17 @@ Tool-Calling Reliability Benchmark (TCRB) answers that question with reproducibl
 
 Detailed project criteria live in `docs/core-goals.md`.
 
+## Important Alignment Note
+
+There are two different kinds of studies in this repo:
+
+- non-LLM planner studies: built-in planners like `policy_native` and `heuristic` choose tools
+- LLM-backed studies: `hf_local` uses a real model to score candidate tool choices
+
+The fresh local study shown below is a non-LLM planner study. It validates the benchmark harness, reporting, transfer logic, and study-gate behavior. It does not by itself prove how a real LLM behaves on tool selection.
+
+That second question requires an actual `hf_local` run.
+
 ## In Plain English
 
 What this repo does:
@@ -36,6 +47,12 @@ In short:
 - but it still failed the transfer-matrix portfolio check
 
 That is not a contradiction. It is the point of the benchmark. A planner can improve on one slice and still fail as a generally better policy.
+
+What this means for alignment:
+
+- we now have a strong harness result
+- we do not yet have a headline real-LLM result in the README
+- the repo contains a real-LLM path for that next step
 
 ## What We Ran
 
@@ -209,6 +226,33 @@ uv run tcrb summarize-run --multi-seed-json runs/comparison-ms/multi_seed.json -
 ```
 
 If you prefer a notebook walkthrough, `notebooks/entrypoint_outcomes.ipynb` still exists, but the main reporting path is now artifact-first and works locally without depending on notebook execution.
+
+## Running A Real LLM Study
+
+If the goal is to verify whether a real model picks the relevant tool for a user query, use the HF path.
+
+Relevant files:
+
+- `src/tcrb/hf_planner.py`
+- `configs/planners/policy_native.json`
+- `configs/planners/hf_qwen2_5_3b_base.json`
+- `configs/planners/hf_qwen2_5_3b_comparison.json`
+- `scripts/run_northstar_hf.py`
+
+Practical note:
+
+- this is the path that likely wants a GPU such as a T4
+- the non-LLM planner studies do not need that GPU
+
+Recommended GPU-backed command:
+
+```bash
+uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_base.json --run-study-gate --run-summarize
+```
+
+The HF northstar script now refuses to run if base and comparison planner configs are operationally identical, unless you explicitly allow that. That guard exists to prevent meaningless base-vs-comparison LLM studies.
+
+At the moment, the most meaningful default real-LLM comparison in this repo is `policy_native` vs `hf_local`. A true model-vs-model or base-vs-finetuned HF comparison would need a genuinely different HF planner config, not just a different config name.
 
 ## If You Want To Extend The Repo
 
