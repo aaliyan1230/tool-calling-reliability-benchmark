@@ -9,6 +9,7 @@ from pathlib import Path
 from .benchmark import run_benchmark, write_result_json
 from .compare import compare_run_payloads, load_json_payload
 from .config import load_benchmark_config, load_workload
+from .env import load_env_file
 from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
 from .eval_cases import load_eval_cases, score_eval_cases
 from .planner import load_tool_planner
@@ -576,6 +577,7 @@ def _run_summarize_run(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    load_env_file(Path.cwd())
     parser = build_parser()
     args = parser.parse_args()
 

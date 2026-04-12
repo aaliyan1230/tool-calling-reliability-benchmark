@@ -6,6 +6,7 @@ from pathlib import Path
 
 from tcrb.benchmark import run_benchmark, write_result_json
 from tcrb.config import load_benchmark_config, load_workload
+from tcrb.env import load_env_file
 from tcrb.eval_cases import load_eval_cases, score_eval_cases, write_json as write_json_file
 from tcrb.models import Workload
 from tcrb.planner import load_tool_planner
@@ -151,6 +152,7 @@ def _filter_eval_cases_for_task_ids(eval_payload: dict, task_ids: set[str]) -> d
 def main() -> int:
     args = _parse_args()
     repo_root = Path.cwd()
+    load_env_file(repo_root)
 
     manifest_path = (repo_root / args.manifest).resolve()
     config_path = (repo_root / args.config).resolve()

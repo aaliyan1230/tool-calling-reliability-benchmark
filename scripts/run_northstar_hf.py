@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import time
 from pathlib import Path
+
+from tcrb.env import load_env_file
 
 
 def run_cmd(cmd: list[str], cwd: Path) -> None:
@@ -17,29 +20,8 @@ def run_cmd(cmd: list[str], cwd: Path) -> None:
         raise SystemExit(f"[northstar] Command failed with exit code {completed.returncode}")
 
 
-def load_env_file(repo_root: Path) -> bool:
-    env_path = repo_root / ".env"
-    if not env_path.exists():
-        return False
-
-    loaded_any = False
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("export "):
-            line = line[len("export ") :].strip()
-        if "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if not key:
-            continue
-        if key not in os.environ:
-            os.environ[key] = value
-            loaded_any = True
-    return loaded_any
+def load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,12 +45,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-planner-config",
-        default="configs/planners/hf_qwen2_5_3b_base.json",
+        default="configs/planners/policy_native.json",
         help="Base planner config",
     )
     parser.add_argument(
         "--comparison-planner-config",
-        default="configs/planners/hf_qwen2_5_3b_comparison.json",
+        default="configs/planners/hf_qwen2_5_3b_base.json",
         help="Comparison planner config",
     )
     parser.add_argument(
@@ -83,7 +65,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-toolsets",
-        default="customer_support,ecommerce_ops,fintech_risk",
+        default="customer_support,ecommerce_ops,fintech_risk,developer_tools",
         help="Comma-separated toolsets for transfer matrix",
     )
     parser.add_argument(
@@ -125,6 +107,16 @@ def parse_args() -> argparse.Namespace:
         "--run-study-gate",
         action="store_true",
         help="Run tcrb study-gate after baseline/comparison/delta/matrix stages",
+    )
+    parser.add_argument(
+        "--run-summarize",
+        action="store_true",
+        help="Run tcrb summarize-run after delta/matrix/study-gate stages",
+    )
+    parser.add_argument(
+        "--allow-identical-planners",
+        action="store_true",
+        help="Allow base and comparison planner configs to resolve to identical JSON payloads",
     )
     parser.add_argument(
         "--study-gate-null-run",
@@ -185,6 +177,20 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     repo_root = Path.cwd()
+
+    base_planner_payload = load_json((repo_root / args.base_planner_config).resolve())
+    comparison_planner_payload = load_json(
+        (repo_root / args.comparison_planner_config).resolve()
+    )
+    comparable_base = {k: v for k, v in base_planner_payload.items() if k != "name"}
+    comparable_comparison = {
+        k: v for k, v in comparison_planner_payload.items() if k != "name"
+    }
+    if (not args.allow_identical_planners) and comparable_base == comparable_comparison:
+        raise SystemExit(
+            "[northstar] Base and comparison planner configs are identical. "
+            "Pass genuinely different configs or use --allow-identical-planners explicitly."
+        )
 
     loaded = load_env_file(repo_root)
     if loaded:
@@ -338,6 +344,28 @@ def main() -> int:
 
         run_cmd(study_gate_cmd, cwd=repo_root)
 
+    if args.run_summarize:
+        summarize_output_dir = f"runs/{args.label_prefix}-analysis"
+        summarize_cmd = [
+            "uv",
+            "run",
+            "tcrb",
+            "summarize-run",
+            "--multi-seed-json",
+            comparison_ms_json,
+            "--delta-json",
+            delta_json,
+            "--matrix-json",
+            matrix_json,
+            "--output-dir",
+            summarize_output_dir,
+            "--output-report",
+            f"{summarize_output_dir}/analysis_summary.md",
+        ]
+        if study_gate_json:
+            summarize_cmd.extend(["--study-gate-json", study_gate_json])
+        run_cmd(summarize_cmd, cwd=repo_root)
+
     print("[northstar] Done")
     print("[northstar] Base multi-seed:", base_ms_json)
     print("[northstar] Comparison multi-seed:", comparison_ms_json)
@@ -349,6 +377,8 @@ def main() -> int:
         print("[northstar] Study gate JSON:", study_gate_json)
         if study_gate_report:
             print("[northstar] Study gate report:", study_gate_report)
+    if args.run_summarize:
+        print("[northstar] Analysis summary:", f"runs/{args.label_prefix}-analysis/analysis_summary.md")
     return 0
 
 
