@@ -255,6 +255,7 @@ uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners
 - `prepare-sft-data` normalizes ShareGPT-style tool-calling datasets into JSONL
 - `prepare-dpo-data` reshapes preference datasets such as `ToolPreference`
 - `mine-failure-pairs` turns eval failures into `(prompt, chosen, rejected)` DPO rows
+- `mine-benchmark-failure-pairs` turns native TCRB `result.json` plus `eval_cases.json` into DPO rows
 - `train-sft` and `train-dpo` lazily import HF training dependencies and run QLoRA-style training
 
 Install the optional ML stack first:
@@ -285,6 +286,12 @@ If you have BFCL-style eval outputs with `expected_output` and `predicted_output
 
 ```bash
 uv run tcrb mine-failure-pairs --eval-json runs/bfcl_eval/predictions.json --output-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
+```
+
+If you want to mine directly from the benchmark’s own artifacts instead of a separate eval dump, use the native adapter:
+
+```bash
+uv run tcrb mine-benchmark-failure-pairs --result-json runs/hf-run/result.json --eval-cases-json workloads/eval_cases/customer_support_eval_cases.json --policy naive_retry --output-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
 ```
 
 You can also prepare the `ToolPreference` backup dataset directly:

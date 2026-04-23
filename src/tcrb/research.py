@@ -328,6 +328,81 @@ def mine_failure_preferences(
     return mined
 
 
+def mine_benchmark_failure_preferences(
+    result_payload: dict[str, Any],
+    eval_cases_payload: dict[str, Any],
+    *,
+    policy: str | None = None,
+    source_name: str = "tcrb_eval_cases",
+) -> list[dict[str, Any]]:
+    case_map = {
+        str(case.get("task_id", "")).strip(): case
+        for case in list(eval_cases_payload.get("cases", []))
+        if str(case.get("task_id", "")).strip()
+    }
+
+    rows: list[dict[str, Any]] = []
+    for task_result in list(result_payload.get("task_results", [])):
+        task_id = str(task_result.get("task_id", "")).strip()
+        active_policy = str(task_result.get("policy", "")).strip()
+        if not task_id or task_id not in case_map:
+            continue
+        if policy is not None and active_policy != str(policy).strip():
+            continue
+
+        case = case_map[task_id]
+        predicted_sequence = [
+            str(attempt.get("tool_name", "")).strip()
+            for attempt in list(task_result.get("attempts", []))
+            if str(attempt.get("tool_name", "")).strip()
+        ]
+        expected_sequence = [
+            str(tool_name).strip()
+            for tool_name in list(case.get("expected_tool_sequence", []))
+            if str(tool_name).strip()
+        ]
+        if not expected_sequence:
+            expected_first = str(case.get("expected_first_tool", "")).strip()
+            if expected_first:
+                expected_sequence = [expected_first]
+
+        rows.append(
+            {
+                "task_id": task_id,
+                "prompt": str(case.get("question", "")).strip(),
+                "expected_output": _tool_sequence_to_payload(expected_sequence),
+                "predicted_output": _tool_sequence_to_payload(predicted_sequence),
+                "source": source_name,
+                "policy": active_policy,
+                "metadata": {
+                    "question": case.get("question"),
+                    "expected_first_tool": case.get("expected_first_tool"),
+                    "called_first_tool": predicted_sequence[0] if predicted_sequence else "",
+                },
+            }
+        )
+
+    mined = mine_failure_preferences(rows, allowed_tool_names=None)
+    for item in mined:
+        task_id = item.get("metadata", {}).get("task_id")
+        if task_id is None:
+            continue
+        active_case = case_map.get(str(task_id), {})
+        active_policy = next(
+            (
+                str(task_result.get("policy", "")).strip()
+                for task_result in list(result_payload.get("task_results", []))
+                if str(task_result.get("task_id", "")).strip() == str(task_id)
+                and (policy is None or str(task_result.get("policy", "")).strip() == str(policy).strip())
+            ),
+            "",
+        )
+        item.setdefault("metadata", {})
+        item["metadata"]["policy"] = active_policy
+        item["metadata"]["question"] = active_case.get("question")
+    return mined
+
+
 def load_records_from_path(path: str | Path) -> list[dict[str, Any]]:
     source_path = Path(path)
     if source_path.suffix.lower() == ".jsonl":
@@ -719,6 +794,19 @@ def _normalize_arguments(arguments: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
     return {}
+
+
+def _tool_sequence_to_payload(tool_names: list[str]) -> dict[str, Any]:
+    return {
+        "tool_calls": [
+            {
+                "name": str(tool_name).strip(),
+                "arguments": {},
+            }
+            for tool_name in tool_names
+            if str(tool_name).strip()
+        ]
+    }
 
 
 def _load_source_rows(source: ResearchDatasetSource) -> list[dict[str, Any]]:

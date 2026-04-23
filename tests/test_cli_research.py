@@ -120,3 +120,68 @@ def test_mine_failure_pairs_cli_writes_preference_jsonl(tmp_path: Path, monkeypa
     row = json.loads(lines[0])
     assert row["failure_type"] == "wrong_function_name"
     assert row["metadata"]["task_id"] == "t1"
+
+
+def test_mine_benchmark_failure_pairs_cli_writes_policy_filtered_jsonl(
+    tmp_path: Path, monkeypatch
+):
+    result_path = tmp_path / "result.json"
+    eval_cases_path = tmp_path / "eval_cases.json"
+    output_path = tmp_path / "benchmark_pairs.jsonl"
+
+    _write_json(
+        result_path,
+        {
+            "task_results": [
+                {
+                    "task_id": "t1",
+                    "policy": "naive_retry",
+                    "attempts": [{"tool_name": "weather.find"}],
+                },
+                {
+                    "task_id": "t1",
+                    "policy": "schema_first_fallback",
+                    "attempts": [{"tool_name": "weather.lookup"}],
+                },
+            ]
+        },
+    )
+    _write_json(
+        eval_cases_path,
+        {
+            "cases": [
+                {
+                    "task_id": "t1",
+                    "question": "Find Berlin weather",
+                    "expected_first_tool": "weather.lookup",
+                    "expected_tool_sequence": ["weather.lookup"],
+                }
+            ]
+        },
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tcrb",
+            "mine-benchmark-failure-pairs",
+            "--result-json",
+            str(result_path),
+            "--eval-cases-json",
+            str(eval_cases_path),
+            "--output-jsonl",
+            str(output_path),
+            "--policy",
+            "naive_retry",
+        ],
+    )
+
+    assert main() == 0
+
+    lines = output_path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    row = json.loads(lines[0])
+    assert row["prompt"] == "Find Berlin weather"
+    assert row["metadata"]["policy"] == "naive_retry"
+    assert row["failure_type"] == "wrong_function_name"

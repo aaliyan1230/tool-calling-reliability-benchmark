@@ -3,6 +3,7 @@ import json
 from tcrb.research import (
     apply_function_name_masking,
     classify_tool_call_failure,
+    mine_benchmark_failure_preferences,
     mine_failure_preferences,
     normalize_sharegpt_record,
     normalize_toolpreference_record,
@@ -122,3 +123,54 @@ def test_mine_failure_preferences_skips_matches_and_keeps_failure_metadata():
     assert mined[0]["failure_type"] == "wrong_function_name"
     assert json.loads(mined[0]["chosen"])["name"] == "weather.lookup"
     assert mined[0]["metadata"]["task_id"] == "bad"
+
+
+def test_mine_benchmark_failure_preferences_uses_result_and_eval_cases():
+    result_payload = {
+        "task_results": [
+            {
+                "task_id": "t1",
+                "policy": "naive_retry",
+                "attempts": [
+                    {"tool_name": "weather.find"},
+                    {"tool_name": "weather.lookup"},
+                ],
+            },
+            {
+                "task_id": "t2",
+                "policy": "naive_retry",
+                "attempts": [{"tool_name": "order.lookup"}],
+            },
+        ]
+    }
+    eval_cases_payload = {
+        "cases": [
+            {
+                "task_id": "t1",
+                "question": "Find Berlin weather",
+                "expected_first_tool": "weather.lookup",
+                "expected_tool_sequence": ["weather.lookup"],
+            },
+            {
+                "task_id": "t2",
+                "question": "Look up order A1",
+                "expected_first_tool": "order.lookup",
+                "expected_tool_sequence": ["order.lookup"],
+            },
+        ]
+    }
+
+    mined = mine_benchmark_failure_preferences(
+        result_payload,
+        eval_cases_payload,
+        policy="naive_retry",
+    )
+
+    assert len(mined) == 1
+    assert mined[0]["prompt"] == "Find Berlin weather"
+    assert mined[0]["failure_type"] == "wrong_function_name"
+    assert mined[0]["metadata"]["policy"] == "naive_retry"
+    chosen = json.loads(mined[0]["chosen"])
+    rejected = json.loads(mined[0]["rejected"])
+    assert chosen["tool_calls"][0]["name"] == "weather.lookup"
+    assert rejected["tool_calls"][0]["name"] == "weather.find"
