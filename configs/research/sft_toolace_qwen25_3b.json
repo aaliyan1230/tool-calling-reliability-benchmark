@@ -1,0 +1,29 @@
+{
+  "stage": "sft",
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+  "dataset_sources": [
+    {
+      "name": "toolace",
+      "format": "sharegpt",
+      "dataset_id": "Team-ACE/ToolACE",
+      "split": "train"
+    }
+  ],
+  "learning_rate": 1e-4,
+  "num_train_epochs": 2,
+  "per_device_train_batch_size": 8,
+  "gradient_accumulation_steps": 2,
+  "warmup_ratio": 0.1,
+  "max_seq_length": 2048,
+  "packing": true,
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "target_modules": "all-linear",
+  "load_in_4bit": true,
+  "masking": {
+    "ratio": 0.0,
+    "seed": 11
+  }
+}

@@ -13,6 +13,15 @@ from .env import load_env_file
 from .experiments import parse_seed_list, run_multi_seed, run_sweep, write_json
 from .eval_cases import load_eval_cases, score_eval_cases
 from .planner import load_tool_planner
+from .research import (
+    load_research_recipe,
+    mine_failure_preferences,
+    prepare_preference_records,
+    prepare_sft_records,
+    run_dpo_training,
+    run_sft_training,
+    write_jsonl,
+)
 from .reporting import (
     render_analysis_markdown,
     render_delta_markdown,
@@ -288,6 +297,86 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-report",
         default=None,
         help="Path to write the markdown analysis summary",
+    )
+
+    prepare_sft_parser = subparsers.add_parser(
+        "prepare-sft-data",
+        help="Prepare normalized SFT JSONL from research recipe sources",
+    )
+    prepare_sft_parser.add_argument(
+        "--recipe-config",
+        required=True,
+        help="Path to research recipe JSON",
+    )
+    prepare_sft_parser.add_argument(
+        "--output-jsonl",
+        default=None,
+        help="Path to write normalized SFT JSONL",
+    )
+
+    prepare_dpo_parser = subparsers.add_parser(
+        "prepare-dpo-data",
+        help="Prepare normalized preference JSONL from research recipe sources",
+    )
+    prepare_dpo_parser.add_argument(
+        "--recipe-config",
+        required=True,
+        help="Path to research recipe JSON",
+    )
+    prepare_dpo_parser.add_argument(
+        "--output-jsonl",
+        default=None,
+        help="Path to write normalized preference JSONL",
+    )
+
+    mine_pairs_parser = subparsers.add_parser(
+        "mine-failure-pairs",
+        help="Mine DPO preference pairs from eval payload failures",
+    )
+    mine_pairs_parser.add_argument(
+        "--eval-json",
+        required=True,
+        help="Path to JSON payload with eval cases and model outputs",
+    )
+    mine_pairs_parser.add_argument(
+        "--output-jsonl",
+        required=True,
+        help="Path to write mined preference JSONL",
+    )
+    mine_pairs_parser.add_argument(
+        "--allowed-tools",
+        default=None,
+        help="Optional comma-separated allowlist used to label hallucinated functions",
+    )
+
+    train_sft_parser = subparsers.add_parser(
+        "train-sft",
+        help="Run QLoRA SFT training from a research recipe and prepared JSONL",
+    )
+    train_sft_parser.add_argument(
+        "--recipe-config",
+        required=True,
+        help="Path to research recipe JSON",
+    )
+    train_sft_parser.add_argument(
+        "--dataset-jsonl",
+        default=None,
+        help="Prepared SFT JSONL path (defaults under recipe output dir)",
+    )
+
+    train_dpo_parser = subparsers.add_parser(
+        "train-dpo",
+        help="Run QLoRA DPO training from a research recipe and prepared JSONL",
+    )
+    train_dpo_parser.add_argument(
+        "--recipe-config",
+        required=True,
+        help="Path to research recipe JSON",
+    )
+    train_dpo_parser.add_argument(
+        "--dataset-jsonl",
+        default=None,
+        help="Prepared preference JSONL path (defaults under recipe output dir)",
     )
 
     return parser
@@ -576,6 +665,88 @@ def _run_summarize_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_research_output_path(
+    recipe_output_dir: str,
+    override_path: str | None,
+    *,
+    default_name: str,
+) -> Path:
+    if override_path:
+        return Path(override_path)
+    return Path(recipe_output_dir) / default_name
+
+
+def _parse_allowed_tools(raw: str | None) -> set[str] | None:
+    if raw is None:
+        return None
+    values = {token.strip() for token in raw.split(",") if token.strip()}
+    return values or None
+
+
+def _run_prepare_sft_data(args: argparse.Namespace) -> int:
+    recipe = load_research_recipe(args.recipe_config)
+    rows = prepare_sft_records(recipe)
+    output_path = _resolve_research_output_path(
+        recipe.output_dir,
+        args.output_jsonl,
+        default_name="sft_train.jsonl",
+    )
+    write_jsonl(rows, output_path)
+    print(f"Prepared SFT rows: {len(rows)}")
+    print(f"Wrote SFT JSONL: {output_path}")
+    return 0
+
+
+def _run_prepare_dpo_data(args: argparse.Namespace) -> int:
+    recipe = load_research_recipe(args.recipe_config)
+    rows = prepare_preference_records(recipe)
+    output_path = _resolve_research_output_path(
+        recipe.output_dir,
+        args.output_jsonl,
+        default_name="dpo_train.jsonl",
+    )
+    write_jsonl(rows, output_path)
+    print(f"Prepared preference rows: {len(rows)}")
+    print(f"Wrote preference JSONL: {output_path}")
+    return 0
+
+
+def _run_mine_failure_pairs(args: argparse.Namespace) -> int:
+    eval_payload = _load_json(args.eval_json)
+    rows = mine_failure_preferences(
+        eval_payload,
+        allowed_tool_names=_parse_allowed_tools(args.allowed_tools),
+    )
+    write_jsonl(rows, args.output_jsonl)
+    print(f"Mined failure pairs: {len(rows)}")
+    print(f"Wrote mined preference JSONL: {args.output_jsonl}")
+    return 0
+
+
+def _run_train_sft(args: argparse.Namespace) -> int:
+    recipe = load_research_recipe(args.recipe_config)
+    dataset_path = _resolve_research_output_path(
+        recipe.output_dir,
+        args.dataset_jsonl,
+        default_name="sft_train.jsonl",
+    )
+    output_path = run_sft_training(recipe, dataset_path=dataset_path)
+    print(f"SFT training output: {output_path}")
+    return 0
+
+
+def _run_train_dpo(args: argparse.Namespace) -> int:
+    recipe = load_research_recipe(args.recipe_config)
+    dataset_path = _resolve_research_output_path(
+        recipe.output_dir,
+        args.dataset_jsonl,
+        default_name="dpo_train.jsonl",
+    )
+    output_path = run_dpo_training(recipe, dataset_path=dataset_path)
+    print(f"DPO training output: {output_path}")
+    return 0
+
+
 def main() -> int:
     load_env_file(Path.cwd())
     parser = build_parser()
@@ -597,6 +768,16 @@ def main() -> int:
         return _run_render_plots(args)
     if args.command == "summarize-run":
         return _run_summarize_run(args)
+    if args.command == "prepare-sft-data":
+        return _run_prepare_sft_data(args)
+    if args.command == "prepare-dpo-data":
+        return _run_prepare_dpo_data(args)
+    if args.command == "mine-failure-pairs":
+        return _run_mine_failure_pairs(args)
+    if args.command == "train-sft":
+        return _run_train_sft(args)
+    if args.command == "train-dpo":
+        return _run_train_dpo(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 2

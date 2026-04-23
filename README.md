@@ -250,6 +250,61 @@ Recommended GPU-backed command:
 uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_base.json --run-study-gate --run-summarize
 ```
 
+## Running The Failure-Aware Finetuning Plan
+
+- `prepare-sft-data` normalizes ShareGPT-style tool-calling datasets into JSONL
+- `prepare-dpo-data` reshapes preference datasets such as `ToolPreference`
+- `mine-failure-pairs` turns eval failures into `(prompt, chosen, rejected)` DPO rows
+- `train-sft` and `train-dpo` lazily import HF training dependencies and run QLoRA-style training
+
+Install the optional ML stack first:
+
+```bash
+uv sync --extra dev --extra research
+```
+
+Prepare the main SFT set from ToolACE:
+
+```bash
+uv run tcrb prepare-sft-data --recipe-config configs/research/sft_toolace_qwen25_3b.json
+```
+
+Prepare the masked ToolACE+Hermes variant from the plan:
+
+```bash
+uv run tcrb prepare-sft-data --recipe-config configs/research/sft_toolace_hermes_mask20_qwen25_3b.json
+```
+
+Run SFT from the prepared JSONL:
+
+```bash
+uv run tcrb train-sft --recipe-config configs/research/sft_toolace_qwen25_3b.json
+```
+
+If you have BFCL-style eval outputs with `expected_output` and `predicted_output`, mine failure pairs like this:
+
+```bash
+uv run tcrb mine-failure-pairs --eval-json runs/bfcl_eval/predictions.json --output-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
+```
+
+You can also prepare the `ToolPreference` backup dataset directly:
+
+```bash
+uv run tcrb prepare-dpo-data --recipe-config configs/research/dpo_toolpreference_qwen25_3b.json
+```
+
+Run DPO using either mined failures or prepared preference JSONL:
+
+```bash
+uv run tcrb train-dpo --recipe-config configs/research/dpo_failure_qwen25_3b.json --dataset-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
+```
+
+Notes:
+
+- the prep and mining commands work on CPU and on macOS
+- the training commands are intended for a Linux GPU environment such as Kaggle T4 and use `fp16` + optional 4-bit loading
+- the recipe files under `configs/research/` are concrete starting points for the exact SFT, masking, and DPO stages in the attached plan
+
 The HF northstar script now refuses to run if base and comparison planner configs are operationally identical, unless you explicitly allow that. That guard exists to prevent meaningless base-vs-comparison LLM studies.
 
 At the moment, the most meaningful default real-LLM comparison in this repo is `policy_native` vs `hf_local`. A true model-vs-model or base-vs-finetuned HF comparison would need a genuinely different HF planner config, not just a different config name.
