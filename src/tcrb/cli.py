@@ -15,6 +15,7 @@ from .eval_cases import load_eval_cases, score_eval_cases
 from .planner import load_tool_planner
 from .research import (
     load_research_recipe,
+    mine_benchmark_failure_preferences,
     mine_failure_preferences,
     prepare_preference_records,
     prepare_sft_records,
@@ -347,6 +348,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--allowed-tools",
         default=None,
         help="Optional comma-separated allowlist used to label hallucinated functions",
+    )
+
+    mine_benchmark_pairs_parser = subparsers.add_parser(
+        "mine-benchmark-failure-pairs",
+        help="Mine preference pairs directly from TCRB result.json plus eval_cases.json",
+    )
+    mine_benchmark_pairs_parser.add_argument(
+        "--result-json",
+        required=True,
+        help="Path to benchmark result.json payload",
+    )
+    mine_benchmark_pairs_parser.add_argument(
+        "--eval-cases-json",
+        required=True,
+        help="Path to eval cases JSON with expected tool sequences",
+    )
+    mine_benchmark_pairs_parser.add_argument(
+        "--output-jsonl",
+        required=True,
+        help="Path to write mined preference JSONL",
+    )
+    mine_benchmark_pairs_parser.add_argument(
+        "--policy",
+        default=None,
+        help="Optional policy filter when result.json contains multiple policies",
     )
 
     train_sft_parser = subparsers.add_parser(
@@ -723,6 +749,20 @@ def _run_mine_failure_pairs(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_mine_benchmark_failure_pairs(args: argparse.Namespace) -> int:
+    result_payload = _load_json(args.result_json)
+    eval_cases_payload = load_eval_cases(args.eval_cases_json)
+    rows = mine_benchmark_failure_preferences(
+        result_payload,
+        eval_cases_payload,
+        policy=args.policy,
+    )
+    write_jsonl(rows, args.output_jsonl)
+    print(f"Mined benchmark failure pairs: {len(rows)}")
+    print(f"Wrote benchmark preference JSONL: {args.output_jsonl}")
+    return 0
+
+
 def _run_train_sft(args: argparse.Namespace) -> int:
     recipe = load_research_recipe(args.recipe_config)
     dataset_path = _resolve_research_output_path(
@@ -774,6 +814,8 @@ def main() -> int:
         return _run_prepare_dpo_data(args)
     if args.command == "mine-failure-pairs":
         return _run_mine_failure_pairs(args)
+    if args.command == "mine-benchmark-failure-pairs":
+        return _run_mine_benchmark_failure_pairs(args)
     if args.command == "train-sft":
         return _run_train_sft(args)
     if args.command == "train-dpo":
