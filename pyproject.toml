@@ -15,6 +15,15 @@ dev = [
   "matplotlib>=3.8",
   "pytest>=8.0",
 ]
+research = [
+  "accelerate>=0.30",
+  "bitsandbytes>=0.43; platform_system == 'Linux'",
+  "datasets>=2.18",
+  "peft>=0.11",
+  "torch>=2.2",
+  "transformers>=4.41",
+  "trl>=0.14",
+]
 
 [project.scripts]
 tcrb = "tcrb.cli:main"
