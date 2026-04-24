@@ -55,6 +55,7 @@ class ResearchRecipe:
     stage: str
     base_model: str
     output_dir: str
+    adapter_path: str | None = None
     dataset_sources: list[ResearchDatasetSource] = field(default_factory=list)
     input_path: str | None = None
     learning_rate: float = 1e-4
@@ -100,6 +101,7 @@ def research_recipe_from_dict(payload: dict[str, Any]) -> ResearchRecipe:
         base_model=str(payload.get("base_model", "")).strip(),
         output_dir=str(payload.get("output_dir", "outputs/research")).strip()
         or "outputs/research",
+        adapter_path=(str(payload.get("adapter_path", "")).strip() or None),
         dataset_sources=sources,
         input_path=(str(payload.get("input_path", "")).strip() or None),
         learning_rate=float(payload.get("learning_rate", 1e-4)),
@@ -540,6 +542,14 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         task_type=peft_module.TaskType.CAUSAL_LM,
         target_modules=recipe.target_modules,
     )
+    if recipe.adapter_path:
+        model = peft_module.PeftModel.from_pretrained(
+            model,
+            recipe.adapter_path,
+            is_trainable=True,
+        )
+        lora_config = None
+
     training_args = transformers_module.TrainingArguments(
         output_dir=recipe.output_dir,
         learning_rate=recipe.learning_rate,
@@ -887,7 +897,7 @@ def _build_dpo_trainer_kwargs(
         kwargs["ref_model"] = None
     if "beta" in params:
         kwargs["beta"] = recipe.beta
-    if "peft_config" in params:
+    if lora_config is not None and "peft_config" in params:
         kwargs["peft_config"] = lora_config
     if "max_length" in params:
         kwargs["max_length"] = recipe.max_seq_length

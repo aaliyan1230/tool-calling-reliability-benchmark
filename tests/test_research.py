@@ -1,12 +1,14 @@
 import json
 
 from tcrb.research import (
+    _build_dpo_trainer_kwargs,
     apply_function_name_masking,
     classify_tool_call_failure,
     mine_benchmark_failure_preferences,
     mine_failure_preferences,
     normalize_sharegpt_record,
     normalize_toolpreference_record,
+    research_recipe_from_dict,
 )
 
 
@@ -174,3 +176,52 @@ def test_mine_benchmark_failure_preferences_uses_result_and_eval_cases():
     rejected = json.loads(mined[0]["rejected"])
     assert chosen["tool_calls"][0]["name"] == "weather.lookup"
     assert rejected["tool_calls"][0]["name"] == "weather.find"
+
+
+def test_research_recipe_parses_optional_adapter_path():
+    recipe = research_recipe_from_dict(
+        {
+            "stage": "dpo",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "adapter_path": "outputs/research/qwen25-3b-sft-toolace",
+            "output_dir": "outputs/research/qwen25-3b-dpo",
+        }
+    )
+
+    assert recipe.adapter_path == "outputs/research/qwen25-3b-sft-toolace"
+
+
+def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
+    class DummyTrainer:
+        def __init__(
+            self,
+            model,
+            args,
+            train_dataset,
+            ref_model=None,
+            beta=0.5,
+            peft_config=None,
+            processing_class=None,
+        ):
+            pass
+
+    class DummyModule:
+        DPOTrainer = DummyTrainer
+
+    kwargs = _build_dpo_trainer_kwargs(
+        trl_module=DummyModule,
+        model=object(),
+        training_args=object(),
+        train_dataset=object(),
+        tokenizer=object(),
+        recipe=research_recipe_from_dict(
+            {
+                "stage": "dpo",
+                "base_model": "Qwen/Qwen2.5-3B-Instruct",
+                "output_dir": "outputs/research/qwen25-3b-dpo",
+            }
+        ),
+        lora_config=None,
+    )
+
+    assert "peft_config" not in kwargs

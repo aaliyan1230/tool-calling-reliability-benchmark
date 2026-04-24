@@ -145,3 +145,18 @@ def test_replay_uses_sequence_then_fallback():
 def test_deprecated_planner_type_is_not_supported():
     with pytest.raises(ValueError):
         planner_from_dict({"type": "deprecated", "name": "deprecated"})
+
+
+def test_planner_from_dict_supports_hf_local_adapter_path():
+    planner = planner_from_dict(
+        {
+            "type": "hf_local",
+            "name": "hf_qwen_adapter",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "adapter_path": "outputs/research/qwen25-3b-sft-toolace",
+        }
+    )
+
+    assert planner.planner_id == "hf_qwen_adapter"
+    assert planner.base_model == "Qwen/Qwen2.5-3B-Instruct"
+    assert planner.adapter_path == "outputs/research/qwen25-3b-sft-toolace"
