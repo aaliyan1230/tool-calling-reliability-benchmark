@@ -2,6 +2,7 @@ import json
 
 from tcrb.research import (
     _build_dpo_trainer_kwargs,
+    _training_dtype,
     _training_precision_kwargs,
     apply_function_name_masking,
     classify_tool_call_failure,
@@ -221,6 +222,45 @@ def test_training_precision_kwargs_follow_recipe():
     )
 
     assert _training_precision_kwargs(recipe) == {"fp16": False, "bf16": True}
+
+
+def test_training_dtype_follows_recipe_precision_order():
+    class DummyTorch:
+        float16 = "float16"
+        bfloat16 = "bfloat16"
+        float32 = "float32"
+
+    fp16_recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "fp16": True,
+            "bf16": False,
+        }
+    )
+    bf16_recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "fp16": False,
+            "bf16": True,
+        }
+    )
+    full_precision_recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "fp16": False,
+            "bf16": False,
+        }
+    )
+
+    assert _training_dtype(fp16_recipe, torch_module=DummyTorch) == "float16"
+    assert _training_dtype(bf16_recipe, torch_module=DummyTorch) == "bfloat16"
+    assert _training_dtype(full_precision_recipe, torch_module=DummyTorch) == "float32"
 
 
 def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
