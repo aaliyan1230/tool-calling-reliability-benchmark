@@ -49,6 +49,7 @@ def heuristic_pick(
 class HFLocalPlannerCore:
     planner_id: str
     base_model_id: str
+    adapter_path: str | None = None
 
     def __post_init__(self) -> None:
         hf_token = str(os.environ.get("HF_TOKEN", "")).strip()
@@ -73,6 +74,16 @@ class HFLocalPlannerCore:
             **auth_kwargs,
             **model_kwargs,
         )
+
+        adapter_path = str(self.adapter_path or "").strip()
+        if adapter_path:
+            from peft import PeftModel
+
+            base_model = PeftModel.from_pretrained(
+                base_model,
+                adapter_path,
+                is_trainable=False,
+            )
 
         self.model = base_model
 

@@ -389,6 +389,7 @@ class CommandPlanner:
 class HFLocalPlanner:
     planner_id: str = "hf_local"
     base_model: str = ""
+    adapter_path: str | None = None
     fallback: ToolPlanner = field(default_factory=PolicyNativePlanner)
     _core: object | None = field(default=None, init=False, repr=False)
 
@@ -404,6 +405,7 @@ class HFLocalPlanner:
             self._core = HFLocalPlannerCore(
                 planner_id=self.planner_id,
                 base_model_id=model_name,
+                adapter_path=(str(self.adapter_path or "").strip() or None),
             )
         return self._core
 
@@ -481,6 +483,7 @@ def planner_from_dict(payload: dict) -> ToolPlanner:
         return HFLocalPlanner(
             planner_id=planner_id,
             base_model=str(payload.get("base_model", "")),
+            adapter_path=(str(payload.get("adapter_path", "")).strip() or None),
             fallback=PolicyNativePlanner(),
         )
 
