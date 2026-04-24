@@ -71,7 +71,23 @@ class ResearchRecipe:
     lora_dropout: float = 0.05
     target_modules: str | list[str] = "all-linear"
     load_in_4bit: bool = True
+    fp16: bool = True
+    bf16: bool = False
     masking: FunctionMaskingConfig = field(default_factory=FunctionMaskingConfig)
+
+
+def _coerce_bool(value: Any, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+    return bool(value)
 
 
 def dataset_source_from_dict(payload: dict[str, Any]) -> ResearchDatasetSource:
@@ -116,7 +132,9 @@ def research_recipe_from_dict(payload: dict[str, Any]) -> ResearchRecipe:
         lora_alpha=int(payload.get("lora_alpha", 32)),
         lora_dropout=float(payload.get("lora_dropout", 0.05)),
         target_modules=payload.get("target_modules", "all-linear"),
-        load_in_4bit=bool(payload.get("load_in_4bit", True)),
+        load_in_4bit=_coerce_bool(payload.get("load_in_4bit"), default=True),
+        fp16=_coerce_bool(payload.get("fp16"), default=True),
+        bf16=_coerce_bool(payload.get("bf16"), default=False),
         masking=FunctionMaskingConfig(
             ratio=float(masking_payload.get("ratio", 0.0)),
             seed=int(masking_payload.get("seed", 0)),
@@ -131,6 +149,13 @@ def research_recipe_from_dict(payload: dict[str, Any]) -> ResearchRecipe:
 def load_research_recipe(path: str | Path) -> ResearchRecipe:
     with Path(path).open("r", encoding="utf-8") as handle:
         return research_recipe_from_dict(json.load(handle))
+
+
+def _training_precision_kwargs(recipe: ResearchRecipe) -> dict[str, bool]:
+    return {
+        "fp16": recipe.fp16,
+        "bf16": recipe.bf16,
+    }
 
 
 def _role_from_sharegpt(raw_role: str) -> str:
@@ -557,8 +582,7 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         per_device_train_batch_size=recipe.per_device_train_batch_size,
         gradient_accumulation_steps=recipe.gradient_accumulation_steps,
         warmup_ratio=recipe.warmup_ratio,
-        fp16=True,
-        bf16=False,
+        **_training_precision_kwargs(recipe),
         logging_steps=10,
         save_strategy="epoch",
         report_to="none",
@@ -646,8 +670,7 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         per_device_train_batch_size=recipe.per_device_train_batch_size,
         gradient_accumulation_steps=recipe.gradient_accumulation_steps,
         warmup_ratio=recipe.warmup_ratio,
-        fp16=True,
-        bf16=False,
+        **_training_precision_kwargs(recipe),
         logging_steps=10,
         save_strategy="epoch",
         report_to="none",

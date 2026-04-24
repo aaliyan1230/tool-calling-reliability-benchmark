@@ -2,6 +2,7 @@ import json
 
 from tcrb.research import (
     _build_dpo_trainer_kwargs,
+    _training_precision_kwargs,
     apply_function_name_masking,
     classify_tool_call_failure,
     mine_benchmark_failure_preferences,
@@ -189,6 +190,37 @@ def test_research_recipe_parses_optional_adapter_path():
     )
 
     assert recipe.adapter_path == "outputs/research/qwen25-3b-sft-toolace"
+
+
+def test_research_recipe_parses_runtime_precision_flags():
+    recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "fp16": False,
+            "bf16": False,
+            "load_in_4bit": "true",
+        }
+    )
+
+    assert recipe.fp16 is False
+    assert recipe.bf16 is False
+    assert recipe.load_in_4bit is True
+
+
+def test_training_precision_kwargs_follow_recipe():
+    recipe = research_recipe_from_dict(
+        {
+            "stage": "dpo",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-dpo",
+            "fp16": False,
+            "bf16": True,
+        }
+    )
+
+    assert _training_precision_kwargs(recipe) == {"fp16": False, "bf16": True}
 
 
 def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
