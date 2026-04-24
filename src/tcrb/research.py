@@ -166,6 +166,17 @@ def _training_dtype(recipe: ResearchRecipe, *, torch_module: Any) -> Any:
     return torch_module.float32
 
 
+def _prepare_model_for_quantized_training(
+    recipe: ResearchRecipe,
+    *,
+    model: Any,
+    peft_module: Any,
+) -> Any:
+    if not recipe.load_in_4bit:
+        return model
+    return peft_module.prepare_model_for_kbit_training(model)
+
+
 def _role_from_sharegpt(raw_role: str) -> str:
     role = str(raw_role).strip().lower()
     if role == "human":
@@ -570,6 +581,11 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     )
     if hasattr(model, "config"):
         model.config.use_cache = False
+    model = _prepare_model_for_quantized_training(
+        recipe,
+        model=model,
+        peft_module=peft_module,
+    )
 
     lora_config = peft_module.LoraConfig(
         r=recipe.lora_r,
@@ -670,6 +686,11 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     )
     if hasattr(model, "config"):
         model.config.use_cache = False
+    model = _prepare_model_for_quantized_training(
+        recipe,
+        model=model,
+        peft_module=peft_module,
+    )
 
     lora_config = peft_module.LoraConfig(
         r=recipe.lora_r,

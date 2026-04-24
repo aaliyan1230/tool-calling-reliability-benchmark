@@ -2,6 +2,7 @@ import json
 
 from tcrb.research import (
     _build_dpo_trainer_kwargs,
+    _prepare_model_for_quantized_training,
     _training_dtype,
     _training_precision_kwargs,
     apply_function_name_masking,
@@ -261,6 +262,41 @@ def test_training_dtype_follows_recipe_precision_order():
     assert _training_dtype(fp16_recipe, torch_module=DummyTorch) == "float16"
     assert _training_dtype(bf16_recipe, torch_module=DummyTorch) == "bfloat16"
     assert _training_dtype(full_precision_recipe, torch_module=DummyTorch) == "float32"
+
+
+def test_prepare_model_for_quantized_training_only_wraps_4bit_models():
+    class DummyPeftModule:
+        @staticmethod
+        def prepare_model_for_kbit_training(model):
+            return {"prepared": model}
+
+    quantized_recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "load_in_4bit": True,
+        }
+    )
+    full_precision_recipe = research_recipe_from_dict(
+        {
+            "stage": "sft",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-sft-toolace",
+            "load_in_4bit": False,
+        }
+    )
+
+    assert _prepare_model_for_quantized_training(
+        quantized_recipe,
+        model="model",
+        peft_module=DummyPeftModule,
+    ) == {"prepared": "model"}
+    assert _prepare_model_for_quantized_training(
+        full_precision_recipe,
+        model="model",
+        peft_module=DummyPeftModule,
+    ) == "model"
 
 
 def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
