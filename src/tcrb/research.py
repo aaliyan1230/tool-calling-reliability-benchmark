@@ -158,6 +158,14 @@ def _training_precision_kwargs(recipe: ResearchRecipe) -> dict[str, bool]:
     }
 
 
+def _training_dtype(recipe: ResearchRecipe, *, torch_module: Any) -> Any:
+    if recipe.bf16:
+        return torch_module.bfloat16
+    if recipe.fp16:
+        return torch_module.float16
+    return torch_module.float32
+
+
 def _role_from_sharegpt(raw_role: str) -> str:
     role = str(raw_role).strip().lower()
     if role == "human":
@@ -543,12 +551,16 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    model_kwargs = {"trust_remote_code": True}
+    torch_dtype = _training_dtype(recipe, torch_module=torch_module)
+    model_kwargs = {
+        "trust_remote_code": True,
+        "torch_dtype": torch_dtype,
+    }
     if recipe.load_in_4bit:
         model_kwargs["quantization_config"] = transformers_module.BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch_module.float16,
+            bnb_4bit_compute_dtype=torch_dtype,
         )
     if torch_module.cuda.is_available():
         model_kwargs["device_map"] = "auto"
@@ -639,12 +651,16 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    model_kwargs = {"trust_remote_code": True}
+    torch_dtype = _training_dtype(recipe, torch_module=torch_module)
+    model_kwargs = {
+        "trust_remote_code": True,
+        "torch_dtype": torch_dtype,
+    }
     if recipe.load_in_4bit:
         model_kwargs["quantization_config"] = transformers_module.BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch_module.float16,
+            bnb_4bit_compute_dtype=torch_dtype,
         )
     if torch_module.cuda.is_available():
         model_kwargs["device_map"] = "auto"
