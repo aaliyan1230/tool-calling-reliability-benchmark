@@ -1,285 +1,174 @@
 # Tool-Calling Reliability Benchmark
 
-This repository studies a simple but important question: if one tool-calling planner looks better than another, did it actually become more reliable, or did it just get lucky on a narrow slice of tasks?
+Tool-Calling Reliability Benchmark (TCRB) is a benchmark-and-repair workflow for tool-routing reliability.
 
-Tool-Calling Reliability Benchmark (TCRB) answers that question with reproducible runs, fault injection, side-by-side comparisons, transfer checks, and plain-language reports. The goal is not only to produce scores. The goal is to produce evidence that a human reader can understand.
+It is built to answer a stricter question than "did the score go up?":
+
+If we repair a planner so it chooses the right tool more often on the target workload, does that improvement survive under controlled failures, across multiple seeds, and across other toolsets?
 
 Detailed project criteria live in `docs/core-goals.md`.
 
 Artifact bundle: https://doi.org/10.5281/zenodo.20071002
 
-## Important Alignment Note
+## Headline Result
 
-There are two different kinds of studies in this repo:
+The strongest result in this repo is a targeted router-repair run on a real HF planner:
 
-- non-LLM planner studies: built-in planners like `policy_native` and `heuristic` choose tools
-- LLM-backed studies: `hf_local` uses a real model to score candidate tool choices
+- base model: `Qwen/Qwen2.5-3B-Instruct`
+- repair step: DPO on a small first-tool preference dataset
+- training set size: `157` preference rows
+- target domain: `customer_support`
 
-The fresh local study shown below is a non-LLM planner study. It validates the benchmark harness, reporting, transfer logic, and study-gate behavior. It does not by itself prove how a real LLM behaves on tool selection.
+### What improved
 
-That second question requires an actual `hf_local` run.
+| signal | base | repaired | delta |
+|---|---:|---:|---:|
+| target success across seeds `11,13,17` | `0.8333` | `0.9074` | `+0.0741` |
+| invalid tool-call rate | `0.1367` | `0.0719` | `-0.0649` |
+| target first-tool accuracy (`customer_support`) | `0.8333` | `1.0000` | `+0.1667` |
 
-## In Plain English
+### What did not transfer cleanly
 
-What this repo does:
+| toolset | base first-tool acc | repaired first-tool acc | delta |
+|---|---:|---:|---:|
+| `customer_support` | `0.8333` | `1.0000` | `+0.1667` |
+| `ecommerce_ops` | `1.0000` | `0.8889` | `-0.1111` |
+| `fintech_risk` | unchanged | unchanged | `0.0000` |
+| `developer_tools` | unchanged | unchanged | `0.0000` |
 
-- runs planners against tool-calling workloads under controlled failures
-- compares a baseline planner against a modified planner
-- checks whether the modified planner really improved on the target tasks
-- checks whether that improvement transfers to other toolsets or falls apart
-- writes markdown reports and plots so you do not need to inspect raw JSON by hand
+## Why This Is Still A Good Result
 
-What this repo has achieved already:
+Glass-half-full version:
 
-- a full local benchmark and reporting loop
-- reusable plot generation from existing artifacts
-- asset-backed markdown summaries
-- a transfer matrix over four toolsets
-- a contributor-friendly minimal planner path for extension work
+- the repair worked on the failure mode it was designed to fix
+- the gain was visible across multiple seeds, not just one lucky run
+- invalid calls dropped while success rose, which is the direction that matters operationally
+- the benchmark caught the transfer limit instead of hiding it, which is exactly what a reliability benchmark should do
 
-## The Main Finding From This Repo
+This repo is not claiming a universal tool-calling fix.
 
-The clearest fresh result in this repository is a local study comparing the built-in `heuristic` planner against `policy_native`.
+It is showing something more useful:
 
-In short:
+1. a small targeted repair can measurably improve first-tool routing on a real workload
+2. that gain can be checked under a stricter methodology than a single benchmark score
+3. transfer needs to be measured explicitly, because target improvement and cross-domain robustness are not the same thing
 
-- the heuristic planner improved target-workload success
-- it reduced invalid tool calls on that same target workload
-- the effect was strong enough to pass the study-gate check
-- but it still failed the transfer-matrix portfolio check
+## What TCRB Actually Does
 
-That is not a contradiction. It is the point of the benchmark. A planner can improve on one slice and still fail as a generally better policy.
+TCRB combines four pieces:
 
-What this means for alignment:
+- controlled workload execution with injected failures
+- baseline-vs-comparison evaluation
+- multi-seed aggregation
+- transfer checks across multiple toolsets
 
-- we now have a strong harness result
-- we do not yet have a headline real-LLM result in the README
-- the repo contains a real-LLM path for that next step
+The repo supports both:
 
-## What We Ran
+- benchmark-only studies with built-in planners such as `policy_native` and `heuristic`
+- HF-backed studies with `hf_local`, including adapter-backed comparisons and targeted repair runs
 
-The end-to-end study artifacts are here:
+## Methodology
 
-- `runs/study-heuristic-vs-native-base-ms/multi_seed_summary.md`
-- `runs/study-heuristic-vs-native-comparison-ms/multi_seed_summary.md`
-- `runs/study-heuristic-vs-native-delta/delta-ms.md`
-- `runs/study-heuristic-vs-native-matrix/matrix_summary.md`
-- `runs/study-heuristic-vs-native-study-gate/study_gate.md`
-- `runs/study-heuristic-vs-native-analysis/analysis_summary.md`
+The methodology is intentionally conservative.
 
-The transfer study now covers four toolsets:
+### 1. Targeted task signal
+
+We measure whether the comparison planner improves the first tool it selects and whether task success also improves.
+
+### 2. Error quality
+
+We track invalid tool calls directly, so a planner does not get credit for reaching higher success through noisier behavior.
+
+### 3. Multi-seed evaluation
+
+We aggregate across seeds to reduce the chance that one favorable run becomes the entire story.
+
+### 4. Transfer checks
+
+We test the same change on multiple toolsets:
 
 - `customer_support`
 - `ecommerce_ops`
 - `fintech_risk`
 - `developer_tools`
 
-The fourth toolset is new in this repo and was added to make transfer claims less tied to the original three domains.
+That is what turns a local win into a meaningful reliability claim, or shows where the claim stops.
 
-## Findings
+## Repo Outputs
 
-### High-Level Outcome
+The stable artifacts under `runs/<label>/` are:
 
-| signal | result | plain-language meaning |
-|---|---:|---|
-| mean target success delta | +0.1944 | the comparison planner solved more target tasks |
-| mean target invalid-call delta | -0.1743 | it made fewer bad tool calls |
-| study-gate verdict | PASS | the change is real enough to observe, not just flat noise |
-| matrix portfolio verdict | FAIL | the comparison planner is not an across-the-board upgrade |
-| rows in transfer matrix | 4 | the transfer check now spans four toolsets |
-| worst transfer row | customer_support at -0.1111 | the target transfer threshold was still missed |
+| artifact | purpose |
+|---|---|
+| `summary.md`, `result.json` | one planner on one workload |
+| `multi_seed_summary.md`, `multi_seed.json` | aggregated behavior across seeds |
+| `delta-ms.md`, `delta-ms.json` | direct comparison between base and repaired planner |
+| `matrix_summary.md`, `matrix.json` | transfer behavior across toolsets |
+| `analysis_summary.md` | compact artifact-first summary with nearby visuals |
 
-### What That Means
+If you want one place to start, open:
 
-For a reader who is new to this kind of benchmark:
+- `runs/study-heuristic-vs-native-analysis/analysis_summary.md` for the benchmark harness story
+- the Zenodo artifact bundle above for the latest end-to-end repair bundle
 
-- `PASS` in the study gate is good: it means the comparison produced observable movement.
-- `FAIL` in the transfer matrix is not a broken run: it means the benchmark caught a limitation in the planner change.
-- Seeing both together is useful. It means the benchmark can distinguish “better somewhere” from “better overall.”
+## Benchmark Foundation
 
-### Policy-Level Result
+Before the HF router-repair result, this repo already established the harness on built-in planners.
 
-On the target workload, the heuristic planner improved the strongest policies by a visible margin:
+That earlier work matters because it validated the reporting loop, transfer matrix, and study-gate logic before using the same framework on a real HF planner.
 
-- `exponential_backoff_jitter`: success `+0.2778`, invalid calls `-0.2063`
-- `naive_retry`: success `+0.2778`, invalid calls `-0.2050`
-- `timeout_budget_early_abort`: success `+0.2222`, invalid calls `-0.2857`
-
-So the benchmark is not merely saying “different.” It is showing exactly where the planner got better.
-
-## Visual Walkthrough
-
-If you only look at three things in this repo, look at these.
-
-### 1. Overall Comparison View
-
-This figure summarizes the comparison planner on the target workload across the main metrics.
+Two representative visuals from that benchmark foundation:
 
 ![Multi-seed overview](runs/study-heuristic-vs-native-analysis/multi_seed_overview.png)
 
-### 2. Did The Comparison Planner Improve?
-
-This figure shows the direct change from `policy_native` to `heuristic` for each policy. In this chart:
-
-- bars above zero in success are good
-- bars below zero in invalid calls are also good
-
-![Delta policy view](runs/study-heuristic-vs-native-analysis/delta_policy.png)
-
-### 3. Did The Improvement Transfer?
-
-This figure is the transfer matrix. Values near zero mean little change. Negative values mean the comparison planner got worse on that toolset for that metric.
-
 ![Transfer matrix view](runs/study-heuristic-vs-native-analysis/transfer_matrix.png)
 
-The important read is simple: the comparison planner improved the target benchmark summary, but it still missed the target-domain transfer threshold and therefore does not qualify as a clean overall win.
+Those figures are from the benchmark-only path, not from the later HF repair run, but they show the same reliability framing the repo now applies to LLM-backed planner studies.
 
-## Methodology
+## What Changed In The Repo
 
-The benchmark is intentionally layered so that each claim has a corresponding proof artifact.
+The repo now includes the full execution path for the HF repair workflow:
 
-### 1. Run Under Controlled Failures
+- strict HF planner configs with explicit candidate-scope controls
+- adapter-backed planner comparisons
+- direct first-tool probe and matrix scripts
+- DPO dataset construction for router repair
+- Kaggle packaging and execution helpers for GPU-backed runs
+- training-side fixes for adapter continuation and DPO argument compatibility
 
-Planners are evaluated under injected failures such as:
+Key files:
 
-- timeouts
-- rate limits
-- malformed schemas
-- contract drift
-- network failures
+- `src/tcrb/hf_planner.py`
+- `src/tcrb/research.py`
+- `scripts/run_northstar_hf.py`
+- `scripts/run_hf_choice_probe.py`
+- `scripts/run_hf_choice_matrix.py`
+- `scripts/build_router_dpo_dataset.py`
+- `scripts/kaggle_tcrb.py`
+- `kaggle/runner.py`
 
-This makes the benchmark about reliability under stress, not just ideal-path behavior.
+## Minimal Workflows
 
-### 2. Aggregate Across Seeds
+Most of the old command wall is not needed day to day. These are the only workflows worth surfacing.
 
-We do not trust one run. Multi-seed summaries reduce the chance that a result is just randomness.
-
-### 3. Compare Baseline vs Comparison Directly
-
-We compute `comparison - base` so the size and direction of a change are explicit.
-
-### 4. Test Transfer Across Toolsets
-
-A planner that improves on one workload but collapses elsewhere should not be treated as a generally better planner. The transfer matrix is where that gets caught.
-
-### 5. Gate On Signal Quality
-
-The study gate exists to reject flatline or weak results. It is there to stop overclaiming.
-
-## How To Read The Artifacts
-
-The repo writes a few stable artifact types under `runs/<label>/`.
-
-| artifact | what it tells you |
-|---|---|
-| `result.json`, `summary.md` | one run, one planner, one workload |
-| `multi_seed.json`, `multi_seed_summary.md` | average behavior across several seeds |
-| `delta-ms.json`, `delta-ms.md` | exactly how comparison differs from baseline |
-| `matrix.json`, `matrix_summary.md` | whether gains transfer across toolsets |
-| `study_gate.json`, `study_gate.md` | whether the result is strong enough to count as evidence |
-| `analysis_summary.md` | one compact markdown summary with embedded visuals |
-
-If you want a single artifact to open first, start with `runs/study-heuristic-vs-native-analysis/analysis_summary.md`.
-
-## What Changed In This Project
-
-This repo now includes more than the original benchmark loop.
-
-- reusable plot rendering from stored artifact JSON
-- markdown reports that can reference nearby visuals
-- a fourth enriched toolset: `developer_tools`
-- a minimal deterministic planner path for contributors
-
-Those changes make the project easier to inspect as a research artifact, not just as code.
-
-## Run It Yourself
-
-Local setup is small:
+### 1. Local sanity and tests
 
 ```bash
 uv sync --extra dev
 uv run pytest
 ```
 
-To reproduce the kind of study shown above:
+### 2. Strict HF comparison
 
-```bash
-uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3 --planner-config configs/planners/policy_native.json --label base-ms
-```
-
-```bash
-uv run tcrb multi-seed --config configs/baseline.json --workload workloads/sample_tasks.json --seeds 1,2,3 --planner-config configs/planners/heuristic.json --label comparison-ms
-```
-
-```bash
-uv run tcrb eval-delta --base-run runs/base-ms/multi_seed.json --comparison-run runs/comparison-ms/multi_seed.json --output-json runs/delta/delta-ms.json --output-report runs/delta/delta-ms.md
-```
-
-```bash
-uv run python scripts/run_transfer_matrix.py --manifest workloads/enriched/manifest.json --config configs/baseline.json --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/heuristic.json --target-toolset customer_support --label matrix-study
-```
-
-```bash
-uv run tcrb study-gate --base-run runs/base-ms/multi_seed.json --comparison-run runs/comparison-ms/multi_seed.json --matrix-json runs/matrix-study/matrix.json --require-matrix-signal --output-json runs/study-gate/study_gate.json --output-report runs/study-gate/study_gate.md
-```
-
-```bash
-uv run tcrb summarize-run --multi-seed-json runs/comparison-ms/multi_seed.json --delta-json runs/delta/delta-ms.json --matrix-json runs/matrix-study/matrix.json --study-gate-json runs/study-gate/study_gate.json --output-dir runs/analysis --output-report runs/analysis/analysis_summary.md
-```
-
-If you prefer a notebook walkthrough, `notebooks/entrypoint_outcomes.ipynb` still exists, but the main reporting path is now artifact-first and works locally without depending on notebook execution.
-
-## Running A Real LLM Study
-
-If the goal is to verify whether a real model picks the relevant tool for a user query, use the HF path.
-
-Relevant files:
-
-- `src/tcrb/hf_planner.py`
-- `configs/planners/policy_native.json`
-- `configs/planners/hf_qwen2_5_3b_base.json`
-- `configs/planners/hf_qwen2_5_3b_comparison.json`
-- `configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json`
-- `configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json`
-- `scripts/run_northstar_hf.py`
-- `scripts/run_hf_choice_probe.py`
-- `scripts/run_hf_choice_matrix.py`
-- `scripts/kaggle_tcrb.py`
-
-Practical note:
-
-- this is the path that likely wants a GPU such as a T4
-- the non-LLM planner studies do not need that GPU
-
-Recommended GPU-backed command:
-
-```bash
-uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_base.json --run-study-gate --run-summarize
-```
-
-If you want a true base-vs-adapter study for Qwen2.5-3B, use the adapter-backed comparison config:
-
-```bash
-uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/hf_qwen2_5_3b_base.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison.json --run-study-gate --run-summarize
-```
-
-If you want a stricter first-tool routing comparison with no heuristic shortcuts and an explicit task-scoped candidate set, use:
+Use this when you want a clean base-vs-adapter first-tool study with explicit candidate controls:
 
 ```bash
 uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json --skip-matrix --run-study-gate --run-summarize
 ```
 
-For direct first-tool audits before a full benchmark, use the probe and matrix helpers:
+### 3. Kaggle-backed repair run
 
-```bash
-uv run python scripts/run_hf_choice_probe.py --workload workloads/enriched/customer_support.json --eval-cases-json workloads/eval_cases/customer_support_eval_cases.json --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json
-```
-
-```bash
-uv run python scripts/run_hf_choice_matrix.py --manifest workloads/enriched/manifest.json --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json --max-tasks 18
-```
-
-For Kaggle-backed execution, stage the repo snapshot as a Kaggle dataset, push the kernel, wait for completion, and pull artifacts back:
+Use this when you want the GPU execution path:
 
 ```bash
 uv run python scripts/kaggle_tcrb.py dataset-version
@@ -288,81 +177,15 @@ uv run python scripts/kaggle_tcrb.py watch
 uv run python scripts/kaggle_tcrb.py output --output-dir outputs/kaggle
 ```
 
-## Running The Failure-Aware Finetuning Plan
+## Extending The Repo
 
-- `prepare-sft-data` normalizes ShareGPT-style tool-calling datasets into JSONL
-- `prepare-dpo-data` reshapes preference datasets such as `ToolPreference`
-- `mine-failure-pairs` turns eval failures into `(prompt, chosen, rejected)` DPO rows
-- `mine-benchmark-failure-pairs` turns native TCRB `result.json` plus `eval_cases.json` into DPO rows
-- `train-sft` and `train-dpo` lazily import HF training dependencies and run QLoRA-style training
-
-Install the optional ML stack first:
-
-```bash
-uv sync --extra dev --extra research
-```
-
-Prepare the main SFT set from ToolACE:
-
-```bash
-uv run tcrb prepare-sft-data --recipe-config configs/research/sft_toolace_qwen25_3b.json
-```
-
-Prepare the masked ToolACE+Hermes variant from the plan:
-
-```bash
-uv run tcrb prepare-sft-data --recipe-config configs/research/sft_toolace_hermes_mask20_qwen25_3b.json
-```
-
-Run SFT from the prepared JSONL:
-
-```bash
-uv run tcrb train-sft --recipe-config configs/research/sft_toolace_qwen25_3b.json
-```
-
-If you have BFCL-style eval outputs with `expected_output` and `predicted_output`, mine failure pairs like this:
-
-```bash
-uv run tcrb mine-failure-pairs --eval-json runs/bfcl_eval/predictions.json --output-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
-```
-
-If you want to mine directly from the benchmark’s own artifacts instead of a separate eval dump, use the native adapter:
-
-```bash
-uv run tcrb mine-benchmark-failure-pairs --result-json runs/hf-run/result.json --eval-cases-json workloads/eval_cases/customer_support_eval_cases.json --policy naive_retry --output-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
-```
-
-You can also prepare the `ToolPreference` backup dataset directly:
-
-```bash
-uv run tcrb prepare-dpo-data --recipe-config configs/research/dpo_toolpreference_qwen25_3b.json
-```
-
-Run DPO using either mined failures or prepared preference JSONL:
-
-```bash
-uv run tcrb train-dpo --recipe-config configs/research/dpo_failure_qwen25_3b.json --dataset-jsonl outputs/research/qwen25-3b-failure-pairs/dpo_train.jsonl
-```
-
-Notes:
-
-- the prep and mining commands work on CPU and on macOS
-- the training commands are intended for a Linux GPU environment such as Kaggle T4 and use `fp16` + optional 4-bit loading
-- the recipe files under `configs/research/` are concrete starting points for the exact SFT, masking, and DPO stages in the attached plan
-
-The HF northstar script now refuses to run if base and comparison planner configs are operationally identical, unless you explicitly allow that. That guard exists to prevent meaningless base-vs-comparison LLM studies.
-
-At the moment, the most meaningful default real-LLM comparison in this repo is `policy_native` vs `hf_local`. A true model-vs-model or base-vs-finetuned HF comparison would need a genuinely different HF planner config, not just a different config name.
-
-## If You Want To Extend The Repo
-
-The easiest place to start is the minimal planner path:
+If you want to extend planners or add new workloads, start with:
 
 - `configs/planners/minimal.json`
 - `examples/custom_planner_minimal.py`
 - `docs/extending-planners.md`
 
-Current planner families in the repo:
+Current planner families:
 
 - `policy_native`
 - `heuristic`
@@ -371,5 +194,3 @@ Current planner families in the repo:
 - `replay`
 - `command`
 - `hf_local`
-
-`hf_local` is the advanced path. The rest of the benchmark and reporting workflow can be run locally without GPU requirements.
