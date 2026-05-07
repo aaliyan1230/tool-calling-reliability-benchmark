@@ -50,6 +50,10 @@ class HFLocalPlannerCore:
     planner_id: str
     base_model_id: str
     adapter_path: str | None = None
+    candidate_scope: str = "task"
+    candidate_order: str = "task"
+    policy_adjustment_weight: float = 1.0
+    heuristic_policy_shortcuts: bool = True
 
     def __post_init__(self) -> None:
         hf_token = str(os.environ.get("HF_TOKEN", "")).strip()
@@ -99,8 +103,7 @@ class HFLocalPlannerCore:
         attempted_tools: set[str],
         last_status: str | None,
     ) -> str:
-        ordered = [task.primary_tool, *task.fallback_tools]
-        available = [name for name in ordered if name in workload.tools]
+        available = self._candidate_names(task=task, workload=workload)
         candidate_tools = {
             name: {
                 "description": workload.tools[name].description,
@@ -127,6 +130,23 @@ class HFLocalPlannerCore:
             + "\n\nJSON:"
         )
 
+    def _candidate_names(self, *, task: TaskSpec, workload: Workload) -> list[str]:
+        if self.candidate_scope == "workload":
+            names = list(workload.tools.keys())
+        else:
+            names = [task.primary_tool, *task.fallback_tools]
+
+        seen: set[str] = set()
+        available = []
+        for name in names:
+            if name in workload.tools and name not in seen:
+                seen.add(name)
+                available.append(name)
+
+        if self.candidate_order == "sorted":
+            return sorted(available)
+        return available
+
     def _sequence_logprob(self, prompt: str, completion: str) -> float:
         full_text = prompt + completion
         enc_full = self.tokenizer(full_text, return_tensors="pt")
@@ -152,6 +172,40 @@ class HFLocalPlannerCore:
 
         gathered = token_log_probs.gather(dim=-1, index=target_slice.unsqueeze(-1)).squeeze(-1)
         return float(gathered.sum().item())
+
+    def _sequence_logprobs(self, prompt: str, completions: list[str]) -> list[float]:
+        if not completions:
+            return []
+
+        full_texts = [prompt + completion for completion in completions]
+        enc_full = self.tokenizer(full_texts, return_tensors="pt", padding=True)
+        enc_prompt = self.tokenizer(prompt, return_tensors="pt")
+
+        input_ids = enc_full["input_ids"]
+        attention_mask = enc_full["attention_mask"]
+        prompt_len = int(enc_prompt["input_ids"].shape[1])
+
+        if torch.cuda.is_available():
+            input_ids = input_ids.to(self.model.device)
+            attention_mask = attention_mask.to(self.model.device)
+
+        with torch.inference_mode():
+            logits = self.model(input_ids=input_ids, attention_mask=attention_mask).logits
+
+        shifted_logits = logits[:, :-1, :]
+        shifted_targets = input_ids[:, 1:]
+        shifted_mask = attention_mask[:, 1:]
+
+        start = max(0, prompt_len - 1)
+        token_log_probs = torch.log_softmax(shifted_logits[:, start:, :], dim=-1)
+        target_slice = shifted_targets[:, start:]
+        mask_slice = shifted_mask[:, start:].to(token_log_probs.dtype)
+
+        gathered = token_log_probs.gather(
+            dim=-1,
+            index=target_slice.unsqueeze(-1),
+        ).squeeze(-1)
+        return [float(value) for value in (gathered * mask_slice).sum(dim=-1).tolist()]
 
     def _policy_adjustment(
         self,
@@ -200,7 +254,10 @@ class HFLocalPlannerCore:
         attempted_tools: set[str],
         last_status: str | None,
     ) -> str:
-        if policy in {"schema_first_fallback", "timeout_budget_early_abort"}:
+        if self.heuristic_policy_shortcuts and policy in {
+            "schema_first_fallback",
+            "timeout_budget_early_abort",
+        }:
             return heuristic_pick(task, workload, attempted_tools, last_status)
 
         prompt = self._prompt(
@@ -212,16 +269,18 @@ class HFLocalPlannerCore:
             last_status=last_status,
         )
 
-        candidates = [task.primary_tool, *task.fallback_tools]
-        candidates = [name for name in candidates if name in workload.tools]
+        candidates = self._candidate_names(task=task, workload=workload)
         if not candidates:
             return ""
 
+        completions = [
+            json.dumps({"tool_name": name}, ensure_ascii=True) for name in candidates
+        ]
+        model_scores = self._sequence_logprobs(prompt, completions)
+
         scored: list[tuple[float, str]] = []
-        for name in candidates:
-            completion = json.dumps({"tool_name": name}, ensure_ascii=True)
-            model_score = self._sequence_logprob(prompt, completion)
-            adjusted = model_score + self._policy_adjustment(
+        for model_score, name in zip(model_scores, candidates, strict=True):
+            policy_adjustment = self.policy_adjustment_weight * self._policy_adjustment(
                 name=name,
                 task=task,
                 workload=workload,
@@ -229,6 +288,7 @@ class HFLocalPlannerCore:
                 attempted_tools=attempted_tools,
                 last_status=last_status,
             )
+            adjusted = model_score + policy_adjustment
             scored.append((adjusted, name))
 
         scored.sort(reverse=True)

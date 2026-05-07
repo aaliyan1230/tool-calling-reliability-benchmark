@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -22,6 +23,10 @@ def run_cmd(cmd: list[str], cwd: Path) -> None:
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def tcrb_cmd(*args: str) -> list[str]:
+    return [sys.executable, "-m", "tcrb.cli", *args]
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,6 +72,11 @@ def parse_args() -> argparse.Namespace:
         "--matrix-toolsets",
         default="customer_support,ecommerce_ops,fintech_risk,developer_tools",
         help="Comma-separated toolsets for transfer matrix",
+    )
+    parser.add_argument(
+        "--skip-matrix",
+        action="store_true",
+        help="Skip transfer matrix for a faster target-workload signal run",
     )
     parser.add_argument(
         "--matrix-max-tasks",
@@ -207,10 +217,7 @@ def main() -> int:
     matrix_json = f"runs/{matrix_label}/matrix.json"
 
     run_cmd(
-        [
-            "uv",
-            "run",
-            "tcrb",
+        tcrb_cmd(
             "multi-seed",
             "--config",
             args.config,
@@ -222,15 +229,12 @@ def main() -> int:
             args.base_planner_config,
             "--label",
             base_ms_label,
-        ],
+        ),
         cwd=repo_root,
     )
 
     run_cmd(
-        [
-            "uv",
-            "run",
-            "tcrb",
+        tcrb_cmd(
             "multi-seed",
             "--config",
             args.config,
@@ -242,15 +246,12 @@ def main() -> int:
             args.comparison_planner_config,
             "--label",
             comparison_ms_label,
-        ],
+        ),
         cwd=repo_root,
     )
 
     run_cmd(
-        [
-            "uv",
-            "run",
-            "tcrb",
+        tcrb_cmd(
             "eval-delta",
             "--base-run",
             base_ms_json,
@@ -260,43 +261,42 @@ def main() -> int:
             delta_json,
             "--output-report",
             delta_md,
-        ],
+        ),
         cwd=repo_root,
     )
 
-    run_cmd(
-        [
-            "uv",
-            "run",
-            "python",
-            "scripts/run_transfer_matrix.py",
-            "--manifest",
-            args.matrix_manifest,
-            "--config",
-            args.config,
-            "--base-planner-config",
-            args.base_planner_config,
-            "--comparison-planner-config",
-            args.comparison_planner_config,
-            "--target-toolset",
-            args.matrix_target_toolset,
-            "--toolsets",
-            args.matrix_toolsets,
-            "--max-tasks",
-            str(args.matrix_max_tasks),
-            "--target-first-min-delta",
-            str(args.matrix_target_first_min_delta),
-            "--target-seq-min-delta",
-            str(args.matrix_target_seq_min_delta),
-            "--open-first-min-delta",
-            str(args.matrix_open_first_min_delta),
-            "--open-seq-min-delta",
-            str(args.matrix_open_seq_min_delta),
-            "--label",
-            matrix_label,
-        ],
-        cwd=repo_root,
-    )
+    if not args.skip_matrix:
+        run_cmd(
+            [
+                sys.executable,
+                "scripts/run_transfer_matrix.py",
+                "--manifest",
+                args.matrix_manifest,
+                "--config",
+                args.config,
+                "--base-planner-config",
+                args.base_planner_config,
+                "--comparison-planner-config",
+                args.comparison_planner_config,
+                "--target-toolset",
+                args.matrix_target_toolset,
+                "--toolsets",
+                args.matrix_toolsets,
+                "--max-tasks",
+                str(args.matrix_max_tasks),
+                "--target-first-min-delta",
+                str(args.matrix_target_first_min_delta),
+                "--target-seq-min-delta",
+                str(args.matrix_target_seq_min_delta),
+                "--open-first-min-delta",
+                str(args.matrix_open_first_min_delta),
+                "--open-seq-min-delta",
+                str(args.matrix_open_seq_min_delta),
+                "--label",
+                matrix_label,
+            ],
+            cwd=repo_root,
+        )
 
     study_gate_json: str | None = None
     study_gate_report: str | None = None
@@ -307,21 +307,13 @@ def main() -> int:
             else f"runs/{args.label_prefix}-study-gate/study_gate.json"
         )
         study_gate_report = args.study_gate_output_report
-        matrix_input = (
-            args.study_gate_matrix_json if args.study_gate_matrix_json else matrix_json
-        )
 
-        study_gate_cmd = [
-            "uv",
-            "run",
-            "tcrb",
+        study_gate_cmd = tcrb_cmd(
             "study-gate",
             "--base-run",
             base_ms_json,
             "--comparison-run",
             comparison_ms_json,
-            "--matrix-json",
-            matrix_input,
             "--flatline-epsilon",
             str(args.study_gate_flatline_epsilon),
             "--min-effect-vs-null",
@@ -330,7 +322,14 @@ def main() -> int:
             str(args.study_gate_matrix_flatline_epsilon),
             "--output-json",
             study_gate_json,
-        ]
+        )
+        matrix_input = (
+            args.study_gate_matrix_json
+            if args.study_gate_matrix_json
+            else (matrix_json if not args.skip_matrix else None)
+        )
+        if matrix_input:
+            study_gate_cmd.extend(["--matrix-json", matrix_input])
         if args.study_gate_null_run:
             study_gate_cmd.extend(["--null-run", args.study_gate_null_run])
         if study_gate_report:
@@ -346,22 +345,19 @@ def main() -> int:
 
     if args.run_summarize:
         summarize_output_dir = f"runs/{args.label_prefix}-analysis"
-        summarize_cmd = [
-            "uv",
-            "run",
-            "tcrb",
+        summarize_cmd = tcrb_cmd(
             "summarize-run",
             "--multi-seed-json",
             comparison_ms_json,
             "--delta-json",
             delta_json,
-            "--matrix-json",
-            matrix_json,
             "--output-dir",
             summarize_output_dir,
             "--output-report",
             f"{summarize_output_dir}/analysis_summary.md",
-        ]
+        )
+        if not args.skip_matrix:
+            summarize_cmd.extend(["--matrix-json", matrix_json])
         if study_gate_json:
             summarize_cmd.extend(["--study-gate-json", study_gate_json])
         run_cmd(summarize_cmd, cwd=repo_root)
@@ -371,8 +367,9 @@ def main() -> int:
     print("[northstar] Comparison multi-seed:", comparison_ms_json)
     print("[northstar] Delta JSON:", delta_json)
     print("[northstar] Delta report:", delta_md)
-    print("[northstar] Matrix JSON:", matrix_json)
-    print("[northstar] Matrix report:", f"runs/{matrix_label}/matrix_summary.md")
+    if not args.skip_matrix:
+        print("[northstar] Matrix JSON:", matrix_json)
+        print("[northstar] Matrix report:", f"runs/{matrix_label}/matrix_summary.md")
     if study_gate_json:
         print("[northstar] Study gate JSON:", study_gate_json)
         if study_gate_report:

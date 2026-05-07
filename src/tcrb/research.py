@@ -177,6 +177,26 @@ def _prepare_model_for_quantized_training(
     return peft_module.prepare_model_for_kbit_training(model)
 
 
+def _attach_trainable_adapter_if_present(
+    recipe: ResearchRecipe,
+    *,
+    model: Any,
+    peft_module: Any,
+    lora_config: Any,
+) -> tuple[Any, Any]:
+    adapter_path = str(recipe.adapter_path or "").strip()
+    if not adapter_path:
+        return model, lora_config
+    return (
+        peft_module.PeftModel.from_pretrained(
+            model,
+            adapter_path,
+            is_trainable=True,
+        ),
+        None,
+    )
+
+
 def _role_from_sharegpt(raw_role: str) -> str:
     role = str(raw_role).strip().lower()
     if role == "human":
@@ -574,7 +594,7 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
             bnb_4bit_compute_dtype=torch_dtype,
         )
     if torch_module.cuda.is_available():
-        model_kwargs["device_map"] = "auto"
+        model_kwargs["device_map"] = {"": 0}
     model = transformers_module.AutoModelForCausalLM.from_pretrained(
         recipe.base_model,
         **model_kwargs,
@@ -595,27 +615,17 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         task_type=peft_module.TaskType.CAUSAL_LM,
         target_modules=recipe.target_modules,
     )
-    if recipe.adapter_path:
-        model = peft_module.PeftModel.from_pretrained(
-            model,
-            recipe.adapter_path,
-            is_trainable=True,
-        )
-        lora_config = None
+    model, lora_config = _attach_trainable_adapter_if_present(
+        recipe,
+        model=model,
+        peft_module=peft_module,
+        lora_config=lora_config,
+    )
 
-    training_args = transformers_module.TrainingArguments(
-        output_dir=recipe.output_dir,
-        learning_rate=recipe.learning_rate,
-        num_train_epochs=recipe.num_train_epochs,
-        per_device_train_batch_size=recipe.per_device_train_batch_size,
-        gradient_accumulation_steps=recipe.gradient_accumulation_steps,
-        warmup_ratio=recipe.warmup_ratio,
-        **_training_precision_kwargs(recipe),
-        logging_steps=10,
-        save_strategy="epoch",
-        report_to="none",
-        remove_unused_columns=False,
-        gradient_checkpointing=True,
+    training_args = _build_dpo_training_args(
+        transformers_module=transformers_module,
+        trl_module=trl_module,
+        recipe=recipe,
     )
 
     trainer_kwargs = _build_sft_trainer_kwargs(
@@ -679,7 +689,7 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
             bnb_4bit_compute_dtype=torch_dtype,
         )
     if torch_module.cuda.is_available():
-        model_kwargs["device_map"] = "auto"
+        model_kwargs["device_map"] = {"": 0}
     model = transformers_module.AutoModelForCausalLM.from_pretrained(
         recipe.base_model,
         **model_kwargs,
@@ -700,19 +710,16 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         task_type=peft_module.TaskType.CAUSAL_LM,
         target_modules=recipe.target_modules,
     )
-    training_args = transformers_module.TrainingArguments(
-        output_dir=recipe.output_dir,
-        learning_rate=recipe.learning_rate,
-        num_train_epochs=recipe.num_train_epochs,
-        per_device_train_batch_size=recipe.per_device_train_batch_size,
-        gradient_accumulation_steps=recipe.gradient_accumulation_steps,
-        warmup_ratio=recipe.warmup_ratio,
-        **_training_precision_kwargs(recipe),
-        logging_steps=10,
-        save_strategy="epoch",
-        report_to="none",
-        remove_unused_columns=False,
-        gradient_checkpointing=True,
+    model, lora_config = _attach_trainable_adapter_if_present(
+        recipe,
+        model=model,
+        peft_module=peft_module,
+        lora_config=lora_config,
+    )
+    training_args = _build_dpo_training_args(
+        transformers_module=transformers_module,
+        trl_module=trl_module,
+        recipe=recipe,
     )
 
     trainer_kwargs = _build_dpo_trainer_kwargs(
@@ -935,6 +942,43 @@ def _build_sft_trainer_kwargs(
     elif "processing_class" in params:
         kwargs["processing_class"] = tokenizer
     return kwargs
+
+
+def _build_dpo_training_args(
+    *,
+    transformers_module: Any,
+    trl_module: Any,
+    recipe: ResearchRecipe,
+) -> Any:
+    base_kwargs = {
+        "output_dir": recipe.output_dir,
+        "learning_rate": recipe.learning_rate,
+        "num_train_epochs": recipe.num_train_epochs,
+        "per_device_train_batch_size": recipe.per_device_train_batch_size,
+        "gradient_accumulation_steps": recipe.gradient_accumulation_steps,
+        "warmup_ratio": recipe.warmup_ratio,
+        **_training_precision_kwargs(recipe),
+        "logging_steps": 10,
+        "save_strategy": "epoch",
+        "report_to": "none",
+        "remove_unused_columns": False,
+        "gradient_checkpointing": True,
+    }
+    dpo_config_cls = getattr(trl_module, "DPOConfig", None)
+    if dpo_config_cls is None:
+        training_args = transformers_module.TrainingArguments(**base_kwargs)
+        for field_name in ("model_init_kwargs", "ref_model_init_kwargs"):
+            if not hasattr(training_args, field_name):
+                setattr(training_args, field_name, None)
+        return training_args
+
+    params = inspect.signature(dpo_config_cls.__init__).parameters
+    dpo_kwargs = dict(base_kwargs)
+    if "max_length" in params:
+        dpo_kwargs["max_length"] = recipe.max_seq_length
+    if "max_prompt_length" in params:
+        dpo_kwargs["max_prompt_length"] = max(256, recipe.max_seq_length // 2)
+    return dpo_config_cls(**dpo_kwargs)
 
 
 def _build_dpo_trainer_kwargs(
