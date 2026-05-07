@@ -1,0 +1,13 @@
+{
+  "id": "aaliyanshaikh/tcrb-hf-signal-run",
+  "title": "TCRB HF Signal Run",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "aaliyanshaikh/tcrb-repo-snapshot"
+  ]
+}

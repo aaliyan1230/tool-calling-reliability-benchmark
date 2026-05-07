@@ -1,6 +1,8 @@
 import json
 
 from tcrb.research import (
+    _attach_trainable_adapter_if_present,
+    _build_dpo_training_args,
     _build_dpo_trainer_kwargs,
     _prepare_model_for_quantized_training,
     _training_dtype,
@@ -299,6 +301,38 @@ def test_prepare_model_for_quantized_training_only_wraps_4bit_models():
     ) == "model"
 
 
+def test_attach_trainable_adapter_if_present_loads_existing_adapter():
+    class DummyPeftModule:
+        class PeftModel:
+            @staticmethod
+            def from_pretrained(model, adapter_path, is_trainable):
+                return {
+                    "wrapped": model,
+                    "adapter_path": adapter_path,
+                    "is_trainable": is_trainable,
+                }
+
+    recipe = research_recipe_from_dict(
+        {
+            "stage": "dpo",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "output_dir": "outputs/research/qwen25-3b-dpo",
+            "adapter_path": "outputs/ft-notebook/final",
+        }
+    )
+
+    model, lora_config = _attach_trainable_adapter_if_present(
+        recipe,
+        model="model",
+        peft_module=DummyPeftModule,
+        lora_config="lora",
+    )
+
+    assert model["adapter_path"] == "outputs/ft-notebook/final"
+    assert model["is_trainable"] is True
+    assert lora_config is None
+
+
 def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
     class DummyTrainer:
         def __init__(
@@ -333,3 +367,67 @@ def test_build_dpo_trainer_kwargs_skips_peft_config_when_adapter_loaded():
     )
 
     assert "peft_config" not in kwargs
+
+
+def test_build_dpo_training_args_backfills_missing_trl_fields():
+    class DummyTrainingArguments:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DummyTransformers:
+        TrainingArguments = DummyTrainingArguments
+
+    class DummyTRL:
+        pass
+
+    args = _build_dpo_training_args(
+        transformers_module=DummyTransformers,
+        trl_module=DummyTRL,
+        recipe=research_recipe_from_dict(
+            {
+                "stage": "dpo",
+                "base_model": "Qwen/Qwen2.5-3B-Instruct",
+                "output_dir": "outputs/research/qwen25-3b-dpo",
+            }
+        ),
+    )
+
+    assert args.model_init_kwargs is None
+    assert args.ref_model_init_kwargs is None
+
+
+def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
+    class DummyTrainingArguments:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DummyTransformers:
+        TrainingArguments = DummyTrainingArguments
+
+    class DummyDPOConfig:
+        def __init__(self, max_length=None, max_prompt_length=None, **kwargs):
+            self.kwargs = {
+                **kwargs,
+                "max_length": max_length,
+                "max_prompt_length": max_prompt_length,
+            }
+
+    class DummyTRL:
+        DPOConfig = DummyDPOConfig
+
+    args = _build_dpo_training_args(
+        transformers_module=DummyTransformers,
+        trl_module=DummyTRL,
+        recipe=research_recipe_from_dict(
+            {
+                "stage": "dpo",
+                "base_model": "Qwen/Qwen2.5-3B-Instruct",
+                "output_dir": "outputs/research/qwen25-3b-dpo",
+                "max_seq_length": 512,
+            }
+        ),
+    )
+
+    assert isinstance(args, DummyDPOConfig)
+    assert args.kwargs["max_length"] == 512
+    assert args.kwargs["max_prompt_length"] == 256

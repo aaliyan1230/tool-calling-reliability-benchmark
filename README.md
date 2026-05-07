@@ -6,6 +6,8 @@ Tool-Calling Reliability Benchmark (TCRB) answers that question with reproducibl
 
 Detailed project criteria live in `docs/core-goals.md`.
 
+Artifact bundle: https://doi.org/10.5281/zenodo.20071002
+
 ## Important Alignment Note
 
 There are two different kinds of studies in this repo:
@@ -237,7 +239,12 @@ Relevant files:
 - `configs/planners/policy_native.json`
 - `configs/planners/hf_qwen2_5_3b_base.json`
 - `configs/planners/hf_qwen2_5_3b_comparison.json`
+- `configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json`
+- `configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json`
 - `scripts/run_northstar_hf.py`
+- `scripts/run_hf_choice_probe.py`
+- `scripts/run_hf_choice_matrix.py`
+- `scripts/kaggle_tcrb.py`
 
 Practical note:
 
@@ -248,6 +255,37 @@ Recommended GPU-backed command:
 
 ```bash
 uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/policy_native.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_base.json --run-study-gate --run-summarize
+```
+
+If you want a true base-vs-adapter study for Qwen2.5-3B, use the adapter-backed comparison config:
+
+```bash
+uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/hf_qwen2_5_3b_base.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison.json --run-study-gate --run-summarize
+```
+
+If you want a stricter first-tool routing comparison with no heuristic shortcuts and an explicit task-scoped candidate set, use:
+
+```bash
+uv run python scripts/run_northstar_hf.py --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json --skip-matrix --run-study-gate --run-summarize
+```
+
+For direct first-tool audits before a full benchmark, use the probe and matrix helpers:
+
+```bash
+uv run python scripts/run_hf_choice_probe.py --workload workloads/enriched/customer_support.json --eval-cases-json workloads/eval_cases/customer_support_eval_cases.json --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json
+```
+
+```bash
+uv run python scripts/run_hf_choice_matrix.py --manifest workloads/enriched/manifest.json --base-planner-config configs/planners/hf_qwen2_5_3b_base_taskscope_strict.json --comparison-planner-config configs/planners/hf_qwen2_5_3b_comparison_taskscope_strict.json --max-tasks 18
+```
+
+For Kaggle-backed execution, stage the repo snapshot as a Kaggle dataset, push the kernel, wait for completion, and pull artifacts back:
+
+```bash
+uv run python scripts/kaggle_tcrb.py dataset-version
+uv run python scripts/kaggle_tcrb.py push
+uv run python scripts/kaggle_tcrb.py watch
+uv run python scripts/kaggle_tcrb.py output --output-dir outputs/kaggle
 ```
 
 ## Running The Failure-Aware Finetuning Plan

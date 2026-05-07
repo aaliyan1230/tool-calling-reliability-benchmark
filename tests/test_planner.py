@@ -5,11 +5,11 @@ import pytest
 from tcrb.models import TaskSpec, ToolSpec, Workload
 from tcrb.planner import (
     HeuristicPlanner,
+    MinimalPlanner,
     PolicyNativePlanner,
     ReplayPlanner,
     StochasticPlanner,
     planner_from_dict,
-        MinimalPlanner,
 )
 
 
@@ -117,29 +117,30 @@ def test_replay_uses_sequence_then_fallback():
     assert chosen_first == "b"
     assert chosen_second == "a"
 
-    def test_minimal_planner_prefers_primary_tool():
-        workload = _workload()
-        task = workload.tasks[0]
-        planner = MinimalPlanner()
 
-        chosen = planner.choose_tool(
-            task=task,
-            workload=workload,
-            policy="naive_retry",
-            attempt_number=1,
-            attempted_tools={"b"},
-            last_status="network_failure",
-            rng=random.Random(5),
-        )
+def test_minimal_planner_prefers_primary_tool():
+    workload = _workload()
+    task = workload.tasks[0]
+    planner = MinimalPlanner()
 
-        assert chosen == "a"
+    chosen = planner.choose_tool(
+        task=task,
+        workload=workload,
+        policy="naive_retry",
+        attempt_number=1,
+        attempted_tools={"b"},
+        last_status="network_failure",
+        rng=random.Random(5),
+    )
+
+    assert chosen == "a"
 
 
-    def test_planner_from_dict_supports_minimal_type():
-        planner = planner_from_dict({"type": "minimal", "name": "minimal_v1"})
+def test_planner_from_dict_supports_minimal_type():
+    planner = planner_from_dict({"type": "minimal", "name": "minimal_v1"})
 
-        assert isinstance(planner, MinimalPlanner)
-        assert planner.planner_id == "minimal_v1"
+    assert isinstance(planner, MinimalPlanner)
+    assert planner.planner_id == "minimal_v1"
 
 
 def test_deprecated_planner_type_is_not_supported():
@@ -160,3 +161,22 @@ def test_planner_from_dict_supports_hf_local_adapter_path():
     assert planner.planner_id == "hf_qwen_adapter"
     assert planner.base_model == "Qwen/Qwen2.5-3B-Instruct"
     assert planner.adapter_path == "outputs/research/qwen25-3b-sft-toolace"
+
+
+def test_planner_from_dict_supports_hf_local_strict_candidate_options():
+    planner = planner_from_dict(
+        {
+            "type": "hf_local",
+            "name": "hf_strict",
+            "base_model": "Qwen/Qwen2.5-3B-Instruct",
+            "candidate_scope": "workload",
+            "candidate_order": "sorted",
+            "policy_adjustment_weight": 0.0,
+            "heuristic_policy_shortcuts": False,
+        }
+    )
+
+    assert planner.candidate_scope == "workload"
+    assert planner.candidate_order == "sorted"
+    assert planner.policy_adjustment_weight == 0.0
+    assert planner.heuristic_policy_shortcuts is False

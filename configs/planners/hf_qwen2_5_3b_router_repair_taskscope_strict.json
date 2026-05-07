@@ -1,0 +1,13 @@
+{
+  "name": "hf_qwen2_5_3b_router_repair_taskscope_strict",
+  "type": "hf_local",
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "adapter_path": "outputs/research/qwen25-3b-dpo-router-repair",
+  "device": "auto",
+  "temperature": 0.0,
+  "max_new_tokens": 96,
+  "candidate_scope": "task",
+  "candidate_order": "task_then_alpha",
+  "policy_adjustment_weight": 0.0,
+  "heuristic_policy_shortcuts": false
+}

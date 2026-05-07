@@ -16,3 +16,8 @@ tmp
 further-plan.md
 reports
 RESEARCH_PLAN.md
+docs
+.playwright-mcp
+session_logs/
+kaggle/__pycache__/
+zenodo-files-broken-pdf.png
