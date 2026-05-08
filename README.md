@@ -119,9 +119,9 @@ That earlier work matters because it validated the reporting loop, transfer matr
 
 Two representative visuals from that benchmark foundation:
 
-![Multi-seed overview](runs/study-heuristic-vs-native-analysis/multi_seed_overview.png)
+![Multi-seed overview](assets/readme/multi_seed_overview.png)
 
-![Transfer matrix view](runs/study-heuristic-vs-native-analysis/transfer_matrix.png)
+![Transfer matrix view](assets/readme/transfer_matrix.png)
 
 Those figures are from the benchmark-only path, not from the later HF repair run, but they show the same reliability framing the repo now applies to LLM-backed planner studies.
 
