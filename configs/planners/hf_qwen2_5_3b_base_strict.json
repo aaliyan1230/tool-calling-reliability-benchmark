@@ -1,0 +1,9 @@
+{
+  "type": "hf_local",
+  "name": "hf_qwen2_5_3b_base_strict",
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "candidate_scope": "workload",
+  "candidate_order": "sorted",
+  "policy_adjustment_weight": 0.0,
+  "heuristic_policy_shortcuts": false
+}
