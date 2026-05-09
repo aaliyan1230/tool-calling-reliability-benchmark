@@ -36,22 +36,18 @@ The strongest result in this repo is a targeted router-repair run on a real HF p
 | `fintech_risk` | unchanged | unchanged | `0.0000` |
 | `developer_tools` | unchanged | unchanged | `0.0000` |
 
-## Why This Is Still A Good Result
+## Why This Matters
 
-Glass-half-full version:
+- the repair fixed the specific failure mode it targeted
+- the gain replicated across multiple seeds, not one lucky run
+- invalid calls dropped while success rose—the operational direction that matters
+- the benchmark surfaced the transfer limit rather than hiding it, which is what a reliability benchmark is supposed to do
 
-- the repair worked on the failure mode it was designed to fix
-- the gain was visible across multiple seeds, not just one lucky run
-- invalid calls dropped while success rose, which is the direction that matters operationally
-- the benchmark caught the transfer limit instead of hiding it, which is exactly what a reliability benchmark should do
-
-This repo is not claiming a universal tool-calling fix.
-
-It is showing something more useful:
+What this repo shows:
 
 1. a small targeted repair can measurably improve first-tool routing on a real workload
-2. that gain can be checked under a stricter methodology than a single benchmark score
-3. transfer needs to be measured explicitly, because target improvement and cross-domain robustness are not the same thing
+2. that gain holds up under stricter methodology than a single benchmark score
+3. transfer must be measured explicitly—target improvement and cross-domain robustness are separate properties
 
 ## What TCRB Actually Does
 
