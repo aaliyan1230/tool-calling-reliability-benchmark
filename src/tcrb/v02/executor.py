@@ -155,7 +155,12 @@ def _classify_diagnostics(
                 break
 
     if not labels:
-        labels.append("premature_stop" if len(steps) <= 1 else "tool_skip")
+        has_tool = any(isinstance(s.parsed_action, ToolCall) for s in steps)
+        has_answer = any(isinstance(s.parsed_action, FinalAnswer) for s in steps)
+        if not has_tool and not has_answer:
+            labels.append("tool_skip")
+        elif has_answer and not has_tool:
+            labels.append("fabrication")
 
     final = []
     seen = set()

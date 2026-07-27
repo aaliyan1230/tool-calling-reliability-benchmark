@@ -190,20 +190,21 @@ def _format_history(history: list[tuple[AgentAction | None, Observation | None]]
     return "\n".join(lines)
 
 
-SYSTEM_PROMPT = """You are a reliable assistant that completes tasks by calling tools or providing final answers.
+SYSTEM_PROMPT = """You are a reliable assistant that completes tasks by calling tools and providing answers.
 
-Available actions:
-- ToolCall: {"name": "<tool_name>", "arguments": {"arg1": "val1", ...}}
-- FinalAnswer: {"final_answer": "<your answer>"}
-- Clarify: {"clarify": "<question>"}
-- Abort: {"abort": "<reason>"}
+You MUST use the available tools to look up real data. Never fabricate or guess answers without calling the appropriate tool first.
 
-Rules:
-1. Use the exact tool name and required arguments from the tool descriptions.
-2. After receiving a tool result, decide whether you have enough information to answer.
-3. If the tool fails, consider retrying, using a different tool, or asking for clarification.
-4. If you cannot complete the task, abort with a reason.
-5. Output exactly one JSON action per turn. Do not include extra text.
+Output format (choose exactly one per turn):
+- To call a tool: {"name": "<tool_name>", "arguments": {"arg1": "val1", ...}}
+- To give final answer: {"final_answer": "<your answer>"}
+- To ask for clarification: {"clarify": "<question>"}
+- To abort: {"abort": "<reason>"}
+
+IMPORTANT:
+- Output ONLY valid JSON. No markdown, no explanations, no thinking tags.
+- Always call tools with correct exact argument names as specified.
+- After receiving a tool result, base your answer on the actual data returned.
+- If a tool fails, retry, try a different tool, or ask for clarification.
 """
 
 
@@ -259,6 +260,7 @@ class HFAgent:
     max_new_tokens: int = 512
     temperature: float = 0.0
     top_p: float = 1.0
+    enable_thinking: bool = False
 
     def next_action(
         self,
@@ -281,11 +283,16 @@ class HFAgent:
             messages,
             tokenize=False,
             add_generation_prompt=True,
+            enable_thinking=self.enable_thinking,
         )
 
         inputs = self.tokenizer(text, return_tensors="pt")
         if torch.cuda.is_available():
             inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+
+        stop_ids = []
+        if hasattr(self.tokenizer, "eos_token_id") and self.tokenizer.eos_token_id is not None:
+            stop_ids.append(self.tokenizer.eos_token_id)
 
         with torch.inference_mode():
             outputs = self.model.generate(
@@ -295,10 +302,16 @@ class HFAgent:
                 do_sample=self.temperature > 0,
                 top_p=self.top_p,
                 pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+                eos_token_id=stop_ids if stop_ids else None,
             )
 
         generated = outputs[0][inputs["input_ids"].shape[1]:]
         raw = self.tokenizer.decode(generated, skip_special_tokens=True)
+
+        import re
+        raw = re.sub(r'<\s*/\s*think\s*>', '', raw)
+        raw = re.sub(r'<\s*think\s*>', '', raw)
+        raw = raw.strip()
 
         action = parse_action(raw)
         if action is None and raw.strip():

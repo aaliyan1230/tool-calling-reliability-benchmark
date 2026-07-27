@@ -70,7 +70,7 @@ def _assess_claims(trace: EpisodeTrace, claims: list[str]) -> bool:
     if not trace.final_response:
         return False
     response_lower = trace.final_response.lower()
-    return any(c.lower() in response_lower for c in claims)
+    return all(c.lower() in response_lower for c in claims)
 
 
 def _count_labels(traces: list[EpisodeTrace]) -> dict[DiagnosticLabel, int]:
@@ -101,6 +101,7 @@ def run_eval(
         model=model,
         tokenizer=tokenizer,
         system_prompt=system_prompt or "",
+        enable_thinking=False,
     )
 
     all_tasks = build_all_tasks()
