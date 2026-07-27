@@ -26,7 +26,7 @@ from typing import Any
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .agent import HFAgent
+from .agent import LogProbAgent
 from .executor import EpisodeConfig, run_episode
 from .tasks import (
     build_all_tasks,
@@ -96,13 +96,11 @@ def run_eval(
     print(f"Loading model: {model_id}", flush=True)
     model, tokenizer = _load_model(model_id)
 
-    agent = HFAgent(
+    agent = LogProbAgent(
         agent_id="baseline",
         model=model,
         tokenizer=tokenizer,
         system_prompt=system_prompt or "",
-        enable_thinking=False,
-        max_new_tokens=256,
     )
 
     all_tasks = build_all_tasks()

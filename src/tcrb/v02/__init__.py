@@ -24,6 +24,7 @@ from .tools import (
 from .agent import (
     Agent,
     HFAgent,
+    LogProbAgent,
     OracleAgent,
     ReplayAgent,
     build_chat_messages,
@@ -65,6 +66,7 @@ __all__ = [
     "FinalAnswer",
     "HFAgent",
     "LegacyRoutingAgent",
+    "LogProbAgent",
     "Observation",
     "ObservationStatus",
     "OracleAgent",

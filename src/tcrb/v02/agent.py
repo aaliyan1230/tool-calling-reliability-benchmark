@@ -265,7 +265,37 @@ class HFAgent:
     max_new_tokens: int = 512
     temperature: float = 0.0
     top_p: float = 1.0
-    enable_thinking: bool = False
+
+    def next_action(
+        self,
+        *,
+        task_query: str,
+        available_tools: list[ToolDef],
+        history: list[tuple[AgentAction | None, Observation | None]],
+        rng: random.Random,
+    ) -> AgentAction:
+        backend = LogProbAgent(
+            model=self.model,
+            tokenizer=self.tokenizer,
+            system_prompt=self.system_prompt,
+        )
+        return backend.next_action(
+            task_query=task_query,
+            available_tools=available_tools,
+            history=history,
+            rng=rng,
+        )
+
+
+@dataclass
+class LogProbAgent:
+    agent_id: str = "logprob"
+    model: Any = None
+    tokenizer: Any = None
+    system_prompt: str = SYSTEM_PROMPT
+    max_new_tokens: int = 256
+    temperature: float = 0.0
+    top_p: float = 1.0
 
     def _build_prompt(
         self,
@@ -300,6 +330,36 @@ class HFAgent:
 
         return "\n".join(parts)
 
+    def _score_completions(self, prompt: str, completions: list[str]) -> list[float]:
+        import torch
+
+        full_texts = [prompt + c for c in completions]
+        enc_full = self.tokenizer(full_texts, return_tensors="pt", padding=True)
+        enc_prompt = self.tokenizer(prompt, return_tensors="pt")
+        prompt_len = int(enc_prompt["input_ids"].shape[1])
+
+        input_ids = enc_full["input_ids"]
+        attention_mask = enc_full["attention_mask"]
+
+        if torch.cuda.is_available():
+            input_ids = input_ids.to(self.model.device)
+            attention_mask = attention_mask.to(self.model.device)
+
+        with torch.inference_mode():
+            logits = self.model(input_ids=input_ids, attention_mask=attention_mask).logits
+
+        shifted_logits = logits[:, :-1, :]
+        shifted_targets = input_ids[:, 1:]
+        shifted_mask = attention_mask[:, 1:]
+
+        start = max(0, prompt_len - 1)
+        token_log_probs = torch.log_softmax(shifted_logits[:, start:, :], dim=-1)
+        target_slice = shifted_targets[:, start:]
+        mask_slice = shifted_mask[:, start:].to(token_log_probs.dtype)
+
+        gathered = token_log_probs.gather(dim=-1, index=target_slice.unsqueeze(-1)).squeeze(-1)
+        return [float(v) for v in (gathered * mask_slice).sum(dim=-1).tolist()]
+
     def next_action(
         self,
         *,
@@ -308,51 +368,35 @@ class HFAgent:
         history: list[tuple[AgentAction | None, Observation | None]],
         rng: random.Random,
     ) -> AgentAction:
-        import torch
+        if not available_tools:
+            return FinalAnswer(text="")
 
         prompt = self._build_prompt(task_query, available_tools, history)
 
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        if torch.cuda.is_available():
-            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+        completions: list[tuple[str, AgentAction]] = []
 
-        with torch.inference_mode():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                temperature=self.temperature if self.temperature > 0 else None,
-                do_sample=self.temperature > 0,
-                top_p=self.top_p,
-                pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-                eos_token_id=[self.tokenizer.eos_token_id] if self.tokenizer.eos_token_id is not None else None,
+        if not history:
+            completions.append(('{"final_answer": "', FinalAnswer(text="")))
+            completions.append(('{"clarify": "', Clarify(text="")))
+
+        for tool in available_tools:
+            args_str = json.dumps(tool.input_schema.get("properties", {}))
+            completions.append(
+                (f'{{"name": "{tool.name}", "arguments": {{',
+                 ToolCall(name=tool.name, arguments={}))
             )
 
-        generated = outputs[0][inputs["input_ids"].shape[1]:]
-        raw = self.tokenizer.decode(generated, skip_special_tokens=True).strip()
+        if history:
+            completions.append(('{"final_answer": "', FinalAnswer(text="")))
 
-        import re
-        json_matches = re.findall(r'\{[^{}]*"name"\s*:\s*"[^"]+"\s*[,}][^{}]*\}', raw)
-        for match in json_matches:
-            action = parse_action(match)
-            if action is not None:
-                return action
+        texts = [c[0] for c in completions]
+        scores = self._score_completions(prompt, texts)
 
-        json_matches = re.findall(r'\{[^{}]*"final_answer"\s*:\s*"[^"]*"[^{}]*\}', raw)
-        for match in json_matches:
-            action = parse_action(match)
-            if action is not None:
-                return action
+        scored = list(zip(scores, [c[1] for c in completions]))
+        scored.sort(key=lambda x: x[0], reverse=True)
 
-        first_line = raw.split("\n")[0].strip()
-        if first_line.startswith('{"'):
-            action = parse_action(first_line)
-            if action is not None:
-                return action
+        if scored:
+            return scored[0][1]
 
-        if raw.startswith('{"'):
-            action = parse_action(raw)
-            if action is not None:
-                return action
-
-        return FinalAnswer(text=raw[:500]) if raw else FinalAnswer(text="")
+        return FinalAnswer(text="")
 
