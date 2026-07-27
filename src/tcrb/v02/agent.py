@@ -330,14 +330,25 @@ class HFAgent:
         generated = outputs[0][inputs["input_ids"].shape[1]:]
         raw = self.tokenizer.decode(generated, skip_special_tokens=True).strip()
 
-        # Try parsing first line as JSON action
+        import re
+        json_matches = re.findall(r'\{[^{}]*"name"\s*:\s*"[^"]+"\s*[,}][^{}]*\}', raw)
+        for match in json_matches:
+            action = parse_action(match)
+            if action is not None:
+                return action
+
+        json_matches = re.findall(r'\{[^{}]*"final_answer"\s*:\s*"[^"]*"[^{}]*\}', raw)
+        for match in json_matches:
+            action = parse_action(match)
+            if action is not None:
+                return action
+
         first_line = raw.split("\n")[0].strip()
         if first_line.startswith('{"'):
             action = parse_action(first_line)
             if action is not None:
                 return action
 
-        # Try parsing the full output
         if raw.startswith('{"'):
             action = parse_action(raw)
             if action is not None:
