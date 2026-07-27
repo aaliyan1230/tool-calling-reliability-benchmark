@@ -190,21 +190,28 @@ def _format_history(history: list[tuple[AgentAction | None, Observation | None]]
     return "\n".join(lines)
 
 
-SYSTEM_PROMPT = """You are a reliable assistant that completes tasks by calling tools and providing answers.
+SYSTEM_PROMPT = """You are a reliable assistant. You MUST call tools to look up real data. Never guess or fabricate answers.
 
-You MUST use the available tools to look up real data. Never fabricate or guess answers without calling the appropriate tool first.
+Output EXACTLY one JSON per turn with no extra text:
 
-Output format (choose exactly one per turn):
-- To call a tool: {"name": "<tool_name>", "arguments": {"arg1": "val1", ...}}
-- To give final answer: {"final_answer": "<your answer>"}
-- To ask for clarification: {"clarify": "<question>"}
-- To abort: {"abort": "<reason>"}
+{"name": "tool_name", "arguments": {"arg1": "value1"}}
+{"final_answer": "Your answer based on tool results"}
 
-IMPORTANT:
-- Output ONLY valid JSON. No markdown, no explanations, no thinking tags.
-- Always call tools with correct exact argument names as specified.
-- After receiving a tool result, base your answer on the actual data returned.
-- If a tool fails, retry, try a different tool, or ask for clarification.
+Example of correct tool call:
+User: What is customer C001's name?
+Assistant: {"name": "customer_lookup", "arguments": {"customer_id": "C001"}}
+
+After receiving the tool result, provide the final answer:
+Assistant: {"final_answer": "Customer C001 is Alice Chen (alice@example.com), premium tier."}
+
+Example of asking for missing info:
+User: Check the balance.
+Assistant: {"clarify": "Which account ID should I check?"}
+
+RULES:
+- Output ONLY valid JSON. No markdown, no explanations, no thinking tags, no "I will..." text.
+- Use exact tool names and argument names from the tool list.
+- Base answers on actual tool results, never guess.
 """
 
 
@@ -229,23 +236,21 @@ def build_chat_messages(
     history: list[tuple[AgentAction | None, Observation | None]],
     system_prompt: str = SYSTEM_PROMPT,
 ) -> list[dict[str, str]]:
-    messages: list[dict[str, str]] = [
-        {"role": "system", "content": system_prompt},
-    ]
-
     tools_text = _format_tools_for_prompt(tools)
-    messages.append({"role": "system", "content": f"Available tools:\n{tools_text}"})
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": system_prompt + "\n\nAvailable tools:\n" + tools_text},
+    ]
 
     for action, obs in history:
         if isinstance(action, ToolCall):
             content = json.dumps({"name": action.name, "arguments": action.arguments})
             messages.append({"role": "assistant", "content": content})
         elif isinstance(action, FinalAnswer):
-            messages.append({"role": "assistant", "content": action.text})
+            messages.append({"role": "assistant", "content": json.dumps({"final_answer": action.text})})
 
         if obs is not None:
-            messages.append({"role": "tool" if isinstance(action, ToolCall) else "user",
-                             "content": json.dumps({"status": obs.status, "payload": obs.payload})})
+            obs_content = json.dumps({"status": obs.status, "result": obs.payload})
+            messages.append({"role": "user", "content": f"Tool result: {obs_content}"})
 
     messages.append({"role": "user", "content": task_query})
     return messages
@@ -279,12 +284,19 @@ class HFAgent:
             system_prompt=self.system_prompt,
         )
 
-        text = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=self.enable_thinking,
-        )
+        try:
+            text = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=self.enable_thinking,
+            )
+        except TypeError:
+            text = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
 
         inputs = self.tokenizer(text, return_tensors="pt")
         if torch.cuda.is_available():
