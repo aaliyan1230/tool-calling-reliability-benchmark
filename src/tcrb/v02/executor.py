@@ -25,7 +25,7 @@ from .types import (
 )
 
 
-MAX_STEPS = 20
+MAX_STEPS = 5
 MAX_TIME_BUDGET_MS = 120_000
 
 
