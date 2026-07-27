@@ -375,10 +375,6 @@ class LogProbAgent:
 
         completions: list[tuple[str, AgentAction]] = []
 
-        if not history:
-            completions.append(('{"final_answer": "', FinalAnswer(text="")))
-            completions.append(('{"clarify": "', Clarify(text="")))
-
         for tool in available_tools:
             args_str = json.dumps(tool.input_schema.get("properties", {}))
             completions.append(
