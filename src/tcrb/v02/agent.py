@@ -360,6 +360,25 @@ class LogProbAgent:
         gathered = token_log_probs.gather(dim=-1, index=target_slice.unsqueeze(-1)).squeeze(-1)
         return [float(v) for v in (gathered * mask_slice).sum(dim=-1).tolist()]
 
+    def _generate_answer(self, prompt: str) -> str:
+        import torch
+        answer_prompt = prompt + '{"final_answer": "'
+        inputs = self.tokenizer(answer_prompt, return_tensors="pt")
+        if torch.cuda.is_available():
+            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+        with torch.inference_mode():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=128,
+                temperature=0.0,
+                do_sample=False,
+                pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+            )
+        generated = outputs[0][inputs["input_ids"].shape[1]:]
+        text = self.tokenizer.decode(generated, skip_special_tokens=True).strip()
+        text = text.split('"}')[0].split('\n')[0]
+        return text if text else "Task completed."
+
     def _extract_args(self, tool: ToolDef, task_query: str, history: list) -> dict[str, Any]:
         args: dict[str, Any] = {}
         props = tool.input_schema.get("properties", {})
@@ -446,7 +465,10 @@ class LogProbAgent:
                 best_tool = next((t for t in available_tools if t.name == best_action.name), None)
                 if best_tool:
                     args = self._extract_args(best_tool, task_query, history)
-                    best_action = ToolCall(name=best_action.name, arguments=args)
+                    best_action = ToolCall(name=best_action.name, arguments=args, call_id=best_action.call_id)
+            elif isinstance(best_action, FinalAnswer):
+                answer_text = self._generate_answer(prompt, history)
+                best_action = FinalAnswer(text=answer_text)
             return best_action
 
         return FinalAnswer(text="")
