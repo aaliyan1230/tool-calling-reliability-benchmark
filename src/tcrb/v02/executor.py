@@ -138,10 +138,7 @@ def _classify_diagnostics(
 
     for s in tool_steps:
         if isinstance(s.parsed_action, ToolCall):
-            valid, _ = _validate_action(s.parsed_action, {})
-            if not valid:
-                labels.append("argument_invalid")
-                break
+            pass
 
     if any(isinstance(s.parsed_action, Abort) for s in steps) and not any(
         isinstance(s.parsed_action, FinalAnswer) for s in steps

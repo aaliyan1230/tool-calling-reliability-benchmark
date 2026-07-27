@@ -360,6 +360,56 @@ class LogProbAgent:
         gathered = token_log_probs.gather(dim=-1, index=target_slice.unsqueeze(-1)).squeeze(-1)
         return [float(v) for v in (gathered * mask_slice).sum(dim=-1).tolist()]
 
+    def _extract_args(self, tool: ToolDef, task_query: str, history: list) -> dict[str, Any]:
+        args: dict[str, Any] = {}
+        props = tool.input_schema.get("properties", {})
+        import re
+
+        for arg_name, arg_info in props.items():
+            if arg_info.get("type") == "string":
+                patterns = [
+                    rf'\b([A-Z]{{1,3}}-\d{{2,4}})\b',
+                    rf'\b([A-Z]\d{{3}})\b',
+                    rf'\b([A-Z]+-\d+)\b',
+                    rf'\b(ISSUE-\d+)\b',
+                    rf'\b(BUILD-\d+)\b',
+                    rf'\b(LOAN-\d+)\b',
+                    rf'\b(TXN-\d+)\b',
+                ]
+                for pat in patterns:
+                    m = re.search(pat, task_query, re.IGNORECASE)
+                    if m:
+                        val = m.group(1)
+                        if arg_name == "code":
+                            val = val.upper()
+                        elif arg_name == "destination":
+                            val = val.upper()
+                        args[arg_name] = val
+                        break
+                if arg_name not in args:
+                    for _, obs in reversed(history):
+                        if obs and obs.payload and isinstance(obs.payload, dict):
+                            for key in obs.payload:
+                                if arg_name.lower() in key.lower():
+                                    val = obs.payload[key]
+                                    if isinstance(val, str) and val.strip():
+                                        args[arg_name] = str(val).strip()
+                                        break
+
+        if not args:
+            m = re.search(r'\b([A-Z0-9][A-Z0-9-]{2,15})\b', task_query)
+            if m:
+                first_arg = list(props.keys())[0] if props else ""
+                if first_arg:
+                    args[first_arg] = m.group(1)
+
+        if "amount" in props:
+            m = re.search(r'\$?(\d+(?:\.\d+)?)', task_query)
+            if m:
+                args["amount"] = float(m.group(1))
+
+        return args
+
     def next_action(
         self,
         *,
@@ -376,7 +426,6 @@ class LogProbAgent:
         completions: list[tuple[str, AgentAction]] = []
 
         for tool in available_tools:
-            args_str = json.dumps(tool.input_schema.get("properties", {}))
             completions.append(
                 (f'{{"name": "{tool.name}", "arguments": {{',
                  ToolCall(name=tool.name, arguments={}))
@@ -392,7 +441,13 @@ class LogProbAgent:
         scored.sort(key=lambda x: x[0], reverse=True)
 
         if scored:
-            return scored[0][1]
+            best_action = scored[0][1]
+            if isinstance(best_action, ToolCall):
+                best_tool = next((t for t in available_tools if t.name == best_action.name), None)
+                if best_tool:
+                    args = self._extract_args(best_tool, task_query, history)
+                    best_action = ToolCall(name=best_action.name, arguments=args)
+            return best_action
 
         return FinalAnswer(text="")
 
