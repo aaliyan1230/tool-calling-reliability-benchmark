@@ -280,10 +280,10 @@ class HFAgent:
         if not history:
             parts.append("")
             parts.append("Example conversation:")
-            parts.append('User: What is the name of customer C001?')
-            parts.append('Assistant: {"name": "customer_lookup", "arguments": {"customer_id": "C001"}}')
-            parts.append('Tool result: {"status": "success", "result": {"found": true, "name": "Alice Chen", "email": "alice@example.com", "tier": "premium"}}')
-            parts.append('Assistant: {"final_answer": "Customer C001 is Alice Chen (alice@example.com), premium tier."}')
+            parts.append('User: What is the name of customer X999?')
+            parts.append('Assistant: {"name": "customer_lookup", "arguments": {"customer_id": "X999"}}')
+            parts.append('Tool result: {"status": "success", "result": {"found": false, "customer_id": "X999"}}')
+            parts.append('Assistant: {"final_answer": "Customer X999 was not found in our system."}')
             parts.append("")
 
         for action, obs in history:
