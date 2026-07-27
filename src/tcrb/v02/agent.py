@@ -267,6 +267,39 @@ class HFAgent:
     top_p: float = 1.0
     enable_thinking: bool = False
 
+    def _build_prompt(
+        self,
+        task_query: str,
+        available_tools: list[ToolDef],
+        history: list[tuple[AgentAction | None, Observation | None]],
+    ) -> str:
+        tools_text = _format_tools_for_prompt(available_tools)
+
+        parts = [self.system_prompt, "", "Available tools:", tools_text]
+
+        if not history:
+            parts.append("")
+            parts.append("Example conversation:")
+            parts.append('User: What is the name of customer C001?')
+            parts.append('Assistant: {"name": "customer_lookup", "arguments": {"customer_id": "C001"}}')
+            parts.append('Tool result: {"status": "success", "result": {"found": true, "name": "Alice Chen", "email": "alice@example.com", "tier": "premium"}}')
+            parts.append('Assistant: {"final_answer": "Customer C001 is Alice Chen (alice@example.com), premium tier."}')
+            parts.append("")
+
+        for action, obs in history:
+            if isinstance(action, ToolCall):
+                parts.append(f'Assistant: {{"name": "{action.name}", "arguments": {json.dumps(action.arguments)}}}')
+            elif isinstance(action, FinalAnswer):
+                parts.append(f'Assistant: {{"final_answer": {json.dumps(action.text)}}}')
+
+            if obs is not None:
+                parts.append(f'Tool result: {{"status": "{obs.status}", "result": {json.dumps(obs.payload)}}}')
+
+        parts.append(f"User: {task_query}")
+        parts.append("Assistant: ")
+
+        return "\n".join(parts)
+
     def next_action(
         self,
         *,
@@ -277,34 +310,11 @@ class HFAgent:
     ) -> AgentAction:
         import torch
 
-        messages = build_chat_messages(
-            task_query=task_query,
-            tools=available_tools,
-            history=history,
-            system_prompt=self.system_prompt,
-        )
+        prompt = self._build_prompt(task_query, available_tools, history)
 
-        try:
-            text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=self.enable_thinking,
-            )
-        except TypeError:
-            text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-
-        inputs = self.tokenizer(text, return_tensors="pt")
+        inputs = self.tokenizer(prompt, return_tensors="pt")
         if torch.cuda.is_available():
             inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-
-        stop_ids = []
-        if hasattr(self.tokenizer, "eos_token_id") and self.tokenizer.eos_token_id is not None:
-            stop_ids.append(self.tokenizer.eos_token_id)
 
         with torch.inference_mode():
             outputs = self.model.generate(
@@ -314,19 +324,24 @@ class HFAgent:
                 do_sample=self.temperature > 0,
                 top_p=self.top_p,
                 pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-                eos_token_id=stop_ids if stop_ids else None,
+                eos_token_id=[self.tokenizer.eos_token_id] if self.tokenizer.eos_token_id is not None else None,
             )
 
         generated = outputs[0][inputs["input_ids"].shape[1]:]
-        raw = self.tokenizer.decode(generated, skip_special_tokens=True)
+        raw = self.tokenizer.decode(generated, skip_special_tokens=True).strip()
 
-        import re
-        raw = re.sub(r'<\s*/\s*think\s*>', '', raw)
-        raw = re.sub(r'<\s*think\s*>', '', raw)
-        raw = raw.strip()
+        # Try parsing first line as JSON action
+        first_line = raw.split("\n")[0].strip()
+        if first_line.startswith('{"'):
+            action = parse_action(first_line)
+            if action is not None:
+                return action
 
-        action = parse_action(raw)
-        if action is None and raw.strip():
-            action = FinalAnswer(text=raw.strip())
-        return action
+        # Try parsing the full output
+        if raw.startswith('{"'):
+            action = parse_action(raw)
+            if action is not None:
+                return action
+
+        return FinalAnswer(text=raw[:500]) if raw else FinalAnswer(text="")
 
