@@ -124,7 +124,7 @@ def main() -> int:
         from tcrb.v02.eval_runner import run_eval
 
         model_id = env("TCRB_MODEL", "Qwen/Qwen3-4B")
-        max_tasks = env_int("TCRB_MAX_TASKS", 8)
+        max_tasks = env_int("TCRB_MAX_TASKS", 0)
         domains_str = env("TCRB_DOMAINS", "customer_support,ecommerce,fintech,developer_tools")
         domains = [d.strip() for d in domains_str.split(",") if d.strip()]
         seed = env_int("TCRB_SEED", 42)
