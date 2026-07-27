@@ -34,6 +34,7 @@ class EpisodeConfig:
     max_steps: int = MAX_STEPS
     max_time_budget_ms: int = MAX_TIME_BUDGET_MS
     seed: int = 42
+    validate_arguments: bool = True
 
 
 def _inject_fault(
@@ -247,14 +248,15 @@ def run_episode(
         observation: Observation | None = None
 
         if isinstance(parsed_action, ToolCall):
-            valid, err = _validate_action(parsed_action, {n: tool_defs[n] for n in tool_defs})
-            if not valid:
-                observation = Observation(
-                    status="invalid_arguments",
-                    payload={"error": err},
-                    latency_ms=0,
-                )
-            else:
+            if cfg.validate_arguments:
+                valid, err = _validate_action(parsed_action, {n: tool_defs[n] for n in tool_defs})
+                if not valid:
+                    observation = Observation(
+                        status="invalid_arguments",
+                        payload={"error": err},
+                        latency_ms=0,
+                    )
+            if observation is None:
                 tool = executable_tools.get(parsed_action.name)
                 if tool is None:
                     observation = Observation(
