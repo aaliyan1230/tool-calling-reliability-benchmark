@@ -132,7 +132,7 @@ def run_eval(
                     agent=agent,
                     task=task,
                     tool_defs=TOOL_REGISTRY,
-                    config=EpisodeConfig(seed=seed),
+                    config=EpisodeConfig(seed=seed, validate_arguments=False),
                 )
             except Exception as exc:
                 trace = EpisodeTrace(
@@ -173,7 +173,7 @@ def run_eval(
                             task=task,
                             tool_defs=TOOL_REGISTRY,
                             fault_schedules=schedules,
-                            config=EpisodeConfig(seed=seed),
+                            config=EpisodeConfig(seed=seed, validate_arguments=False),
                         )
                     except Exception:
                         ftrace = EpisodeTrace(
