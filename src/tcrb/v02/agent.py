@@ -467,8 +467,12 @@ class LogProbAgent:
                     args = self._extract_args(best_tool, task_query, history)
                     best_action = ToolCall(name=best_action.name, arguments=args, call_id=best_action.call_id)
             elif isinstance(best_action, FinalAnswer):
-                answer_text = self._generate_answer(prompt, history)
-                best_action = FinalAnswer(text=answer_text)
+                obs_text = ""
+                for _, obs in reversed(history):
+                    if obs and obs.payload and obs.status == "success":
+                        obs_text = json.dumps(obs.payload)
+                        break
+                best_action = FinalAnswer(text=obs_text if obs_text else "Task completed.")
             return best_action
 
         return FinalAnswer(text="")
