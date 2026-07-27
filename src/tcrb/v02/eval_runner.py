@@ -102,6 +102,7 @@ def run_eval(
         tokenizer=tokenizer,
         system_prompt=system_prompt or "",
         enable_thinking=False,
+        max_new_tokens=256,
     )
 
     all_tasks = build_all_tasks()
@@ -112,6 +113,12 @@ def run_eval(
 
     results: list[dict[str, Any]] = []
     start_time = time.time()
+
+    results_path = output_path / "results.json"
+    summary_path = output_path / "summary.json"
+
+    def _save_incremental() -> None:
+        results_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
 
     task_index = 0
     for domain, tasks in sorted(requested.items()):
@@ -194,6 +201,8 @@ def run_eval(
                     })
 
             results.append(record)
+
+            _save_incremental()
 
             elapsed = time.time() - start_time
             rate = task_index / elapsed if elapsed > 0 else 0
@@ -299,10 +308,8 @@ def run_eval(
         "diagnostic_counts": diagnostic_counts,
     }
 
-    results_path = output_path / "results.json"
     results_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
 
-    summary_path = output_path / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     print(f"\nResults written to {output_path}/", flush=True)
