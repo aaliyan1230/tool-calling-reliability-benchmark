@@ -211,19 +211,24 @@ What should the agent do next? Output JSON:"""
         history: list[tuple[AgentAction | None, Observation | None]],
         rng: random.Random,
     ) -> AgentAction:
+        print(f"[GeminiReviewer] next_action called, history_len={len(history)}", flush=True)
         if not self.base_agent:
+            print("[GeminiReviewer] ERROR: No base agent configured", flush=True)
             return FinalAnswer(text="No base agent configured")
         
+        print(f"[GeminiReviewer] Delegating to base_agent (LogProbAgent)", flush=True)
         action = self.base_agent.next_action(
             task_query=task_query,
             available_tools=available_tools,
             history=history,
             rng=rng,
         )
+        print(f"[GeminiReviewer] Base agent returned: {type(action).__name__}", flush=True)
         
         if history:
             last_action, last_obs = history[-1]
             if last_action and last_obs and self._needs_review(last_obs):
+                print(f"[GeminiReviewer] Review needed for observation status: {last_obs.status}", flush=True)
                 self._review_count += 1
                 reviewed_action = self._review_with_gemini(
                     task_query=task_query,
@@ -233,6 +238,7 @@ What should the agent do next? Output JSON:"""
                     history=history[:-1],
                 )
                 if reviewed_action is not None:
+                    print(f"[GeminiReviewer] Gemini suggested: {type(reviewed_action).__name__}", flush=True)
                     return reviewed_action
         
         return action
