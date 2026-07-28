@@ -160,7 +160,7 @@ def main() -> int:
         domains = [d.strip() for d in domains_str.split(",") if d.strip()]
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
-        agent_type = env("TCRB_AGENT_TYPE", "logprob")
+        agent_type = env("TCRB_AGENT_TYPE", "gemini_reviewer")
 
         print(f"[runner] Model: {model_id}", flush=True)
         print(f"[runner] Max tasks: {max_tasks}", flush=True)
