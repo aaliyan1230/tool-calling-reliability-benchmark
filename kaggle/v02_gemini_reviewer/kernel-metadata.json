@@ -1,6 +1,6 @@
 {
-  "id": "aaliyanshaikh/tcrb-v02-gemini-reviewer",
-  "title": "TCRB v0.2 Gemini Reviewer (SelectiveReviewerAgent)",
+  "id": "aaliyanshaikh/tcrb-v0-2-gemini-reviewer-selectiverevieweragent",
+  "title": "TCRB v0 2 Gemini Reviewer SelectiveReviewerAgent",
   "code_file": "runner.py",
   "language": "python",
   "kernel_type": "script",
