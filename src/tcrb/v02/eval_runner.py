@@ -38,6 +38,7 @@ from .tasks import (
 )
 from .tools import TOOL_REGISTRY
 from .types import (
+    Clarify,
     DiagnosticLabel,
     EpisodeTrace,
     FinalAnswer,
