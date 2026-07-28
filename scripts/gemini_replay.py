@@ -189,7 +189,7 @@ def main():
         return 1
     
     client = genai.Client(api_key=api_key)
-    model = "gemini-3.0-flash-lite"
+    model = "gemini-1.5-flash"
     
     print(f"Loading traces from {args.traces_file}", flush=True)
     traces = load_traces(args.traces_file)
