@@ -120,13 +120,16 @@ def run_eval(
     print(f"Total tasks: {total_tasks} across {len(requested)} domains", flush=True)
 
     results: list[dict[str, Any]] = []
+    traces: list[dict[str, Any]] = []
     start_time = time.time()
 
     results_path = output_path / "results.json"
+    traces_path = output_path / "traces.json"
     summary_path = output_path / "summary.json"
 
     def _save_incremental() -> None:
         results_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+        traces_path.write_text(json.dumps(traces, indent=2), encoding="utf-8")
 
     task_index = 0
     for domain, tasks in sorted(requested.items()):
@@ -155,6 +158,41 @@ def run_eval(
 
             claim_pass = _assess_claims(trace, task.canonical_claims)
             clean_success = trace.success or claim_pass
+
+            # Serialize trace for replay
+            trace_data = {
+                "task_id": trace.task_id,
+                "domain": trace.domain,
+                "success": trace.success,
+                "final_response": trace.final_response,
+                "diagnostic_labels": list(trace.diagnostic_labels),
+                "total_time_ms": trace.total_time_ms,
+                "steps": [],
+            }
+            for step in trace.steps:
+                step_data = {
+                    "step_index": step.step_index,
+                    "raw_model_output": step.raw_model_output,
+                    "parse_error": step.parse_error,
+                    "timing_ms": step.timing_ms,
+                }
+                if step.parsed_action is not None:
+                    if isinstance(step.parsed_action, ToolCall):
+                        step_data["action"] = {"type": "tool_call", "name": step.parsed_action.name, "arguments": step.parsed_action.arguments}
+                    elif isinstance(step.parsed_action, FinalAnswer):
+                        step_data["action"] = {"type": "final_answer", "text": step.parsed_action.text}
+                    elif isinstance(step.parsed_action, Clarify):
+                        step_data["action"] = {"type": "clarify", "text": step.parsed_action.text}
+                    elif isinstance(step.parsed_action, Abort):
+                        step_data["action"] = {"type": "abort", "reason": step.parsed_action.reason}
+                if step.observation is not None:
+                    step_data["observation"] = {
+                        "status": step.observation.status,
+                        "payload": step.observation.payload,
+                        "latency_ms": step.observation.latency_ms,
+                    }
+                trace_data["steps"].append(step_data)
+            traces.append(trace_data)
 
             record = {
                 "task_id": task.task_id,
@@ -195,6 +233,42 @@ def run_eval(
 
                     fclaim_pass = _assess_claims(ftrace, task.canonical_claims)
                     fsuccess = ftrace.success or fclaim_pass
+
+                    # Serialize faulted trace
+                    ftrace_data = {
+                        "task_id": ftrace.task_id,
+                        "domain": ftrace.domain,
+                        "fault_idx": fault_idx,
+                        "success": ftrace.success,
+                        "final_response": ftrace.final_response,
+                        "diagnostic_labels": list(ftrace.diagnostic_labels),
+                        "total_time_ms": ftrace.total_time_ms,
+                        "steps": [],
+                    }
+                    for step in ftrace.steps:
+                        step_data = {
+                            "step_index": step.step_index,
+                            "raw_model_output": step.raw_model_output,
+                            "parse_error": step.parse_error,
+                            "timing_ms": step.timing_ms,
+                        }
+                        if step.parsed_action is not None:
+                            if isinstance(step.parsed_action, ToolCall):
+                                step_data["action"] = {"type": "tool_call", "name": step.parsed_action.name, "arguments": step.parsed_action.arguments}
+                            elif isinstance(step.parsed_action, FinalAnswer):
+                                step_data["action"] = {"type": "final_answer", "text": step.parsed_action.text}
+                            elif isinstance(step.parsed_action, Clarify):
+                                step_data["action"] = {"type": "clarify", "text": step.parsed_action.text}
+                            elif isinstance(step.parsed_action, Abort):
+                                step_data["action"] = {"type": "abort", "reason": step.parsed_action.reason}
+                        if step.observation is not None:
+                            step_data["observation"] = {
+                                "status": step.observation.status,
+                                "payload": step.observation.payload,
+                                "latency_ms": step.observation.latency_ms,
+                            }
+                        ftrace_data["steps"].append(step_data)
+                    traces.append(ftrace_data)
 
                     hazard = schedules[0].fault_type if schedules else "unknown"
                     record["faulted"].append({
