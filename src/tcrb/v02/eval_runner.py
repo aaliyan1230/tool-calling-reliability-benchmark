@@ -163,6 +163,10 @@ def run_eval(
             trace_data = {
                 "task_id": trace.task_id,
                 "domain": trace.domain,
+                "task_query": task.user_query,
+                "available_tools": list(task.available_tools),
+                "category": task.category,
+                "canonical_claims": task.canonical_claims,
                 "success": trace.success,
                 "final_response": trace.final_response,
                 "diagnostic_labels": list(trace.diagnostic_labels),
@@ -238,6 +242,10 @@ def run_eval(
                     ftrace_data = {
                         "task_id": ftrace.task_id,
                         "domain": ftrace.domain,
+                        "task_query": task.user_query,
+                        "available_tools": list(task.available_tools),
+                        "category": task.category,
+                        "canonical_claims": task.canonical_claims,
                         "fault_idx": fault_idx,
                         "success": ftrace.success,
                         "final_response": ftrace.final_response,
