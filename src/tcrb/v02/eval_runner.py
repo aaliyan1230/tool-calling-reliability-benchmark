@@ -26,7 +26,7 @@ from typing import Any
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .agent import LogProbAgent
+from .agent import LogProbAgent, resolve_system_prompt
 from .gemini_agent import GeminiReviewerAgent
 from .executor import EpisodeConfig, run_episode
 from .tasks import (
@@ -92,6 +92,7 @@ def run_eval(
     clean_only: bool = False,
     system_prompt: str | None = None,
     agent_type: str = "logprob",
+    prompt_variant: str = "default",
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -99,19 +100,21 @@ def run_eval(
     print(f"Loading model: {model_id}", flush=True)
     model, tokenizer = _load_model(model_id)
 
+    effective_system_prompt = resolve_system_prompt(system_prompt, prompt_variant)
+
     if agent_type == "gemini_reviewer":
         agent = GeminiReviewerAgent(
             agent_id="gemini_reviewer",
             model=model,
             tokenizer=tokenizer,
-            system_prompt=system_prompt or "",
+            system_prompt=effective_system_prompt,
         )
     else:
         agent = LogProbAgent(
             agent_id="baseline",
             model=model,
             tokenizer=tokenizer,
-            system_prompt=system_prompt or "",
+            system_prompt=effective_system_prompt,
         )
 
     all_tasks = build_all_tasks()
@@ -422,6 +425,12 @@ def main() -> int:
                         help="Comma-separated domain names")
     parser.add_argument("--clean-only", action="store_true", help="Run clean evaluation only")
     parser.add_argument("--system-prompt", default=None, help="Optional custom system prompt")
+    parser.add_argument(
+        "--prompt-variant",
+        choices=["default", "recovery"],
+        default="default",
+        help="Built-in system prompt variant used when --system-prompt is omitted",
+    )
     parser.add_argument("--agent-type", default="logprob", choices=["logprob", "gemini_reviewer"],
                         help="Agent type to use (default: logprob)")
 
@@ -438,6 +447,7 @@ def main() -> int:
             clean_only=args.clean_only,
             system_prompt=args.system_prompt,
             agent_type=args.agent_type,
+            prompt_variant=args.prompt_variant,
         )
         return 0 if summary["clean"]["rate"] >= 0 else 1
     except Exception as exc:

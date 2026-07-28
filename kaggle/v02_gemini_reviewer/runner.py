@@ -163,12 +163,14 @@ def main() -> int:
         domains = [d.strip() for d in domains_str.split(",") if d.strip()]
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
+        prompt_variant = env("TCRB_PROMPT_VARIANT", "default")
 
         print(f"[runner] Model: {model_id}", flush=True)
         print(f"[runner] Max tasks: {max_tasks}", flush=True)
         print(f"[runner] Domains: {domains}", flush=True)
         print(f"[runner] Clean only: {clean_only}", flush=True)
         print(f"[runner] Agent type: gemini_reviewer", flush=True)
+        print(f"[runner] Prompt variant: {prompt_variant}", flush=True)
 
         summary = run_eval(
             model_id=model_id,
@@ -178,6 +180,7 @@ def main() -> int:
             max_tasks=max_tasks,
             clean_only=clean_only,
             agent_type="gemini_reviewer",
+            prompt_variant=prompt_variant,
         )
 
         status = {
@@ -185,6 +188,7 @@ def main() -> int:
             "model_id": model_id,
             "agent_type": "gemini_reviewer",
             "clean_rate": summary["clean"]["rate"],
+            "prompt_variant": prompt_variant,
             "duration_s": summary["total_time_s"],
             "output_dir": str(output_dir),
         }
