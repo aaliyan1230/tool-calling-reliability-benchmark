@@ -87,7 +87,6 @@ def load_gemini_key() -> str | None:
         pass
 
     # Debug: list what's in /kaggle/input
-    import os
     input_dir = Path("/kaggle/input")
     if input_dir.exists():
         print(f"[runner] /kaggle/input exists, contents: {list(input_dir.iterdir())}", flush=True)
