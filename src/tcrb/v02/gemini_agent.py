@@ -74,7 +74,7 @@ class GeminiReviewerAgent:
         api_key = os.environ.get("GEMINI_API_KEY")
         if api_key:
             self.gemini_client = genai.Client(api_key=api_key)
-            self.gemini_model = "gemini-2.5-flash"
+            self.gemini_model = "gemini-3.0-flash-lite"
 
     def _needs_review(self, observation: Observation | None) -> bool:
         if observation is None:
