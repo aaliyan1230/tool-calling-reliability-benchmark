@@ -90,6 +90,14 @@ def load_gemini_key() -> str | None:
     input_dir = Path("/kaggle/input")
     if input_dir.exists():
         print(f"[runner] /kaggle/input exists, contents: {list(input_dir.iterdir())}", flush=True)
+        # Check if datasets directory exists
+        datasets_dir = input_dir / "datasets"
+        if datasets_dir.exists():
+            print(f"[runner] /kaggle/input/datasets contents: {list(datasets_dir.iterdir())}", flush=True)
+            # Check for tcrb-repo-snapshot in datasets
+            for item in datasets_dir.iterdir():
+                if item.is_dir():
+                    print(f"[runner] {item} contents: {list(item.iterdir())}", flush=True)
         for slug in ["tcrb-repo-snapshot"]:
             slug_dir = input_dir / slug
             if slug_dir.exists():
