@@ -49,6 +49,19 @@ def load_hf_token() -> str | None:
     except Exception:
         pass
 
+    # Debug: list what's in /kaggle/input
+    input_dir = Path("/kaggle/input")
+    if input_dir.exists():
+        for slug in ["tcrb-repo-snapshot"]:
+            slug_dir = input_dir / slug
+            if slug_dir.exists():
+                for filename in ["hf_token.txt", "token.txt"]:
+                    path = slug_dir / filename
+                    if path.exists():
+                        print(f"[runner] Found {path}", flush=True)
+                    else:
+                        print(f"[runner] {path} does not exist", flush=True)
+
     for slug in ["tcrb-repo-snapshot"]:
         for filename in ["hf_token.txt", "token.txt"]:
             path = Path(f"/kaggle/input/{slug}/{filename}")
@@ -72,6 +85,20 @@ def load_gemini_key() -> str | None:
             return key
     except Exception:
         pass
+
+    # Debug: list what's in /kaggle/input
+    import os
+    input_dir = Path("/kaggle/input")
+    if input_dir.exists():
+        print(f"[runner] /kaggle/input exists, contents: {list(input_dir.iterdir())}", flush=True)
+        for slug in ["tcrb-repo-snapshot"]:
+            slug_dir = input_dir / slug
+            if slug_dir.exists():
+                print(f"[runner] {slug_dir} contents: {list(slug_dir.iterdir())}", flush=True)
+            else:
+                print(f"[runner] {slug_dir} does not exist", flush=True)
+    else:
+        print("[runner] /kaggle/input does not exist", flush=True)
 
     for slug in ["tcrb-repo-snapshot"]:
         for filename in ["gemini_key.txt"]:
