@@ -58,7 +58,7 @@ class GeminiReviewerAgent:
     tokenizer: Any = None
     system_prompt: str = ""
     gemini_client: Any = field(default=None, init=False)
-    gemini_model: str = field(default="gemini-1.5-flash", init=False)
+    gemini_model: str = field(default="gemini-2.0-flash", init=False)
     review_threshold: float = 0.5
     max_reviews: int = 3
     _review_count: int = field(default=0, init=False)
