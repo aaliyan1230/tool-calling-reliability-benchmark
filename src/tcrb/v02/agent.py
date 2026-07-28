@@ -215,6 +215,31 @@ RULES:
 """
 
 
+RECOVERY_SYSTEM_PROMPT = SYSTEM_PROMPT + """
+
+RECOVERY RULES:
+- Treat every non-success tool result as evidence that the previous action did not complete the task.
+- For timeout, rate_limit, or execution_error, retry the same tool at most once. Do not repeat an unchanged failed call.
+- If a retry fails, or the error is invalid_arguments or unknown_tool, select a different valid tool when one is available.
+- For schema_drift or partial_output, use only fields that are present and supported by the task. If the required fact is missing, use another tool instead of guessing.
+- For silent_corruption or cross_source_conflict, do not trust the suspicious result. Seek an independent tool result before answering.
+- After a successful tool result, answer only when it contains the requested fact; otherwise continue with the next necessary tool.
+- Keep tool arguments consistent with the query and prior observations. Never invent values to make a call executable.
+- Stop retrying when the history shows the same tool already failed twice. Prefer a valid fallback or a concise evidence-based final answer.
+"""
+
+
+def resolve_system_prompt(system_prompt: str | None, prompt_variant: str = "default") -> str:
+    """Resolve an optional custom prompt without disabling the built-in default."""
+    if system_prompt and system_prompt.strip():
+        return system_prompt
+    if prompt_variant == "default":
+        return SYSTEM_PROMPT
+    if prompt_variant == "recovery":
+        return RECOVERY_SYSTEM_PROMPT
+    raise ValueError(f"unknown prompt variant: {prompt_variant}")
+
+
 def build_chat_prompt(
     task_query: str,
     tools: list[ToolDef],
@@ -476,4 +501,3 @@ class LogProbAgent:
             return best_action
 
         return FinalAnswer(text="")
-

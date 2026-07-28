@@ -8,6 +8,7 @@ Environment variables:
   TCRB_OUTPUT_DIR    - Output directory (default: /kaggle/working/v02_baseline)
   TCRB_SEED          - Random seed (default: 42)
   TCRB_CLEAN_ONLY    - Run only clean eval (default: 1)
+  TCRB_PROMPT_VARIANT - Built-in prompt variant: default or recovery (default: default)
   TCRB_BRANCH        - Git branch to clone (default: feat/tcrb-v0.2)
 """
 
@@ -161,12 +162,14 @@ def main() -> int:
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
         agent_type = env("TCRB_AGENT_TYPE", "logprob")
+        prompt_variant = env("TCRB_PROMPT_VARIANT", "default")
 
         print(f"[runner] Model: {model_id}", flush=True)
         print(f"[runner] Max tasks: {max_tasks}", flush=True)
         print(f"[runner] Domains: {domains}", flush=True)
         print(f"[runner] Clean only: {clean_only}", flush=True)
         print(f"[runner] Agent type: {agent_type}", flush=True)
+        print(f"[runner] Prompt variant: {prompt_variant}", flush=True)
 
         summary = run_eval(
             model_id=model_id,
@@ -176,12 +179,14 @@ def main() -> int:
             max_tasks=max_tasks,
             clean_only=clean_only,
             agent_type=agent_type,
+            prompt_variant=prompt_variant,
         )
 
         status = {
             "status": "success",
             "model_id": model_id,
             "clean_rate": summary["clean"]["rate"],
+            "prompt_variant": prompt_variant,
             "duration_s": summary["total_time_s"],
             "output_dir": str(output_dir),
         }
