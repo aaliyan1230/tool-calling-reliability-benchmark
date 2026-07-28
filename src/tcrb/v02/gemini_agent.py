@@ -57,7 +57,8 @@ class GeminiReviewerAgent:
     model: Any = None
     tokenizer: Any = None
     system_prompt: str = ""
-    gemini_model: Any = None
+    gemini_client: Any = field(default=None, init=False)
+    gemini_model: str = field(default="gemini-3.0-flash-lite", init=False)
     review_threshold: float = 0.5
     max_reviews: int = 3
     _review_count: int = field(default=0, init=False)
@@ -74,7 +75,6 @@ class GeminiReviewerAgent:
         api_key = os.environ.get("GEMINI_API_KEY")
         if api_key:
             self.gemini_client = genai.Client(api_key=api_key)
-            self.gemini_model = "gemini-3.0-flash-lite"
 
     def _needs_review(self, observation: Observation | None) -> bool:
         if observation is None:
