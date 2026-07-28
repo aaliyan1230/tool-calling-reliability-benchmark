@@ -27,6 +27,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .agent import LogProbAgent
+from .gemini_agent import GeminiReviewerAgent
 from .executor import EpisodeConfig, run_episode
 from .tasks import (
     build_all_tasks,
@@ -89,6 +90,7 @@ def run_eval(
     max_tasks: int = 0,
     clean_only: bool = False,
     system_prompt: str | None = None,
+    agent_type: str = "logprob",
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -96,12 +98,20 @@ def run_eval(
     print(f"Loading model: {model_id}", flush=True)
     model, tokenizer = _load_model(model_id)
 
-    agent = LogProbAgent(
-        agent_id="baseline",
-        model=model,
-        tokenizer=tokenizer,
-        system_prompt=system_prompt or "",
-    )
+    if agent_type == "gemini_reviewer":
+        agent = GeminiReviewerAgent(
+            agent_id="gemini_reviewer",
+            model=model,
+            tokenizer=tokenizer,
+            system_prompt=system_prompt or "",
+        )
+    else:
+        agent = LogProbAgent(
+            agent_id="baseline",
+            model=model,
+            tokenizer=tokenizer,
+            system_prompt=system_prompt or "",
+        )
 
     all_tasks = build_all_tasks()
     requested = {d: all_tasks[d] for d in domains if d in all_tasks}
@@ -329,6 +339,8 @@ def main() -> int:
                         help="Comma-separated domain names")
     parser.add_argument("--clean-only", action="store_true", help="Run clean evaluation only")
     parser.add_argument("--system-prompt", default=None, help="Optional custom system prompt")
+    parser.add_argument("--agent-type", default="logprob", choices=["logprob", "gemini_reviewer"],
+                        help="Agent type to use (default: logprob)")
 
     args = parser.parse_args()
     domains = [d.strip() for d in args.domains.split(",") if d.strip()]
@@ -342,6 +354,7 @@ def main() -> int:
             max_tasks=args.max_tasks or 0,
             clean_only=args.clean_only,
             system_prompt=args.system_prompt,
+            agent_type=args.agent_type,
         )
         return 0 if summary["clean"]["rate"] >= 0 else 1
     except Exception as exc:

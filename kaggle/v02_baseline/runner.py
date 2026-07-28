@@ -67,6 +67,30 @@ def load_hf_token() -> str | None:
     return None
 
 
+def load_gemini_key() -> str | None:
+    key = os.environ.get("GEMINI_API_KEY")
+    if key:
+        return key
+
+    try:
+        from kaggle_secrets import UserSecretsClient
+        key = UserSecretsClient().get_secret("GEMINI_API_KEY")
+        if key:
+            return key
+    except Exception:
+        pass
+
+    for slug in ["tcrb-repo-snapshot"]:
+        for filename in ["gemini_key.txt"]:
+            path = Path(f"/kaggle/input/{slug}/{filename}")
+            if path.exists():
+                content = path.read_text().strip()
+                if content:
+                    return content.splitlines()[0].strip()
+
+    return None
+
+
 def main() -> int:
     output_dir = Path(env("TCRB_OUTPUT_DIR", "/kaggle/working/v02_baseline"))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -80,6 +104,13 @@ def main() -> int:
         else:
             print("[runner] WARNING: HF_TOKEN not found - gated models may fail", flush=True)
 
+        gemini_key = load_gemini_key()
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key
+            print("[runner] GEMINI_API_KEY loaded", flush=True)
+        else:
+            print("[runner] WARNING: GEMINI_API_KEY not found - Gemini reviewer will not work", flush=True)
+
         branch = env("TCRB_BRANCH", "feat/tcrb-v0.2")
         repo_dir = Path("/tmp/tcrb_repo")
 
@@ -92,7 +123,7 @@ def main() -> int:
         print("[runner] Installing dependencies", flush=True)
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "-q",
-             "transformers>=4.45", "torch>=2.0", "accelerate>=0.20"],
+             "transformers>=4.45", "torch>=2.0", "accelerate>=0.20", "google-genai>=1.0"],
             check=True, text=True, capture_output=True,
         )
 
@@ -129,11 +160,13 @@ def main() -> int:
         domains = [d.strip() for d in domains_str.split(",") if d.strip()]
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
+        agent_type = env("TCRB_AGENT_TYPE", "logprob")
 
         print(f"[runner] Model: {model_id}", flush=True)
         print(f"[runner] Max tasks: {max_tasks}", flush=True)
         print(f"[runner] Domains: {domains}", flush=True)
         print(f"[runner] Clean only: {clean_only}", flush=True)
+        print(f"[runner] Agent type: {agent_type}", flush=True)
 
         summary = run_eval(
             model_id=model_id,
@@ -142,6 +175,7 @@ def main() -> int:
             seed=seed,
             max_tasks=max_tasks,
             clean_only=clean_only,
+            agent_type=agent_type,
         )
 
         status = {
