@@ -112,7 +112,29 @@ Evaluate each step and suggest improvements. Output a JSON array of evaluations:
                 result_text = result_text[4:]
             result_text = result_text.strip()
         
-        evaluations = json.loads(result_text)
+        # Try to extract valid JSON array
+        import re
+        # Find JSON array pattern
+        json_match = re.search(r'\[[\s\S]*\]', result_text)
+        if json_match:
+            result_text = json_match.group(0)
+        
+        try:
+            evaluations = json.loads(result_text)
+        except json.JSONDecodeError:
+            # Try to fix common issues
+            # Add missing closing bracket
+            if result_text.count('[') > result_text.count(']'):
+                result_text += ']'
+            # Try to parse individual objects
+            obj_matches = re.findall(r'\{[^{}]*\}', result_text)
+            evaluations = []
+            for obj_str in obj_matches:
+                try:
+                    evaluations.append(json.loads(obj_str))
+                except:
+                    pass
+        
         return {"evaluations": evaluations, "raw_response": result_text}
     
     except Exception as e:
