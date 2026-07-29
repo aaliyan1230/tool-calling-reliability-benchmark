@@ -121,17 +121,22 @@ def _classify_diagnostics(
         labels.append("unnecessary_tool_use")
 
     tool_results = [s.observation for s in tool_steps if s.observation is not None]
-    if tool_results and not any(r.status == "success" for r in tool_results):
+    tool_call_counts: dict[str, int] = {}
+    for step in tool_steps:
+        tool_name = step.parsed_action.name
+        tool_call_counts[tool_name] = tool_call_counts.get(tool_name, 0) + 1
+    if tool_results and not any(r.status == "success" for r in tool_results) and any(
+        count > 1 for count in tool_call_counts.values()
+    ):
         labels.append("retry_loop")
 
-    error_results = [r for r in tool_results if r.is_error]
-    if error_results:
-        retried_errors = set()
-        for s in tool_steps:
-            if isinstance(s.parsed_action, ToolCall) and s.observation and s.observation.is_error:
-                retried_errors.add(s.parsed_action.name)
-        if len(retried_errors) == 0 and len(error_results) > 0:
-            labels.append("silent_result_trust")
+    for index, step in enumerate(steps):
+        if not isinstance(step.parsed_action, ToolCall) or not step.observation or not step.observation.is_error:
+            continue
+        later_actions = [later.parsed_action for later in steps[index + 1:] if later.parsed_action is not None]
+        if later_actions and isinstance(later_actions[0], FinalAnswer):
+            labels.append("result_ignore")
+            break
 
     for s in tool_steps:
         if s.parse_error:

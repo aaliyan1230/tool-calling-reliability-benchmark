@@ -110,3 +110,34 @@ def test_agent_can_recover_from_invalid_arguments_within_step_budget():
     assert trace.steps[0].observation.status == "invalid_arguments"
     assert trace.steps[1].observation.status == "success"
     assert trace.final_response == "C001"
+
+
+def test_answering_immediately_after_tool_error_is_result_ignore_not_retry_loop():
+    def fail(arguments, state, rng):
+        raise RuntimeError("unavailable")
+
+    tool = ToolDef(
+        name="lookup",
+        description="lookup",
+        input_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object"},
+        executor=fail,
+    )
+    task = TaskDef(
+        task_id="TEST-004",
+        domain="test",
+        user_query="Look it up.",
+        category="tool_required",
+        available_tools=["lookup"],
+    )
+
+    trace = run_episode(
+        agent=ReplayAgent(
+            action_sequence=[ToolCall("lookup", {}), FinalAnswer("Could not retrieve it")]
+        ),
+        task=task,
+        tool_defs={"lookup": tool},
+    )
+
+    assert "result_ignore" in trace.diagnostic_labels
+    assert "retry_loop" not in trace.diagnostic_labels
