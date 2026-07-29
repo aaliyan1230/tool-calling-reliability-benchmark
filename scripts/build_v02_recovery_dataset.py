@@ -52,6 +52,14 @@ def _failed_step(trace: dict[str, Any]) -> tuple[int, dict[str, Any], dict[str, 
     return None
 
 
+def _evaluated_success(trace: dict[str, Any]) -> bool:
+    if trace.get("success") is not True:
+        return False
+    claims = [str(claim).lower() for claim in trace.get("canonical_claims", [])]
+    response = str(trace.get("final_response", "")).lower()
+    return not claims or all(claim in response for claim in claims)
+
+
 def _recovery_context(trace: dict[str, Any], action: dict[str, Any], observation: dict[str, Any]) -> dict[str, Any]:
     messages = [
         {"role": "system", "content": RECOVERY_SYSTEM_PROMPT},
@@ -87,14 +95,23 @@ def build_recovery_rows(
             continue
         if trace.get("fault_applied") is False:
             continue
+        if not _evaluated_success(trace):
+            continue
         failed = _failed_step(trace)
         if failed is None:
             continue
         step_index, failed_action, observation = failed
-        retry = _action_payload(failed_action)
+        failed_action_payload = _action_payload(failed_action)
         context = _recovery_context(trace, failed_action, observation)
 
-        sft_messages = context["messages"] + [{"role": "assistant", "content": retry}]
+        next_action = None
+        if step_index + 1 < len(trace.get("steps", [])):
+            next_action = trace["steps"][step_index + 1].get("action")
+        if next_action is None:
+            continue
+        chosen = _action_payload(next_action)
+
+        sft_messages = context["messages"] + [{"role": "assistant", "content": chosen}]
         sft_record = {
             "messages": sft_messages,
             "tools": context["tools"],
@@ -108,17 +125,13 @@ def build_recovery_rows(
         }
         sft_rows.append(sft_record)
 
-        next_action = None
-        if step_index + 1 < len(trace.get("steps", [])):
-            next_action = trace["steps"][step_index + 1].get("action")
-        rejected = _action_payload(next_action)
-        if rejected == retry:
+        if chosen == failed_action_payload:
             continue
         dpo_rows.append(
             {
                 "prompt": render_sft_text(context),
-                "chosen": retry,
-                "rejected": rejected,
+                "chosen": chosen,
+                "rejected": failed_action_payload,
                 "source": "tcrb_v02_recovery",
                 "metadata": sft_record["metadata"],
             }

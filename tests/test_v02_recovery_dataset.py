@@ -19,6 +19,9 @@ def test_recovery_dataset_prefers_retry_after_a_failed_tool_call():
             "split": "train",
             "hazard": "execution_error",
             "fault_applied": True,
+            "success": True,
+            "canonical_claims": ["C001"],
+            "final_response": "Task completed for C001.",
             "task_query": "Look up customer C001.",
             "available_tools": ["customer_lookup"],
             "steps": [
@@ -36,7 +39,7 @@ def test_recovery_dataset_prefers_retry_after_a_failed_tool_call():
                 },
                 {
                     "step_index": 1,
-                    "action": {"type": "final_answer", "text": "Task completed."},
+                    "action": {"type": "final_answer", "text": "Task completed for C001."},
                 },
             ],
         }
@@ -48,7 +51,9 @@ def test_recovery_dataset_prefers_retry_after_a_failed_tool_call():
     assert len(dpo_rows) == 1
     assert RECOVERY_SYSTEM_PROMPT in sft_rows[0]["text"]
     assert '"name": "customer_lookup"' in sft_rows[0]["text"]
-    assert dpo_rows[0]["chosen"] != dpo_rows[0]["rejected"]
+    assert sft_rows[0]["messages"][-1]["content"] == '{"final_answer": "Task completed for C001."}'
+    assert dpo_rows[0]["chosen"] == '{"final_answer": "Task completed for C001."}'
+    assert dpo_rows[0]["rejected"] == '{"name": "customer_lookup", "arguments": {"customer_id": "C001"}}'
 
 
 def test_recovery_dataset_skips_traces_without_failed_tool_steps():
