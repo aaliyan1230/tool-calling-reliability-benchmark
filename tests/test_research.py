@@ -5,6 +5,7 @@ from tcrb.research import (
     _build_dpo_training_args,
     _build_dpo_trainer_kwargs,
     _build_sft_training_args,
+    _coerce_trainable_parameter_dtype,
     _prepare_model_for_quantized_training,
     _training_dtype,
     _training_precision_kwargs,
@@ -478,3 +479,21 @@ def test_build_sft_training_args_uses_trl_sft_config():
 
     assert isinstance(args, DummySFTConfig)
     assert "disable_dropout" not in args.kwargs
+
+
+def test_coerce_trainable_parameter_dtype_makes_t4_adapters_fp16():
+    import torch
+
+    parameter = torch.nn.Parameter(torch.ones(2, dtype=torch.bfloat16))
+
+    class DummyModel:
+        def parameters(self):
+            return [parameter]
+
+    _coerce_trainable_parameter_dtype(
+        DummyModel(),
+        target_dtype=torch.float16,
+        source_dtype=torch.bfloat16,
+    )
+
+    assert parameter.dtype == torch.float16

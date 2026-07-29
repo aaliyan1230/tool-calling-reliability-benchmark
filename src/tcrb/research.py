@@ -197,6 +197,18 @@ def _attach_trainable_adapter_if_present(
     )
 
 
+def _coerce_trainable_parameter_dtype(
+    model: Any,
+    *,
+    target_dtype: Any,
+    source_dtype: Any,
+) -> None:
+    """Keep trainable adapters in the selected fp16/bf16 dtype on GPU."""
+    for parameter in model.parameters():
+        if getattr(parameter, "requires_grad", False) and getattr(parameter, "dtype", None) == source_dtype:
+            parameter.data = parameter.data.to(target_dtype)
+
+
 def _role_from_sharegpt(raw_role: str) -> str:
     role = str(raw_role).strip().lower()
     if role == "human":
@@ -621,6 +633,12 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         peft_module=peft_module,
         lora_config=lora_config,
     )
+    if recipe.fp16 and not recipe.bf16:
+        _coerce_trainable_parameter_dtype(
+            model,
+            target_dtype=torch_module.float16,
+            source_dtype=torch_module.bfloat16,
+        )
 
     training_args = _build_sft_training_args(
         transformers_module=transformers_module,
@@ -716,6 +734,12 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         peft_module=peft_module,
         lora_config=lora_config,
     )
+    if recipe.fp16 and not recipe.bf16:
+        _coerce_trainable_parameter_dtype(
+            model,
+            target_dtype=torch_module.float16,
+            source_dtype=torch_module.bfloat16,
+        )
     training_args = _build_dpo_training_args(
         transformers_module=transformers_module,
         trl_module=trl_module,
