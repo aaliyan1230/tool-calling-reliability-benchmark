@@ -48,7 +48,7 @@ from .types import (
 )
 
 
-def _load_model(model_id: str) -> tuple[Any, Any]:
+def _load_model(model_id: str, adapter_path: str | None = None) -> tuple[Any, Any]:
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
         trust_remote_code=True,
@@ -62,6 +62,10 @@ def _load_model(model_id: str) -> tuple[Any, Any]:
         device_map="auto" if torch.cuda.is_available() else None,
         trust_remote_code=True,
     )
+    if adapter_path:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, adapter_path)
     model.eval()
     return model, tokenizer
 
@@ -98,12 +102,13 @@ def run_eval(
     system_prompt: str | None = None,
     agent_type: str = "logprob",
     prompt_variant: str = "default",
+    adapter_path: str | None = None,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading model: {model_id}", flush=True)
-    model, tokenizer = _load_model(model_id)
+    model, tokenizer = _load_model(model_id, adapter_path=adapter_path)
 
     effective_system_prompt = resolve_system_prompt(system_prompt, prompt_variant)
 
@@ -436,6 +441,11 @@ def main() -> int:
         default="default",
         help="Built-in system prompt variant used when --system-prompt is omitted",
     )
+    parser.add_argument(
+        "--adapter-path",
+        default=None,
+        help="Optional PEFT adapter directory to evaluate",
+    )
     parser.add_argument("--agent-type", default="logprob", choices=["logprob", "gemini_reviewer"],
                         help="Agent type to use (default: logprob)")
 
@@ -453,6 +463,7 @@ def main() -> int:
             system_prompt=args.system_prompt,
             agent_type=args.agent_type,
             prompt_variant=args.prompt_variant,
+            adapter_path=args.adapter_path,
         )
         return 0 if summary["clean"]["rate"] >= 0 else 1
     except Exception as exc:
