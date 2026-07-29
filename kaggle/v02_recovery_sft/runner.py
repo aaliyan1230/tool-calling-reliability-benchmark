@@ -76,6 +76,7 @@ def main() -> int:
                 "peft>=0.14",
                 "trl>=0.15",
                 "bitsandbytes>=0.43",
+                "torchao>=0.16.0",
             ],
             check=True,
             text=True,
