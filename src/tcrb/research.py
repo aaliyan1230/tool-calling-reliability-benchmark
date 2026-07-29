@@ -1035,6 +1035,8 @@ def _build_dpo_training_args(
         dpo_kwargs["max_length"] = recipe.max_seq_length
     if "max_prompt_length" in params:
         dpo_kwargs["max_prompt_length"] = max(256, recipe.max_seq_length // 2)
+    if "beta" in params:
+        dpo_kwargs["beta"] = recipe.beta
     return dpo_config_cls(**dpo_kwargs)
 
 

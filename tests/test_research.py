@@ -407,11 +407,12 @@ def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
         TrainingArguments = DummyTrainingArguments
 
     class DummyDPOConfig:
-        def __init__(self, max_length=None, max_prompt_length=None, **kwargs):
+        def __init__(self, max_length=None, max_prompt_length=None, beta=None, **kwargs):
             self.kwargs = {
                 **kwargs,
                 "max_length": max_length,
                 "max_prompt_length": max_prompt_length,
+                "beta": beta,
             }
 
     class DummyTRL:
@@ -433,6 +434,7 @@ def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
     assert isinstance(args, DummyDPOConfig)
     assert args.kwargs["max_length"] == 512
     assert args.kwargs["max_prompt_length"] == 256
+    assert args.kwargs["beta"] == 0.5
 
 
 def test_build_sft_training_args_uses_trl_sft_config():
