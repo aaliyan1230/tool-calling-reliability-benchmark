@@ -1,0 +1,16 @@
+{
+  "id": "aaliyanshaikh/tcrb-v02-recovery-sft-eval",
+  "title": "TCRB v02 Recovery SFT Evaluation",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "aaliyanshaikh/tcrb-repo-snapshot",
+    "aaliyanshaikh/tcrb-v02-recovery-sft-adapter"
+  ],
+  "kernel_sources": [],
+  "competition_sources": []
+}
