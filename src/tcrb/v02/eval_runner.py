@@ -26,7 +26,7 @@ from typing import Any
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .agent import LogProbAgent, resolve_system_prompt
+from .agent import HFAgent, LogProbAgent, resolve_system_prompt
 from .gemini_agent import GeminiReviewerAgent
 from .executor import EpisodeConfig, run_episode
 from .tasks import (
@@ -79,9 +79,35 @@ def _assess_claims(trace: EpisodeTrace, claims: list[str]) -> bool:
     return all(c.lower() in response_lower for c in claims)
 
 
-def _episode_success(trace: EpisodeTrace, claims: list[str]) -> bool:
-    """Require the declared answer claims instead of rewarding any final answer."""
-    return _assess_claims(trace, claims)
+def _contains_ordered_sequence(actual: list[str], expected: list[str]) -> bool:
+    remaining = iter(actual)
+    return all(any(candidate == tool for candidate in remaining) for tool in expected)
+
+
+def _episode_success(trace: EpisodeTrace, task: TaskDef) -> bool:
+    """Apply category-specific task semantics to an episode trace."""
+    tool_names = [
+        step.parsed_action.name
+        for step in trace.steps
+        if isinstance(step.parsed_action, ToolCall)
+    ]
+    if task.category == "missing_information":
+        return not tool_names and any(
+            isinstance(step.parsed_action, Clarify) for step in trace.steps
+        )
+
+    claims_pass = _assess_claims(trace, task.canonical_claims)
+    if task.category == "no_tool":
+        return not tool_names and trace.success and claims_pass
+
+    if not trace.success or not claims_pass or not tool_names:
+        return False
+    if not task.valid_tool_sequences:
+        return True
+    return any(
+        _contains_ordered_sequence(tool_names, expected)
+        for expected in task.valid_tool_sequences
+    )
 
 
 def _count_labels(traces: list[EpisodeTrace]) -> dict[DiagnosticLabel, int]:
@@ -115,6 +141,13 @@ def run_eval(
     if agent_type == "gemini_reviewer":
         agent = GeminiReviewerAgent(
             agent_id="gemini_reviewer",
+            model=model,
+            tokenizer=tokenizer,
+            system_prompt=effective_system_prompt,
+        )
+    elif agent_type == "hf_generate":
+        agent = HFAgent(
+            agent_id="hf_generate",
             model=model,
             tokenizer=tokenizer,
             system_prompt=effective_system_prompt,
@@ -171,7 +204,7 @@ def run_eval(
                 trace.final_response = str(exc)
 
             claim_pass = _assess_claims(trace, task.canonical_claims)
-            clean_success = _episode_success(trace, task.canonical_claims)
+            clean_success = _episode_success(trace, task)
 
             # Serialize trace for replay
             trace_data = {
@@ -250,7 +283,7 @@ def run_eval(
                         )
 
                     fclaim_pass = _assess_claims(ftrace, task.canonical_claims)
-                    fsuccess = _episode_success(ftrace, task.canonical_claims)
+                    fsuccess = _episode_success(ftrace, task)
 
                     # Serialize faulted trace
                     ftrace_data = {
@@ -446,7 +479,7 @@ def main() -> int:
         default=None,
         help="Optional PEFT adapter directory to evaluate",
     )
-    parser.add_argument("--agent-type", default="logprob", choices=["logprob", "gemini_reviewer"],
+    parser.add_argument("--agent-type", default="logprob", choices=["logprob", "hf_generate", "gemini_reviewer"],
                         help="Agent type to use (default: logprob)")
 
     args = parser.parse_args()
