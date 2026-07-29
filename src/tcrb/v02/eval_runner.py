@@ -31,6 +31,7 @@ from .gemini_agent import GeminiReviewerAgent
 from .executor import EpisodeConfig, run_episode
 from .tasks import (
     build_all_tasks,
+    domain_hazard_quadrant,
     generate_fault_schedules,
     get_faulted_tasks,
     get_oracle_actions,
@@ -192,7 +193,7 @@ def run_eval(
                     agent=agent,
                     task=task,
                     tool_defs=TOOL_REGISTRY,
-                    config=EpisodeConfig(seed=seed, validate_arguments=False),
+                    config=EpisodeConfig(seed=seed, validate_arguments=True),
                 )
             except Exception as exc:
                 trace = EpisodeTrace(
@@ -217,6 +218,7 @@ def run_eval(
                 "success": trace.success,
                 "final_response": trace.final_response,
                 "diagnostic_labels": list(trace.diagnostic_labels),
+                "faults_applied": list(trace.faults_applied),
                 "total_time_ms": trace.total_time_ms,
                 "steps": [],
             }
@@ -266,13 +268,14 @@ def run_eval(
                 for fault_idx in range(5):
                     reset_call_counter()
                     schedules = generate_fault_schedules(task, fault_idx)
+                    hazard = schedules[0].fault_type if schedules else "unknown"
                     try:
                         ftrace = run_episode(
                             agent=agent,
                             task=task,
                             tool_defs=TOOL_REGISTRY,
                             fault_schedules=schedules,
-                            config=EpisodeConfig(seed=seed, validate_arguments=False),
+                            config=EpisodeConfig(seed=seed, validate_arguments=True),
                         )
                     except Exception:
                         ftrace = EpisodeTrace(
@@ -294,9 +297,14 @@ def run_eval(
                         "category": task.category,
                         "canonical_claims": task.canonical_claims,
                         "fault_idx": fault_idx,
+                        "hazard": hazard,
+                        "split": get_split(task),
+                        "quadrant": domain_hazard_quadrant(task, hazard),
                         "success": ftrace.success,
                         "final_response": ftrace.final_response,
                         "diagnostic_labels": list(ftrace.diagnostic_labels),
+                        "faults_applied": list(ftrace.faults_applied),
+                        "fault_applied": hazard in ftrace.faults_applied,
                         "total_time_ms": ftrace.total_time_ms,
                         "steps": [],
                     }
@@ -325,10 +333,10 @@ def run_eval(
                         ftrace_data["steps"].append(step_data)
                     traces.append(ftrace_data)
 
-                    hazard = schedules[0].fault_type if schedules else "unknown"
                     record["faulted"].append({
                         "fault_idx": fault_idx,
                         "hazard": hazard,
+                        "fault_applied": hazard in ftrace.faults_applied,
                         "success": fsuccess,
                         "claim_pass": fclaim_pass,
                         "final_response": ftrace.final_response,
@@ -391,7 +399,8 @@ def run_eval(
                     "hazard": f["hazard"],
                     "success": f["success"],
                     "clean_success": r["clean"]["success"],
-                    "recovery": f["success"] and not r["clean"]["success"],
+                    "fault_applied": f["fault_applied"],
+                    "recovery": f["success"] and f["fault_applied"],
                 })
 
         fault_total = len(fault_results)
@@ -400,12 +409,14 @@ def run_eval(
         by_hazard = {}
         for f in fault_results:
             h = f["hazard"]
-            by_hazard.setdefault(h, {"total": 0, "passed": 0, "recovery": 0})
+            by_hazard.setdefault(h, {"total": 0, "passed": 0, "applied": 0, "recovery": 0})
             by_hazard[h]["total"] += 1
             if f["success"]:
                 by_hazard[h]["passed"] += 1
             if f["recovery"]:
                 by_hazard[h]["recovery"] += 1
+            if f["fault_applied"]:
+                by_hazard[h]["applied"] += 1
     else:
         fault_total = 0
         fault_passed = 0
@@ -439,7 +450,9 @@ def run_eval(
             "rate": round(fault_passed / fault_total, 4) if fault_total else 0,
             "by_hazard": {h: {"total": d["total"], "passed": d["passed"],
                               "rate": round(d["passed"] / d["total"], 4) if d["total"] else 0,
-                              "recovery": d["recovery"]}
+                              "applied": d["applied"],
+                              "recovery": d["recovery"],
+                              "recovery_rate": round(d["recovery"] / d["applied"], 4) if d["applied"] else 0}
                           for h, d in sorted(by_hazard.items())},
         } if not clean_only else None,
         "diagnostic_counts": diagnostic_counts,

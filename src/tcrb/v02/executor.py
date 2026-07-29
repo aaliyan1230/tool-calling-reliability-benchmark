@@ -189,11 +189,12 @@ def run_episode(
         if name in task.available_tools
     }
 
-    fault_by_step: dict[int, FaultSchedule] = {}
-    if fault_schedules:
-        for fs in fault_schedules:
-            if fs.task_id == task.task_id:
-                fault_by_step[fs.step_index] = fs
+    pending_faults = [
+        schedule
+        for schedule in (fault_schedules or [])
+        if schedule.task_id == task.task_id
+    ]
+    faults_applied: list[str] = []
 
     steps: list[StepRecord] = []
     history: list[tuple[AgentAction | None, Observation | None]] = []
@@ -266,7 +267,14 @@ def run_episode(
                     )
                 else:
                     used_tools.add(parsed_action.name)
-                    fault_schedule = fault_by_step.get(step_idx)
+                    fault_schedule = next(
+                        (
+                            schedule
+                            for schedule in pending_faults
+                            if schedule.tool_name == parsed_action.name
+                        ),
+                        None,
+                    )
                     try:
                         payload = tool.execute(parsed_action.arguments, rng)
                         status: ObservationStatus = "success"
@@ -277,6 +285,8 @@ def run_episode(
                                 parsed_action.name,
                                 rng,
                             )
+                            pending_faults.remove(fault_schedule)
+                            faults_applied.append(fault_schedule.fault_type)
                         observation = Observation(
                             status=status,
                             payload=payload,
@@ -341,10 +351,6 @@ def run_episode(
         ))
         history.append((parsed_action, observation))
 
-        if observation and observation.status not in ("success", "partial_output", "cross_source_conflict", "schema_drift"):
-            if observation.status not in ("timeout", "rate_limit", "execution_error"):
-                break
-
     total_time = int((time.time() - start_time) * 1000)
     diagnostic_labels = _classify_diagnostics(steps, used_tools, set(task.available_tools))
 
@@ -355,6 +361,7 @@ def run_episode(
         final_response=final_response,
         success=success,
         diagnostic_labels=diagnostic_labels,
+        faults_applied=faults_applied,
         total_time_ms=total_time,
     )
 

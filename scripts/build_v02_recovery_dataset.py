@@ -13,6 +13,9 @@ from tcrb.v02.agent import RECOVERY_SYSTEM_PROMPT
 from tcrb.v02.tools import TOOL_REGISTRY
 
 
+DEFAULT_TRAINING_HAZARDS = {"execution_error", "schema_drift", "partial_output"}
+
+
 def _action_payload(action: dict[str, Any] | None) -> str:
     if not action:
         return json.dumps({"final_answer": "Task completed."}, ensure_ascii=True)
@@ -68,10 +71,22 @@ def _recovery_context(trace: dict[str, Any], action: dict[str, Any], observation
     }
 
 
-def build_recovery_rows(traces: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def build_recovery_rows(
+    traces: list[dict[str, Any]],
+    *,
+    splits: set[str] | None = None,
+    hazards: set[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    allowed_splits = splits if splits is not None else {"train"}
+    allowed_hazards = hazards if hazards is not None else DEFAULT_TRAINING_HAZARDS
     sft_rows: list[dict[str, Any]] = []
     dpo_rows: list[dict[str, Any]] = []
     for trace in traces:
+        trace_hazard = str(trace.get("hazard", ""))
+        if trace.get("split") not in allowed_splits or trace_hazard not in allowed_hazards:
+            continue
+        if trace.get("fault_applied") is False:
+            continue
         failed = _failed_step(trace)
         if failed is None:
             continue
@@ -87,7 +102,7 @@ def build_recovery_rows(traces: list[dict[str, Any]]) -> tuple[list[dict[str, An
             "source": "tcrb_v02_recovery",
             "metadata": {
                 "task_id": trace.get("task_id"),
-                "hazard": observation.get("status"),
+                "hazard": trace_hazard,
                 "fault_step": step_index,
             },
         }
@@ -124,10 +139,14 @@ def main() -> int:
     parser.add_argument("--traces", required=True, type=Path)
     parser.add_argument("--output-sft", required=True, type=Path)
     parser.add_argument("--output-dpo", required=True, type=Path)
+    parser.add_argument("--splits", default="train")
+    parser.add_argument("--hazards", default=",".join(sorted(DEFAULT_TRAINING_HAZARDS)))
     args = parser.parse_args()
 
     traces = json.loads(args.traces.read_text(encoding="utf-8"))
-    sft_rows, dpo_rows = build_recovery_rows(traces)
+    splits = {value.strip() for value in args.splits.split(",") if value.strip()}
+    hazards = {value.strip() for value in args.hazards.split(",") if value.strip()}
+    sft_rows, dpo_rows = build_recovery_rows(traces, splits=splits, hazards=hazards)
     _write_jsonl(sft_rows, args.output_sft)
     _write_jsonl(dpo_rows, args.output_dpo)
     print(json.dumps({"sft_rows": len(sft_rows), "dpo_rows": len(dpo_rows)}, indent=2))
