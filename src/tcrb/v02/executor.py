@@ -112,7 +112,9 @@ def _classify_diagnostics(
     tool_steps = [s for s in steps if isinstance(s.parsed_action, ToolCall)]
     non_tool_actions = [s for s in steps if s.parsed_action is not None and not isinstance(s.parsed_action, ToolCall)]
 
-    if not tool_steps and not any(isinstance(s.parsed_action, FinalAnswer) for s in steps):
+    if not tool_steps and not any(
+        isinstance(s.parsed_action, (FinalAnswer, Clarify)) for s in steps
+    ):
         labels.append("tool_skip")
 
     if len(tool_steps) > 5:
@@ -155,7 +157,8 @@ def _classify_diagnostics(
     if not labels:
         has_tool = any(isinstance(s.parsed_action, ToolCall) for s in steps)
         has_answer = any(isinstance(s.parsed_action, FinalAnswer) for s in steps)
-        if not has_tool and not has_answer:
+        has_clarification = any(isinstance(s.parsed_action, Clarify) for s in steps)
+        if not has_tool and not has_answer and not has_clarification:
             labels.append("tool_skip")
         elif has_answer and not has_tool:
             labels.append("fabrication")
@@ -303,11 +306,18 @@ def run_episode(
             break
 
         elif isinstance(parsed_action, Clarify):
-            observation = Observation(
-                status="success",
-                payload={"clarify": parsed_action.text},
-                latency_ms=0,
-            )
+            success = True
+            final_response = parsed_action.text
+            steps.append(StepRecord(
+                step_index=step_idx,
+                raw_model_output=raw_output,
+                parsed_action=parsed_action,
+                parse_error=None,
+                observation=None,
+                timing_ms=step_timing,
+            ))
+            history.append((parsed_action, None))
+            break
 
         elif isinstance(parsed_action, Abort):
             steps.append(StepRecord(

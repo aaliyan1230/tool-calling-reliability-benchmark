@@ -190,7 +190,7 @@ def _format_history(history: list[tuple[AgentAction | None, Observation | None]]
     return "\n".join(lines)
 
 
-SYSTEM_PROMPT = """You are a reliable assistant. You MUST call tools to look up real data. Never guess or fabricate answers.
+SYSTEM_PROMPT = """You are a reliable assistant. Call tools when the query requires real data. Answer general knowledge directly, and ask for clarification when required information is missing. Never guess or fabricate tool-derived facts.
 
 Output EXACTLY one JSON per turn with no extra text:
 
@@ -264,6 +264,7 @@ def build_chat_messages(
     tools_text = _format_tools_for_prompt(tools)
     messages: list[dict[str, str]] = [
         {"role": "system", "content": system_prompt + "\n\nAvailable tools:\n" + tools_text},
+        {"role": "user", "content": task_query},
     ]
 
     for action, obs in history:
@@ -272,12 +273,15 @@ def build_chat_messages(
             messages.append({"role": "assistant", "content": content})
         elif isinstance(action, FinalAnswer):
             messages.append({"role": "assistant", "content": json.dumps({"final_answer": action.text})})
+        elif isinstance(action, Clarify):
+            messages.append({"role": "assistant", "content": json.dumps({"clarify": action.text})})
+        elif isinstance(action, Abort):
+            messages.append({"role": "assistant", "content": json.dumps({"abort": action.reason})})
 
         if obs is not None:
             obs_content = json.dumps({"status": obs.status, "result": obs.payload})
             messages.append({"role": "user", "content": f"Tool result: {obs_content}"})
 
-    messages.append({"role": "user", "content": task_query})
     return messages
 
 
@@ -299,17 +303,50 @@ class HFAgent:
         history: list[tuple[AgentAction | None, Observation | None]],
         rng: random.Random,
     ) -> AgentAction:
-        backend = LogProbAgent(
-            model=self.model,
-            tokenizer=self.tokenizer,
-            system_prompt=self.system_prompt,
+        import torch
+
+        messages = build_chat_messages(
+            task_query,
+            available_tools,
+            history,
+            self.system_prompt,
         )
-        return backend.next_action(
-            task_query=task_query,
-            available_tools=available_tools,
-            history=history,
-            rng=rng,
+        encoded = self.tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_tensors="pt",
+            return_dict=True,
         )
+        if isinstance(encoded, dict):
+            inputs = dict(encoded)
+        else:
+            inputs = {
+                "input_ids": encoded,
+                "attention_mask": torch.ones_like(encoded),
+            }
+        device = getattr(self.model, "device", None)
+        if device is not None:
+            inputs = {key: value.to(device) for key, value in inputs.items()}
+
+        generation_kwargs = {
+            **inputs,
+            "max_new_tokens": self.max_new_tokens,
+            "do_sample": self.temperature > 0,
+            "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+        }
+        if self.temperature > 0:
+            generation_kwargs["temperature"] = self.temperature
+            generation_kwargs["top_p"] = self.top_p
+        with torch.inference_mode():
+            outputs = self.model.generate(**generation_kwargs)
+
+        generated = outputs[0][inputs["input_ids"].shape[1]:]
+        raw_action = self.tokenizer.decode(generated, skip_special_tokens=True).strip()
+        parsed = parse_action(raw_action)
+        if parsed is None:
+            return Abort(reason="Model output was not a valid JSON action")
+        return parsed
 
 
 @dataclass
