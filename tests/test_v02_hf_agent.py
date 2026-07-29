@@ -35,12 +35,16 @@ def test_chat_messages_put_query_before_action_history():
 
 
 def test_hf_agent_generates_and_parses_complete_tool_action():
+    class DummyEncoding:
+        input_ids = torch.tensor([[1, 2]])
+        attention_mask = torch.tensor([[1, 1]])
+
     class DummyTokenizer:
         pad_token_id = 0
         eos_token_id = 0
 
         def apply_chat_template(self, messages, **kwargs):
-            return {"input_ids": torch.tensor([[1, 2]]), "attention_mask": torch.tensor([[1, 1]])}
+            return DummyEncoding()
 
         def decode(self, tokens, skip_special_tokens=True):
             return '{"name":"customer_lookup","arguments":{"customer_id":"C001"}}'

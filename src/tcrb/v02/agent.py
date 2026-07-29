@@ -318,7 +318,11 @@ class HFAgent:
             return_tensors="pt",
             return_dict=True,
         )
-        if isinstance(encoded, dict):
+        if hasattr(encoded, "input_ids"):
+            inputs = {"input_ids": encoded.input_ids}
+            if getattr(encoded, "attention_mask", None) is not None:
+                inputs["attention_mask"] = encoded.attention_mask
+        elif isinstance(encoded, dict):
             inputs = dict(encoded)
         else:
             inputs = {
