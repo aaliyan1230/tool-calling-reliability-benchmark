@@ -3,7 +3,7 @@
 
 Environment variables:
   TCRB_MODEL         - HF model ID (default: Qwen/Qwen3-4B)
-  TCRB_MAX_TASKS     - Max tasks to run, 0=all (default: 4 for quick test, 0 for full)
+  TCRB_MAX_TASKS     - Max tasks to run, 0=all (default: 4 for smoke test)
   TCRB_DOMAINS       - Comma-separated domains (default: all)
   TCRB_OUTPUT_DIR    - Output directory (default: /kaggle/working/v02_baseline)
   TCRB_SEED          - Random seed (default: 42)
@@ -157,12 +157,12 @@ def main() -> int:
         from tcrb.v02.eval_runner import run_eval
 
         model_id = env("TCRB_MODEL", "Qwen/Qwen3-4B")
-        max_tasks = env_int("TCRB_MAX_TASKS", 0)
+        max_tasks = env_int("TCRB_MAX_TASKS", 4)
         domains_str = env("TCRB_DOMAINS", "customer_support,ecommerce,fintech,developer_tools")
         domains = [d.strip() for d in domains_str.split(",") if d.strip()]
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
-        agent_type = env("TCRB_AGENT_TYPE", "logprob")
+        agent_type = env("TCRB_AGENT_TYPE", "hf_generate")
         prompt_variant = env("TCRB_PROMPT_VARIANT", "default")
         adapter_path = env("TCRB_ADAPTER_PATH", "") or None
 
