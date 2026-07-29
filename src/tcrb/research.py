@@ -622,7 +622,7 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         lora_config=lora_config,
     )
 
-    training_args = _build_dpo_training_args(
+    training_args = _build_sft_training_args(
         transformers_module=transformers_module,
         trl_module=trl_module,
         recipe=recipe,
@@ -942,6 +942,39 @@ def _build_sft_trainer_kwargs(
     elif "processing_class" in params:
         kwargs["processing_class"] = tokenizer
     return kwargs
+
+
+def _build_sft_training_args(
+    *,
+    transformers_module: Any,
+    trl_module: Any,
+    recipe: ResearchRecipe,
+) -> Any:
+    base_kwargs = {
+        "output_dir": recipe.output_dir,
+        "learning_rate": recipe.learning_rate,
+        "num_train_epochs": recipe.num_train_epochs,
+        "per_device_train_batch_size": recipe.per_device_train_batch_size,
+        "gradient_accumulation_steps": recipe.gradient_accumulation_steps,
+        "warmup_ratio": recipe.warmup_ratio,
+        **_training_precision_kwargs(recipe),
+        "logging_steps": 10,
+        "save_strategy": "epoch",
+        "report_to": "none",
+        "remove_unused_columns": False,
+        "gradient_checkpointing": True,
+    }
+    sft_config_cls = getattr(trl_module, "SFTConfig", None)
+    if sft_config_cls is None:
+        return transformers_module.TrainingArguments(**base_kwargs)
+
+    params = inspect.signature(sft_config_cls.__init__).parameters
+    sft_kwargs = {key: value for key, value in base_kwargs.items() if key in params}
+    if "max_seq_length" in params:
+        sft_kwargs["max_seq_length"] = recipe.max_seq_length
+    if "packing" in params:
+        sft_kwargs["packing"] = recipe.packing
+    return sft_config_cls(**sft_kwargs)
 
 
 def _build_dpo_training_args(
