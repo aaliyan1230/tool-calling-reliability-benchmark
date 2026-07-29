@@ -8,7 +8,7 @@ Environment variables:
   TCRB_OUTPUT_DIR    - Output directory (default: /kaggle/working/v02_baseline)
   TCRB_SEED          - Random seed (default: 42)
   TCRB_CLEAN_ONLY    - Run only clean eval (default: 1)
-  TCRB_PROMPT_VARIANT - Built-in prompt variant: default or recovery (default: default)
+  TCRB_PROMPT_VARIANT - Built-in prompt variant: default or recovery (default: recovery)
   TCRB_BRANCH        - Git branch to clone (default: feat/tcrb-v0.2)
 """
 
@@ -162,7 +162,7 @@ def main() -> int:
         seed = env_int("TCRB_SEED", 42)
         clean_only = env_flag("TCRB_CLEAN_ONLY", False)
         agent_type = env("TCRB_AGENT_TYPE", "logprob")
-        prompt_variant = env("TCRB_PROMPT_VARIANT", "default")
+        prompt_variant = env("TCRB_PROMPT_VARIANT", "recovery")
 
         print(f"[runner] Model: {model_id}", flush=True)
         print(f"[runner] Max tasks: {max_tasks}", flush=True)
