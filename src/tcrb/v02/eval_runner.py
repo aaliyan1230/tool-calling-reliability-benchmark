@@ -39,6 +39,7 @@ from .tasks import (
 )
 from .tools import TOOL_REGISTRY
 from .types import (
+    Abort,
     Clarify,
     DiagnosticLabel,
     EpisodeTrace,
