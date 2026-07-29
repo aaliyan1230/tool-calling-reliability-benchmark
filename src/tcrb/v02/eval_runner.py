@@ -75,6 +75,11 @@ def _assess_claims(trace: EpisodeTrace, claims: list[str]) -> bool:
     return all(c.lower() in response_lower for c in claims)
 
 
+def _episode_success(trace: EpisodeTrace, claims: list[str]) -> bool:
+    """Require the declared answer claims instead of rewarding any final answer."""
+    return _assess_claims(trace, claims)
+
+
 def _count_labels(traces: list[EpisodeTrace]) -> dict[DiagnosticLabel, int]:
     counts: dict[DiagnosticLabel, int] = {}
     for trace in traces:
@@ -161,7 +166,7 @@ def run_eval(
                 trace.final_response = str(exc)
 
             claim_pass = _assess_claims(trace, task.canonical_claims)
-            clean_success = trace.success or claim_pass
+            clean_success = _episode_success(trace, task.canonical_claims)
 
             # Serialize trace for replay
             trace_data = {
@@ -240,7 +245,7 @@ def run_eval(
                         )
 
                     fclaim_pass = _assess_claims(ftrace, task.canonical_claims)
-                    fsuccess = ftrace.success or fclaim_pass
+                    fsuccess = _episode_success(ftrace, task.canonical_claims)
 
                     # Serialize faulted trace
                     ftrace_data = {
