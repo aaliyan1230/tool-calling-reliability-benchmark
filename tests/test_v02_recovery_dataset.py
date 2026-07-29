@@ -16,6 +16,9 @@ def test_recovery_dataset_prefers_retry_after_a_failed_tool_call():
     traces = [
         {
             "task_id": "TEST-001",
+            "split": "train",
+            "hazard": "execution_error",
+            "fault_applied": True,
             "task_query": "Look up customer C001.",
             "available_tools": ["customer_lookup"],
             "steps": [
@@ -53,6 +56,8 @@ def test_recovery_dataset_skips_traces_without_failed_tool_steps():
         [
             {
                 "task_id": "TEST-002",
+                "split": "train",
+                "hazard": "execution_error",
                 "task_query": "Answer this.",
                 "available_tools": [],
                 "steps": [
@@ -64,6 +69,30 @@ def test_recovery_dataset_skips_traces_without_failed_tool_steps():
             }
         ]
     )
+
+    assert sft_rows == []
+    assert dpo_rows == []
+
+
+def test_recovery_dataset_excludes_heldout_split_and_hazard_traces():
+    traces = [
+        {
+            "task_id": "TEST-003",
+            "split": "test",
+            "hazard": "execution_error",
+            "fault_applied": True,
+            "steps": [],
+        },
+        {
+            "task_id": "TEST-004",
+            "split": "train",
+            "hazard": "silent_corruption",
+            "fault_applied": True,
+            "steps": [],
+        },
+    ]
+
+    sft_rows, dpo_rows = build_recovery_rows(traces)
 
     assert sft_rows == []
     assert dpo_rows == []

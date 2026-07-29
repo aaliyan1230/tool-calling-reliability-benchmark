@@ -98,6 +98,7 @@ class EpisodeTrace:
     final_response: str | None = None
     success: bool = False
     diagnostic_labels: list[DiagnosticLabel] = field(default_factory=list)
+    faults_applied: list[str] = field(default_factory=list)
     total_tokens: int = 0
     total_cost_usd: float = 0.0
     total_time_ms: int = 0
