@@ -337,6 +337,7 @@ def run_eval(
                     record["faulted"].append({
                         "fault_idx": fault_idx,
                         "hazard": hazard,
+                        "quadrant": domain_hazard_quadrant(task, hazard),
                         "fault_applied": hazard in ftrace.faults_applied,
                         "success": fsuccess,
                         "claim_pass": fclaim_pass,
@@ -398,6 +399,7 @@ def run_eval(
                     "task_id": r["task_id"],
                     "domain": r["domain"],
                     "hazard": f["hazard"],
+                    "quadrant": f["quadrant"],
                     "success": f["success"],
                     "clean_success": r["clean"]["success"],
                     "fault_applied": f["fault_applied"],
@@ -418,6 +420,21 @@ def run_eval(
                 by_hazard[h]["recovery"] += 1
             if f["fault_applied"]:
                 by_hazard[h]["applied"] += 1
+
+        by_quadrant = {}
+        for f in fault_results:
+            quadrant = f["quadrant"]
+            by_quadrant.setdefault(
+                quadrant,
+                {"total": 0, "passed": 0, "applied": 0, "recovery": 0},
+            )
+            by_quadrant[quadrant]["total"] += 1
+            if f["success"]:
+                by_quadrant[quadrant]["passed"] += 1
+            if f["fault_applied"]:
+                by_quadrant[quadrant]["applied"] += 1
+            if f["recovery"]:
+                by_quadrant[quadrant]["recovery"] += 1
     else:
         fault_total = 0
         fault_passed = 0
@@ -428,6 +445,9 @@ def run_eval(
 
     summary = {
         "model_id": model_id,
+        "agent_type": agent_type,
+        "prompt_variant": prompt_variant,
+        "adapter_path": adapter_path,
         "seed": seed,
         "total_time_s": round(total_time, 1),
         "clean_only": clean_only,
@@ -455,6 +475,17 @@ def run_eval(
                               "recovery": d["recovery"],
                               "recovery_rate": round(d["recovery"] / d["applied"], 4) if d["applied"] else 0}
                           for h, d in sorted(by_hazard.items())},
+            "by_quadrant": {
+                quadrant: {
+                    "total": data["total"],
+                    "passed": data["passed"],
+                    "rate": round(data["passed"] / data["total"], 4) if data["total"] else 0,
+                    "applied": data["applied"],
+                    "recovery": data["recovery"],
+                    "recovery_rate": round(data["recovery"] / data["applied"], 4) if data["applied"] else 0,
+                }
+                for quadrant, data in sorted(by_quadrant.items())
+            },
         } if not clean_only else None,
         "diagnostic_counts": diagnostic_counts,
     }
