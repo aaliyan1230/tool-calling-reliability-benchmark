@@ -4,6 +4,7 @@ from tcrb.research import (
     _attach_trainable_adapter_if_present,
     _build_dpo_training_args,
     _build_dpo_trainer_kwargs,
+    _build_sft_training_args,
     _prepare_model_for_quantized_training,
     _training_dtype,
     _training_precision_kwargs,
@@ -431,3 +432,49 @@ def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
     assert isinstance(args, DummyDPOConfig)
     assert args.kwargs["max_length"] == 512
     assert args.kwargs["max_prompt_length"] == 256
+
+
+def test_build_sft_training_args_uses_trl_sft_config():
+    class DummyTrainingArguments:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DummyTransformers:
+        TrainingArguments = DummyTrainingArguments
+
+    class DummySFTConfig:
+        def __init__(
+            self,
+            output_dir,
+            learning_rate,
+            num_train_epochs,
+            per_device_train_batch_size,
+            gradient_accumulation_steps,
+            warmup_ratio,
+            fp16,
+            bf16,
+            logging_steps,
+            save_strategy,
+            report_to,
+            remove_unused_columns,
+            gradient_checkpointing,
+        ):
+            self.kwargs = locals()
+
+    class DummyTRL:
+        SFTConfig = DummySFTConfig
+
+    args = _build_sft_training_args(
+        transformers_module=DummyTransformers,
+        trl_module=DummyTRL,
+        recipe=research_recipe_from_dict(
+            {
+                "stage": "sft",
+                "base_model": "Qwen/Qwen2.5-3B-Instruct",
+                "output_dir": "outputs/research/qwen25-3b-sft",
+            }
+        ),
+    )
+
+    assert isinstance(args, DummySFTConfig)
+    assert "disable_dropout" not in args.kwargs
