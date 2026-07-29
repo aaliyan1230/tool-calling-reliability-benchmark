@@ -101,7 +101,7 @@ def main() -> int:
             lora_dropout=0.05,
             target_modules="all-linear",
             load_in_4bit=True,
-            fp16=True,
+            fp16=False,
             bf16=False,
         )
         dataset_path = recovery_dataset_path()
