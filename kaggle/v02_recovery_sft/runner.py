@@ -14,7 +14,6 @@ from pathlib import Path
 
 REPO_URL = "https://github.com/aaliyan1230/tool-calling-reliability-benchmark.git"
 MODEL_ID = "Qwen/Qwen3-4B"
-DATASET_PATH = Path("/kaggle/input/tcrb-v02-recovery-sft-data/recovery_sft.jsonl")
 OUTPUT_DIR = Path("/kaggle/working/v02_recovery_sft")
 ADAPTER_DIR = OUTPUT_DIR / "adapter"
 EVAL_DIR = OUTPUT_DIR / "evaluation"
@@ -33,6 +32,17 @@ def load_hf_token() -> str | None:
             if value:
                 return value.splitlines()[0].strip()
     return None
+
+
+def recovery_dataset_path() -> Path:
+    candidates = (
+        Path("/kaggle/input/tcrb-v02-recovery-sft-data/recovery_sft.jsonl"),
+        Path("/kaggle/input/datasets/aaliyanshaikh/tcrb-v02-recovery-sft-data/recovery_sft.jsonl"),
+    )
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError("recovery_sft.jsonl was not found in the attached Kaggle dataset")
 
 
 def main() -> int:
@@ -94,8 +104,9 @@ def main() -> int:
             fp16=True,
             bf16=False,
         )
-        print(f"[runner] Training from {DATASET_PATH}", flush=True)
-        run_sft_training(recipe, dataset_path=DATASET_PATH)
+        dataset_path = recovery_dataset_path()
+        print(f"[runner] Training from {dataset_path}", flush=True)
+        run_sft_training(recipe, dataset_path=dataset_path)
         gc.collect()
 
         import torch
