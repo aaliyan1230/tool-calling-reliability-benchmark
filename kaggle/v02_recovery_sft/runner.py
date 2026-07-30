@@ -124,6 +124,7 @@ def main() -> int:
             seed=42,
             max_tasks=0,
             clean_only=False,
+            agent_type="hf_generate",
             prompt_variant="recovery",
             adapter_path=str(ADAPTER_DIR),
         )
