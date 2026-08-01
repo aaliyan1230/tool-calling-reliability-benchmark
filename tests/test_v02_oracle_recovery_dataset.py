@@ -27,5 +27,8 @@ def test_oracle_recovery_rows_cover_seen_training_hazards_without_leakage():
         chosen = json.loads(sft_row["messages"][-1]["content"])
         assert "name" in chosen
         assert chosen["name"] == sft_row["metadata"]["failed_tool"]
+        assert "Available tools:" in sft_row["messages"][0]["content"]
+        assert sft_row["messages"][3]["role"] == "user"
+        assert sft_row["messages"][3]["content"].startswith("Tool result: ")
         assert dpo_row["chosen"] == sft_row["messages"][-1]["content"]
         assert dpo_row["chosen"] != dpo_row["rejected"]

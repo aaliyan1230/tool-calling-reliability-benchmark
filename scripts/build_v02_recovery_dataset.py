@@ -10,6 +10,7 @@ from typing import Any
 
 from tcrb.research import render_sft_text
 from tcrb.v02.agent import RECOVERY_SYSTEM_PROMPT
+from tcrb.v02.agent import _format_tools_for_prompt
 from tcrb.v02.tools import TOOL_REGISTRY
 
 
@@ -61,13 +62,24 @@ def _evaluated_success(trace: dict[str, Any]) -> bool:
 
 
 def _recovery_context(trace: dict[str, Any], action: dict[str, Any], observation: dict[str, Any]) -> dict[str, Any]:
+    tool_defs = [
+        TOOL_REGISTRY[name]
+        for name in trace.get("available_tools", [])
+        if name in TOOL_REGISTRY
+    ]
     messages = [
-        {"role": "system", "content": RECOVERY_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": RECOVERY_SYSTEM_PROMPT
+            + "\n\nAvailable tools:\n"
+            + _format_tools_for_prompt(tool_defs),
+        },
         {"role": "user", "content": trace.get("task_query", "")},
         {"role": "assistant", "content": _action_payload(action)},
         {
-            "role": "tool",
-            "content": json.dumps(
+            "role": "user",
+            "content": "Tool result: "
+            + json.dumps(
                 {"status": observation.get("status"), "result": observation.get("payload")},
                 ensure_ascii=True,
             ),
