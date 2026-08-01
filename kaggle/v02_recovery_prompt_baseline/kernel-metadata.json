@@ -1,0 +1,15 @@
+{
+  "id": "aaliyanshaikh/tcrb-v02-recovery-prompt-baseline",
+  "title": "TCRB v02 Recovery Prompt Baseline",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "aaliyanshaikh/tcrb-repo-snapshot"
+  ],
+  "kernel_sources": [],
+  "competition_sources": []
+}
