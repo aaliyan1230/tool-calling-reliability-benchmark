@@ -594,6 +594,22 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
+    def render_native_chat_text(row: dict[str, Any]) -> dict[str, str]:
+        messages = row.get("messages")
+        if not messages:
+            return {"text": str(row.get("text", ""))}
+        text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=False,
+        )
+        return {"text": text}
+
+    train_dataset = train_dataset.map(
+        render_native_chat_text,
+        desc="Rendering native chat templates",
+    )
+
     torch_dtype = _training_dtype(recipe, torch_module=torch_module)
     model_kwargs = {
         "trust_remote_code": True,

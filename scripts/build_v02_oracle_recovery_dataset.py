@@ -12,6 +12,7 @@ from typing import Any
 from tcrb.v02.executor import _inject_fault
 from tcrb.research import render_sft_text
 from tcrb.v02.agent import RECOVERY_SYSTEM_PROMPT
+from tcrb.v02.agent import _format_tools_for_prompt
 from tcrb.v02.tasks import (
     build_all_tasks,
     generate_fault_schedules,
@@ -38,11 +39,28 @@ def _action_payload(action: dict[str, Any]) -> str:
 def _recovery_context(
     task: dict[str, Any], action: dict[str, Any], observation: dict[str, Any]
 ) -> dict[str, Any]:
+    tool_defs = [
+        TOOL_REGISTRY[name]
+        for name in task["available_tools"]
+        if name in TOOL_REGISTRY
+    ]
     messages = [
-        {"role": "system", "content": RECOVERY_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": RECOVERY_SYSTEM_PROMPT
+            + "\n\nAvailable tools:\n"
+            + _format_tools_for_prompt(tool_defs),
+        },
         {"role": "user", "content": task["task_query"]},
         {"role": "assistant", "content": _action_payload(action)},
-        {"role": "tool", "content": json.dumps(observation, ensure_ascii=True)},
+        {
+            "role": "user",
+            "content": "Tool result: "
+            + json.dumps(
+                {"status": observation["status"], "result": observation["payload"]},
+                ensure_ascii=True,
+            ),
+        },
     ]
     return {
         "messages": messages,
