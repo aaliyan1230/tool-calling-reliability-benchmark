@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_URL = "https://github.com/aaliyan1230/tool-calling-reliability-benchmark.git"
 MODEL_ID = "Qwen/Qwen3-4B"
 OUTPUT_DIR = Path("/kaggle/working/v02_recovery_sft_eval")
+TASK_OFFSET = 144
 
 
 def adapter_path() -> Path:
@@ -88,6 +89,7 @@ def main() -> int:
             agent_type="hf_generate",
             prompt_variant="recovery",
             adapter_path=str(adapter),
+            task_offset=TASK_OFFSET,
         )
         status = {
             "status": "success",

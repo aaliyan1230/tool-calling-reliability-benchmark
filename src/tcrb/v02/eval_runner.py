@@ -131,6 +131,7 @@ def run_eval(
     agent_type: str = "logprob",
     prompt_variant: str = "default",
     adapter_path: str | None = None,
+    task_offset: int = 0,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -183,6 +184,9 @@ def run_eval(
     task_index = 0
     for domain, tasks in sorted(requested.items()):
         for task in tasks:
+            if task_index < task_offset:
+                task_index += 1
+                continue
             if max_tasks > 0 and task_index >= max_tasks:
                 break
             task_index += 1
