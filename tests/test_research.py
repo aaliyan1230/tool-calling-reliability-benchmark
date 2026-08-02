@@ -4,6 +4,8 @@ from tcrb.research import (
     _attach_trainable_adapter_if_present,
     _build_dpo_training_args,
     _build_dpo_trainer_kwargs,
+    _build_sft_training_args,
+    _coerce_trainable_parameter_dtype,
     _prepare_model_for_quantized_training,
     _training_dtype,
     _training_precision_kwargs,
@@ -405,11 +407,12 @@ def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
         TrainingArguments = DummyTrainingArguments
 
     class DummyDPOConfig:
-        def __init__(self, max_length=None, max_prompt_length=None, **kwargs):
+        def __init__(self, max_length=None, max_prompt_length=None, beta=None, **kwargs):
             self.kwargs = {
                 **kwargs,
                 "max_length": max_length,
                 "max_prompt_length": max_prompt_length,
+                "beta": beta,
             }
 
     class DummyTRL:
@@ -431,3 +434,68 @@ def test_build_dpo_training_args_prefers_trl_dpo_config_when_available():
     assert isinstance(args, DummyDPOConfig)
     assert args.kwargs["max_length"] == 512
     assert args.kwargs["max_prompt_length"] == 256
+    assert args.kwargs["beta"] == 0.5
+
+
+def test_build_sft_training_args_uses_trl_sft_config():
+    class DummyTrainingArguments:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DummyTransformers:
+        TrainingArguments = DummyTrainingArguments
+
+    class DummySFTConfig:
+        def __init__(
+            self,
+            output_dir,
+            learning_rate,
+            num_train_epochs,
+            per_device_train_batch_size,
+            gradient_accumulation_steps,
+            warmup_ratio,
+            fp16,
+            bf16,
+            logging_steps,
+            save_strategy,
+            report_to,
+            remove_unused_columns,
+            gradient_checkpointing,
+        ):
+            self.kwargs = locals()
+
+    class DummyTRL:
+        SFTConfig = DummySFTConfig
+
+    args = _build_sft_training_args(
+        transformers_module=DummyTransformers,
+        trl_module=DummyTRL,
+        recipe=research_recipe_from_dict(
+            {
+                "stage": "sft",
+                "base_model": "Qwen/Qwen2.5-3B-Instruct",
+                "output_dir": "outputs/research/qwen25-3b-sft",
+            }
+        ),
+    )
+
+    assert isinstance(args, DummySFTConfig)
+    assert "disable_dropout" not in args.kwargs
+
+
+def test_coerce_trainable_parameter_dtype_makes_t4_adapters_fp16():
+    import torch
+
+    parameter = torch.nn.Parameter(torch.ones(2, dtype=torch.bfloat16))
+
+    class DummyModel:
+        def parameters(self):
+            return [parameter]
+
+    _coerce_trainable_parameter_dtype(
+        DummyModel(),
+        target_dtype=torch.float16,
+        source_dtype=torch.bfloat16,
+    )
+
+    assert parameter.dtype == torch.float16

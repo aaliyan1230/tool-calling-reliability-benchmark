@@ -197,6 +197,18 @@ def _attach_trainable_adapter_if_present(
     )
 
 
+def _coerce_trainable_parameter_dtype(
+    model: Any,
+    *,
+    target_dtype: Any,
+    source_dtype: Any,
+) -> None:
+    """Keep trainable adapters in the selected fp16/bf16 dtype on GPU."""
+    for parameter in model.parameters():
+        if getattr(parameter, "requires_grad", False) and getattr(parameter, "dtype", None) == source_dtype:
+            parameter.data = parameter.data.to(target_dtype)
+
+
 def _role_from_sharegpt(raw_role: str) -> str:
     role = str(raw_role).strip().lower()
     if role == "human":
@@ -582,6 +594,22 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
+    def render_native_chat_text(row: dict[str, Any]) -> dict[str, str]:
+        messages = row.get("messages")
+        if not messages:
+            return {"text": str(row.get("text", ""))}
+        text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=False,
+        )
+        return {"text": text}
+
+    train_dataset = train_dataset.map(
+        render_native_chat_text,
+        desc="Rendering native chat templates",
+    )
+
     torch_dtype = _training_dtype(recipe, torch_module=torch_module)
     model_kwargs = {
         "trust_remote_code": True,
@@ -621,8 +649,14 @@ def run_sft_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         peft_module=peft_module,
         lora_config=lora_config,
     )
+    if recipe.fp16 and not recipe.bf16:
+        _coerce_trainable_parameter_dtype(
+            model,
+            target_dtype=torch_module.float16,
+            source_dtype=torch_module.bfloat16,
+        )
 
-    training_args = _build_dpo_training_args(
+    training_args = _build_sft_training_args(
         transformers_module=transformers_module,
         trl_module=trl_module,
         recipe=recipe,
@@ -716,6 +750,12 @@ def run_dpo_training(recipe: ResearchRecipe, *, dataset_path: str | Path) -> Pat
         peft_module=peft_module,
         lora_config=lora_config,
     )
+    if recipe.fp16 and not recipe.bf16:
+        _coerce_trainable_parameter_dtype(
+            model,
+            target_dtype=torch_module.float16,
+            source_dtype=torch_module.bfloat16,
+        )
     training_args = _build_dpo_training_args(
         transformers_module=transformers_module,
         trl_module=trl_module,
@@ -944,6 +984,39 @@ def _build_sft_trainer_kwargs(
     return kwargs
 
 
+def _build_sft_training_args(
+    *,
+    transformers_module: Any,
+    trl_module: Any,
+    recipe: ResearchRecipe,
+) -> Any:
+    base_kwargs = {
+        "output_dir": recipe.output_dir,
+        "learning_rate": recipe.learning_rate,
+        "num_train_epochs": recipe.num_train_epochs,
+        "per_device_train_batch_size": recipe.per_device_train_batch_size,
+        "gradient_accumulation_steps": recipe.gradient_accumulation_steps,
+        "warmup_ratio": recipe.warmup_ratio,
+        **_training_precision_kwargs(recipe),
+        "logging_steps": 10,
+        "save_strategy": "epoch",
+        "report_to": "none",
+        "remove_unused_columns": False,
+        "gradient_checkpointing": True,
+    }
+    sft_config_cls = getattr(trl_module, "SFTConfig", None)
+    if sft_config_cls is None:
+        return transformers_module.TrainingArguments(**base_kwargs)
+
+    params = inspect.signature(sft_config_cls.__init__).parameters
+    sft_kwargs = {key: value for key, value in base_kwargs.items() if key in params}
+    if "max_seq_length" in params:
+        sft_kwargs["max_seq_length"] = recipe.max_seq_length
+    if "packing" in params:
+        sft_kwargs["packing"] = recipe.packing
+    return sft_config_cls(**sft_kwargs)
+
+
 def _build_dpo_training_args(
     *,
     transformers_module: Any,
@@ -978,6 +1051,8 @@ def _build_dpo_training_args(
         dpo_kwargs["max_length"] = recipe.max_seq_length
     if "max_prompt_length" in params:
         dpo_kwargs["max_prompt_length"] = max(256, recipe.max_seq_length // 2)
+    if "beta" in params:
+        dpo_kwargs["beta"] = recipe.beta
     return dpo_config_cls(**dpo_kwargs)
 
 

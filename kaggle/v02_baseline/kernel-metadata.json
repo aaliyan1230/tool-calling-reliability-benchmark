@@ -1,0 +1,11 @@
+{
+  "id": "aaliyanshaikh/tcrb-v02-baseline-q3b",
+  "title": "tcrb-v02-baseline-q3b",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["aaliyanshaikh/tcrb-repo-snapshot"]
+}
