@@ -1,0 +1,16 @@
+{
+  "id": "aaliyanshaikh/tcrb-v02-recovery-dpo",
+  "title": "TCRB v02 Recovery DPO",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "aaliyanshaikh/tcrb-repo-snapshot",
+    "aaliyanshaikh/tcrb-v02-recovery-dpo-data"
+  ],
+  "kernel_sources": [],
+  "competition_sources": []
+}

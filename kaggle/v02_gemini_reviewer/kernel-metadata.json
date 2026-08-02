@@ -1,0 +1,13 @@
+{
+  "id": "aaliyanshaikh/tcrb-v0-2-gemini-reviewer-selectiverevieweragent",
+  "title": "TCRB v0 2 Gemini Reviewer SelectiveReviewerAgent",
+  "code_file": "runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["aaliyanshaikh/tcrb-repo-snapshot"],
+  "kernel_sources": [],
+  "competition_sources": []
+}
