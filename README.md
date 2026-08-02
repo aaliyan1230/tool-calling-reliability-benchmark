@@ -10,6 +10,10 @@ Detailed project criteria live in `docs/core-goals.md`.
 
 Artifact bundle: https://doi.org/10.5281/zenodo.20071002
 
+## Current v0.2 Study
+
+The current failure-recovery study is documented in [`reports/v02/README.md`](reports/v02/README.md). It evaluates Qwen3-4B under clean tasks and five controlled tool-failure types, with transfer to unseen domains and hazards.
+
 ## Headline Result
 
 The strongest result in this repo is a targeted router-repair run on a real HF planner:

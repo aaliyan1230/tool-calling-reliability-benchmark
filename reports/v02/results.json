@@ -1,0 +1,157 @@
+{
+  "study": {
+    "name": "TCRB v0.2 failure recovery study",
+    "version": "0.2.0",
+    "model": "Qwen/Qwen3-4B",
+    "agent": "hf_generate",
+    "seed": 42,
+    "hardware": "Kaggle Nvidia Tesla T4",
+    "gemini_used": false
+  },
+  "dataset": {
+    "tasks": 160,
+    "domains": [
+      "customer_support",
+      "ecommerce",
+      "fintech",
+      "developer_tools"
+    ],
+    "tasks_by_category": {
+      "tool_required": 128,
+      "no_tool": 16,
+      "missing_information": 16
+    },
+    "splits": {
+      "train": 48,
+      "dev": 12,
+      "test": 100
+    },
+    "faulted_runs": 640,
+    "hazards": [
+      "execution_error",
+      "schema_drift",
+      "partial_output",
+      "silent_corruption",
+      "cross_source_conflict"
+    ],
+    "training_hazards": [
+      "execution_error",
+      "schema_drift",
+      "partial_output"
+    ],
+    "held_out_hazards": [
+      "silent_corruption",
+      "cross_source_conflict"
+    ],
+    "recovery_training_rows": {
+      "sft": 144,
+      "dpo": 144,
+      "source": "oracle trajectories from train tasks only"
+    }
+  },
+  "experiments": [
+    {
+      "id": "default_baseline",
+      "label": "Qwen baseline",
+      "prompt": "default",
+      "adapter": false,
+      "status": "complete",
+      "source_commit": "b68ae14",
+      "clean": {"passed": 50, "total": 160},
+      "faulted": {"passed": 65, "total": 640, "applied": 204, "recovery": 65},
+      "categories": {
+        "tool_required": {"passed": 24, "total": 128},
+        "no_tool": {"passed": 11, "total": 16},
+        "missing_information": {"passed": 15, "total": 16}
+      },
+      "hazards": {
+        "execution_error": {"passed": 1, "total": 128, "applied": 41, "recovery": 1},
+        "schema_drift": {"passed": 20, "total": 128, "applied": 40, "recovery": 20},
+        "partial_output": {"passed": 14, "total": 128, "applied": 42, "recovery": 14},
+        "silent_corruption": {"passed": 16, "total": 128, "applied": 40, "recovery": 16},
+        "cross_source_conflict": {"passed": 14, "total": 128, "applied": 41, "recovery": 14}
+      },
+      "quadrants": {
+        "seen-domain/seen-hazard": {"passed": 24, "total": 192, "applied": 69, "recovery": 24},
+        "seen-domain/unseen-hazard": {"passed": 19, "total": 128, "applied": 45, "recovery": 19},
+        "unseen-domain/seen-hazard": {"passed": 11, "total": 192, "applied": 54, "recovery": 11},
+        "unseen-domain/unseen-hazard": {"passed": 11, "total": 128, "applied": 36, "recovery": 11}
+      }
+    },
+    {
+      "id": "recovery_prompt",
+      "label": "Recovery prompt",
+      "prompt": "recovery",
+      "adapter": false,
+      "status": "complete",
+      "source_commit": "223acf0",
+      "clean": {"passed": 47, "total": 160},
+      "faulted": {"passed": 77, "total": 640, "applied": 236, "recovery": 77},
+      "categories": {
+        "tool_required": {"passed": 20, "total": 128},
+        "no_tool": {"passed": 12, "total": 16},
+        "missing_information": {"passed": 15, "total": 16}
+      },
+      "hazards": {
+        "execution_error": {"passed": 14, "total": 128, "applied": 51, "recovery": 14},
+        "schema_drift": {"passed": 18, "total": 128, "applied": 44, "recovery": 18},
+        "partial_output": {"passed": 11, "total": 128, "applied": 46, "recovery": 11},
+        "silent_corruption": {"passed": 20, "total": 128, "applied": 48, "recovery": 20},
+        "cross_source_conflict": {"passed": 14, "total": 128, "applied": 47, "recovery": 14}
+      },
+      "quadrants": {
+        "seen-domain/seen-hazard": {"passed": 24, "total": 192, "applied": 72, "recovery": 24},
+        "seen-domain/unseen-hazard": {"passed": 18, "total": 128, "applied": 49, "recovery": 18},
+        "unseen-domain/seen-hazard": {"passed": 19, "total": 192, "applied": 69, "recovery": 19},
+        "unseen-domain/unseen-hazard": {"passed": 16, "total": 128, "applied": 46, "recovery": 16}
+      }
+    },
+    {
+      "id": "sft_initial",
+      "label": "Initial SFT (format mismatch)",
+      "prompt": "recovery",
+      "adapter": true,
+      "status": "diagnostic_only",
+      "source_commit": "1cf7f81",
+      "clean": {"passed": 41, "total": 160},
+      "faulted": {"passed": 50, "total": 640, "applied": 202, "recovery": 50},
+      "note": "The training text format did not match native evaluation messages; traces showed invalid-action aborts."
+    },
+    {
+      "id": "sft_corrected",
+      "label": "Corrected SFT",
+      "prompt": "recovery",
+      "adapter": true,
+      "status": "complete",
+      "source_commit": "dc8c68b",
+      "clean": {"passed": 49, "total": 160},
+      "faulted": {"passed": 64, "total": 640, "applied": 242, "recovery": 64},
+      "categories": {
+        "tool_required": {"passed": 22, "total": 128},
+        "no_tool": {"passed": 12, "total": 16},
+        "missing_information": {"passed": 15, "total": 16}
+      },
+      "hazards": {
+        "execution_error": {"passed": 6, "total": 128, "applied": 52, "recovery": 6},
+        "schema_drift": {"passed": 18, "total": 128, "applied": 46, "recovery": 18},
+        "partial_output": {"passed": 16, "total": 128, "applied": 47, "recovery": 16},
+        "silent_corruption": {"passed": 14, "total": 128, "applied": 48, "recovery": 14},
+        "cross_source_conflict": {"passed": 10, "total": 128, "applied": 49, "recovery": 10}
+      },
+      "quadrants": {
+        "seen-domain/seen-hazard": {"passed": 22, "total": 192, "applied": 76, "recovery": 22},
+        "seen-domain/unseen-hazard": {"passed": 15, "total": 128, "applied": 51, "recovery": 15},
+        "unseen-domain/seen-hazard": {"passed": 18, "total": 192, "applied": 69, "recovery": 18},
+        "unseen-domain/unseen-hazard": {"passed": 9, "total": 128, "applied": 46, "recovery": 9}
+      },
+      "note": "The corrected adapter was trained with native chat-template rendering and evaluated after a quota-interrupted run was resumed."
+    }
+  ],
+  "limitations": [
+    "All reported runs use one seed.",
+    "Applied-fault counts differ because a scheduled fault only fires when its target tool is called.",
+    "Claim scoring uses required text claims rather than a semantic judge.",
+    "Oracle recovery examples mostly teach one-step retry behavior.",
+    "Gemini and DPO are not part of this completed study."
+  ]
+}

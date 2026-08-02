@@ -14,7 +14,9 @@ outputs/
 .env
 tmp
 further-plan.md
-reports
+reports/*
+!reports/v02/
+!reports/v02/**
 RESEARCH_PLAN.md
 docs
 .playwright-mcp
