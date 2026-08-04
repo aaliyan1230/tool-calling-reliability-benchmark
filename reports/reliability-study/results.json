@@ -1,7 +1,7 @@
 {
   "study": {
-    "name": "TCRB v0.2 failure recovery study",
-    "version": "0.2.0",
+    "name": "TCRB failure-recovery study",
+    "track": "failure-recovery",
     "model": "Qwen/Qwen3-4B",
     "agent": "hf_generate",
     "seed": 42,

@@ -15,8 +15,9 @@ outputs/
 tmp
 further-plan.md
 reports/*
-!reports/v02/
-!reports/v02/**
+!reports/reliability-study/
+!reports/reliability-study/**
+!reports/reliability-study-plan.md
 RESEARCH_PLAN.md
 docs
 .playwright-mcp
