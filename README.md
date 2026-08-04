@@ -10,11 +10,37 @@ Detailed project criteria live in `docs/core-goals.md`.
 
 Artifact bundle: https://doi.org/10.5281/zenodo.20071002
 
-## Current v0.2 Study
+## Project Trajectory
 
-The current failure-recovery study is documented in [`reports/v02/README.md`](reports/v02/README.md). It evaluates Qwen3-4B under clean tasks and five controlled tool-failure types, with transfer to unseen domains and hazards.
+This repository records one continuous reliability study. The work began with first-tool routing repair and expanded into full action traces, executable tools, controlled failures, recovery prompts, and recovery training.
 
-## Headline Result
+### Phase 1: Routing Repair
+
+The initial study used Qwen2.5-3B-Instruct and a small DPO dataset of 157 first-tool preference examples. On the target customer-support workload, DPO raised success from `83.33%` to `90.74%`, raised first-tool accuracy from `83.33%` to `100%`, and lowered invalid tool calls from `13.67%` to `7.19%`.
+
+That improvement was local: ecommerce first-tool accuracy fell from `100%` to `88.89%`, while fintech and developer tools were unchanged. This established the central question for the next phase: does a repair survive outside the workload it was trained on?
+
+### Phase 2: Failure-Recovery Extension
+
+The benchmark was extended from choosing only a tool name to generating complete actions: tool name, arguments, final answers, clarifications, and safe aborts. It now runs 160 tasks across customer support, ecommerce, fintech, and developer tools, with five controlled tool-failure types and explicit seen/unseen domain and hazard splits.
+
+The current detailed report is [`reports/reliability-study/README.md`](reports/reliability-study/README.md). The compact result artifact is [`reports/reliability-study/results.json`](reports/reliability-study/results.json).
+
+### Current Findings
+
+| condition | clean | faulted |
+|---|---:|---:|
+| normal Qwen baseline | `31.25%` | `10.16%` |
+| recovery instructions | `29.38%` | `12.03%` |
+| corrected SFT adapter | `30.63%` | `10.00%` |
+
+The recovery instructions are the strongest completed intervention. They improve failure handling while costing a small amount of clean-task accuracy. Corrected supervised fine-tuning (SFT: training on examples of the desired recovery action) removes an earlier formatting failure but does not beat the simpler prompt. Preference training (DPO: teaching the model to prefer a good action over a bad action) and Gemini reviewer experiments remain future work, not completed findings.
+
+### Current Position
+
+The evidence supports a reliability benchmark and a cautious empirical finding, not a claim that training has solved tool recovery. The highest-value next step is multi-seed replication of the baseline and recovery-prompt results. After that, DPO or a Gemini reviewer should be evaluated as separate interventions.
+
+## Earlier Routing Study
 
 The strongest result in this repo is a targeted router-repair run on a real HF planner:
 

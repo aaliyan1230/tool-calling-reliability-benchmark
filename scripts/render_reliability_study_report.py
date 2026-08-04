@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render paper figures from the compact TCRB v0.2 results artifact."""
+"""Render paper figures from the compact reliability-study results artifact."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def render_main_rates(plt, experiments: list[dict], output: Path) -> None:
     ax.set_xlabel("Condition")
     ax.set_ylabel("Pass rate (%)")
     ax.set_ylim(0, 34)
-    ax.set_title("TCRB v0.2: clean versus faulted performance")
+    ax.set_title("TCRB failure-recovery study: clean versus faulted performance")
     ax.bar_label(clean_bars, fmt="%.1f", padding=2, fontsize=8)
     ax.bar_label(faulted_bars, fmt="%.1f", padding=2, fontsize=8)
     ax.legend(frameon=False)
@@ -164,12 +164,12 @@ def main() -> int:
     parser.add_argument(
         "--results",
         type=Path,
-        default=Path("reports/v02/results.json"),
+        default=Path("reports/reliability-study/results.json"),
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/v02/figures"),
+        default=Path("reports/reliability-study/figures"),
     )
     args = parser.parse_args()
     payload = json.loads(args.results.read_text(encoding="utf-8"))
