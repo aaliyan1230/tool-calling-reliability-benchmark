@@ -25,3 +25,4 @@ session_logs/
 kaggle/__pycache__/
 zenodo-files-broken-pdf.png
 local
+.DS_Store

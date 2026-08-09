@@ -1,0 +1,26 @@
+{
+  "base_families": 12,
+  "case_source": "src/tcrb/v031/cases.py",
+  "created_at": "2026-08-09T16:28:02.288604+00:00",
+  "dataset": "tcrb",
+  "outcomes": {
+    "safe": 12,
+    "unsafe": 12
+  },
+  "private_gold_separate": true,
+  "source_commit": "d086653282b6af565204723201d68a3fda3faf28",
+  "trace_count": 24,
+  "validation_errors": [],
+  "version": "v3.1",
+  "view_count": 144,
+  "view_source": "src/tcrb/v031/views.py",
+  "view_types": [
+    "full",
+    "silent_filter",
+    "explicit_redaction",
+    "handoff_summary",
+    "protected_summary",
+    "actionable_summary"
+  ],
+  "views_per_trace": 6
+}
