@@ -376,3 +376,10 @@
 - The staged whitespace audit caught trailing spaces emitted by Matplotlib inside SVG path definitions.
 - Added a deterministic post-save cleanup that strips only trailing whitespace from SVG lines; it does not alter plot content.
 - Re-exporting and re-staging the package before repeating the cached-diff audit.
+
+### 19:41 PKT — Final implementation and results checkpoint committed
+
+- SVG cleanup succeeded; `git diff --cached --check` passed.
+- Created commit `b522003` (`feat: complete two-model provenance pilot`).
+- The commit contains the final two-model implementation, paired analysis, safe `.env` key loading, publishing guard, 22-file result package, three figures, brief, trajectories, audit, and outreach draft.
+- Verified the only remaining uncommitted workspace items are the pre-existing user-owned `uv.lock` modification and `.DS_Store`.
