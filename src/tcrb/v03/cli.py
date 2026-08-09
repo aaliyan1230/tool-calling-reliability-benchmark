@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .analysis import analyze_run
 from .cases import build_case_variants, validate_case_variants
+from .reporting import build_report
 from .runner import build_call_specs, prepare_dataset, run_stage
 
 
@@ -34,6 +35,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     analyze = subparsers.add_parser("analyze", help="Score completed responses")
     analyze.add_argument("--bootstrap-samples", type=int, default=10_000)
+
+    report = subparsers.add_parser("report", help="Build figures and a concise pilot brief")
+    report.add_argument("--output-dir", type=Path)
     return parser
 
 
@@ -67,5 +71,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if summary["failed_now"] else 0
     if args.command == "analyze":
         print(json.dumps(analyze_run(args.run_dir, bootstrap_samples=args.bootstrap_samples), indent=2))
+        return 0
+    if args.command == "report":
+        print(json.dumps(build_report(args.run_dir, output_dir=args.output_dir), indent=2))
         return 0
     raise AssertionError("unreachable")

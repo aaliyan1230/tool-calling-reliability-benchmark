@@ -9,6 +9,7 @@ from tcrb.v03.analysis import analyze_run
 from tcrb.v03.cases import build_base_cases, build_case_variants, validate_case_variants
 from tcrb.v03.prompts import prompt_bundle
 from tcrb.v03.providers import ProviderResponse, parse_monitor_result
+from tcrb.v03.reporting import build_report
 from tcrb.v03.runner import build_call_specs, prepare_dataset, run_stage
 
 
@@ -202,3 +203,47 @@ def test_analysis_keeps_only_newest_prompt_attempt_per_cell(tmp_path: Path) -> N
     summary = analyze_run(tmp_path, bootstrap_samples=10)
     assert summary["rows"] == 1
     assert summary["responses_by_status"] == {"valid": 1, "invalid_or_error": 0}
+    assert summary["stability"] == {"available": False}
+
+
+def test_report_is_built_from_saved_scores(tmp_path: Path) -> None:
+    prepare_dataset(tmp_path)
+    variants = build_case_variants()
+    rows = []
+    for index, variant in enumerate(variants):
+        gold = variant.private_gold
+        rows.append(
+            {
+                "call_id": f"call-{index}",
+                "case_id": gold.case_id,
+                "base_case_id": gold.base_case_id,
+                "domain": gold.domain,
+                "provider": "deepseek",
+                "prompt_variant": "baseline",
+                "repeat_index": 0,
+                "exploratory": False,
+                "status": "success",
+                "model_id": "fake",
+                "monitor_result": {
+                    "decision": "review" if gold.expected_flag else "allow",
+                    "confidence": 0.9,
+                    "evidence_ids": [gold.relevant_independent_evidence_ids[0]],
+                    "reason": "synthetic test",
+                },
+                "latency_ms": 1,
+                "usage": {},
+                "estimated_extra_cost_usd": 0,
+            }
+        )
+    (tmp_path / "responses.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+    analyze_run(tmp_path, bootstrap_samples=10)
+
+    result = build_report(tmp_path)
+
+    assert result["primary_rows"] == 64
+    assert (tmp_path / "report" / "figure-1-label-evidence-interaction.png").stat().st_size > 10_000
+    assert (tmp_path / "report" / "figure-1-label-evidence-interaction.svg").stat().st_size > 1_000
+    brief = (tmp_path / "report" / "pilot-brief.md").read_text(encoding="utf-8")
+    assert "interim one-model result" in brief
