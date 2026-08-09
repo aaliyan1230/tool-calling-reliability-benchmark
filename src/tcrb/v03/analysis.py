@@ -89,6 +89,7 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
         )
 
     primary_rows = [row for row in scored if row["repeat_index"] == 0 and not row["exploratory"]]
+    stability_rows = [row for row in scored if row["repeat_index"] > 0 and not row["exploratory"]]
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in primary_rows:
         grouped[(row["provider"], row["prompt_variant"])].append(row)
@@ -109,6 +110,7 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
         metrics[key] = point
 
     contact_checks = _contact_ready_checks(metrics)
+    stability = _stability_summary(primary_rows, stability_rows)
     summary = {
         "rows": len(scored),
         "primary_rows": len(primary_rows),
@@ -120,6 +122,7 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
             sum(float(row["estimated_extra_cost_usd"] or 0) for row in scored), 6
         ),
         "metrics": metrics,
+        "stability": stability,
         "contact_ready": contact_checks,
         "limitations": [
             "The traces are deterministic simulations, not production logs.",
@@ -130,6 +133,71 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
     _write_jsonl(run_dir / "scores.jsonl", scored)
     _write_json(run_dir / "summary.json", summary)
     return summary
+
+
+def _stability_summary(
+    primary_rows: list[dict[str, Any]],
+    repeat_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not repeat_rows:
+        return {"available": False}
+    repeated_base_ids = {row["base_case_id"] for row in repeat_rows}
+    rows = [
+        row
+        for row in primary_rows + repeat_rows
+        if row["base_case_id"] in repeated_base_ids
+    ]
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[(row["provider"], row["prompt_variant"], row["case_id"])].append(row)
+
+    by_condition: dict[str, Any] = {}
+    conditions = sorted({(row["provider"], row["prompt_variant"]) for row in rows})
+    for provider, prompt_variant in conditions:
+        condition_groups = [
+            group
+            for (group_provider, group_prompt, _), group in grouped.items()
+            if group_provider == provider and group_prompt == prompt_variant
+        ]
+        complete = [
+            sorted(group, key=lambda row: row["repeat_index"])
+            for group in condition_groups
+            if len(group) == 3 and all(row["valid"] for row in group)
+        ]
+        unanimous = [
+            len({row["decision"] for row in group}) == 1
+            for group in complete
+        ]
+        pair_agreements: list[bool] = []
+        for group in complete:
+            for left in range(3):
+                for right in range(left + 1, 3):
+                    pair_agreements.append(group[left]["decision"] == group[right]["decision"])
+
+        majority_rows: list[dict[str, Any]] = []
+        for group in complete:
+            flagged_count = sum(bool(row["flagged"]) for row in group)
+            representative = dict(group[0])
+            representative["flagged"] = flagged_count >= 2
+            representative["correct_decision"] = (
+                representative["flagged"] == representative["expected_flag"]
+            )
+            representative["repeat_index"] = 0
+            majority_rows.append(representative)
+        key = f"{provider}:{prompt_variant}"
+        by_condition[key] = {
+            "expected_three_run_cells": len(condition_groups),
+            "complete_three_run_cells": len(complete),
+            "unanimous_decision_rate": _safe_mean(unanimous),
+            "pairwise_decision_agreement": _safe_mean(pair_agreements),
+            "majority_vote_metrics": _metrics_for_rows(majority_rows),
+        }
+    return {
+        "available": True,
+        "repeated_base_cases": sorted(repeated_base_ids),
+        "additional_repeat_rows": len(repeat_rows),
+        "by_condition": by_condition,
+    }
 
 
 def _metrics_for_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
