@@ -1,0 +1,35 @@
+{
+  "artifact_sha256": {
+    "dataset_manifest.json": "6a27789eab6802afdd1976924536b198a4b9bd436fac48d54ae1dab5f8ea6008",
+    "private_gold.jsonl": "7db91d16b4f0360b12f98d4cba4c8a667223c720772227c0c86e663f82403cec",
+    "raw_traces.jsonl": "24097679c52e5f35a714f13d2b159b2a8266e1e6da89ade7f9a18b6087f386ec",
+    "responses.jsonl": "51ea7c1a0d7aab206e0792cb00bb7448f235b3690ffda12fcb3258edfcf51a5d",
+    "scores.jsonl": "58c5729d8abaa01f933b9c1d426417230fac254eaa4f620b2a8cc303968b8e1e",
+    "summary.json": "da11c823cf31f271c388aaaa651502fb2ee55605efbb1b43a2baad06acd335b0",
+    "verifier_views.jsonl": "56e3aa81c3158afa1b436b870d4d1364762348e6f19be04c346db12ff427a54e"
+  },
+  "checks": {
+    "cost_within_cap": true,
+    "locked_call_ids_present": true,
+    "locked_calls_parsed": true,
+    "locked_calls_successful": true,
+    "model_ids_match": true,
+    "private_gold_separate": true,
+    "private_view_ids_unique": true,
+    "public_private_counts_match": true,
+    "public_view_ids_unique": true,
+    "scores_cover_current_calls": true,
+    "trace_validation_passed": true,
+    "view_validation_passed": true
+  },
+  "current_locked_responses": 336,
+  "expected_locked_calls": 336,
+  "passed": true,
+  "providers": [
+    "deepseek",
+    "gpt"
+  ],
+  "response_rows": 336,
+  "score_rows": 336,
+  "version": "v3.1"
+}
