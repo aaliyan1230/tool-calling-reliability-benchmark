@@ -9,7 +9,13 @@ from tcrb.v03.analysis import analyze_run
 from tcrb.v03.audit import audit_run
 from tcrb.v03.cases import build_base_cases, build_case_variants, validate_case_variants
 from tcrb.v03.prompts import prompt_bundle
-from tcrb.v03.providers import ProviderResponse, parse_monitor_result
+from tcrb.v03.providers import (
+    ProviderResponse,
+    _openai_monitor_schema,
+    load_openai_api_key,
+    parse_monitor_result,
+)
+from tcrb.v03.publishing import _assert_no_secret
 from tcrb.v03.reporting import build_report
 from tcrb.v03.runner import build_call_specs, prepare_dataset, run_stage
 
@@ -66,6 +72,33 @@ def test_monitor_result_parser_accepts_supported_json_shapes(text: str, decision
 def test_monitor_result_parser_rejects_invalid_results(text: str) -> None:
     with pytest.raises(ValueError):
         parse_monitor_result(text)
+
+
+def test_openai_key_can_be_loaded_from_local_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text('OPENAI_API_KEY="test-secret"\n', encoding="utf-8")
+
+    assert load_openai_api_key() == "test-secret"
+
+
+def test_openai_strict_schema_omits_unsupported_unique_items() -> None:
+    schema = _openai_monitor_schema()
+
+    assert "uniqueItems" not in schema["properties"]["evidence_ids"]
+
+
+def test_public_export_secret_scan_rejects_api_keys(tmp_path: Path) -> None:
+    safe = tmp_path / "safe.json"
+    safe.write_text('{"status":"ok"}', encoding="utf-8")
+    _assert_no_secret(safe)
+
+    unsafe = tmp_path / "unsafe.json"
+    unsafe.write_text('{"key":"sk-example-secret-value-123456789"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="possible secret"):
+        _assert_no_secret(unsafe)
 
 
 def test_run_matrices_have_locked_sizes() -> None:
@@ -168,6 +201,52 @@ def test_analysis_computes_expected_label_effect(tmp_path: Path) -> None:
     assert metrics["false_alarm_rate"] == 0.5
 
 
+def test_analysis_computes_paired_prompt_improvement(tmp_path: Path) -> None:
+    prepare_dataset(tmp_path)
+    rows = []
+    for prompt_variant in ("baseline", "evidence_first"):
+        for index, variant in enumerate(build_case_variants()):
+            gold = variant.private_gold
+            if prompt_variant == "baseline":
+                decision = "review" if gold.self_label == "warning" else "allow"
+            else:
+                decision = "block" if gold.expected_flag else "allow"
+            rows.append(
+                {
+                    "call_id": f"{prompt_variant}-{index}",
+                    "case_id": gold.case_id,
+                    "base_case_id": gold.base_case_id,
+                    "domain": gold.domain,
+                    "provider": "deepseek",
+                    "prompt_variant": prompt_variant,
+                    "repeat_index": 0,
+                    "exploratory": False,
+                    "status": "success",
+                    "model_id": "fake",
+                    "monitor_result": {
+                        "decision": decision,
+                        "confidence": 0.9,
+                        "evidence_ids": [gold.relevant_independent_evidence_ids[0]],
+                        "reason": "synthetic test",
+                    },
+                    "latency_ms": 1,
+                    "usage": {},
+                    "estimated_extra_cost_usd": 0,
+                }
+            )
+    (tmp_path / "responses.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+
+    summary = analyze_run(tmp_path, bootstrap_samples=20)
+    comparison = summary["prompt_comparison"]["deepseek"]
+
+    assert comparison["self_label_effect_delta"] == -1.0
+    assert comparison["false_alarm_rate_delta"] == -0.5
+    assert comparison["corruption_detection_rate_delta"] == 0.5
+    assert comparison["decision_accuracy_delta"] == 0.5
+
+
 def test_analysis_keeps_only_newest_prompt_attempt_per_cell(tmp_path: Path) -> None:
     prepare_dataset(tmp_path)
     variant = build_case_variants()[0]
@@ -248,6 +327,8 @@ def test_report_is_built_from_saved_scores(tmp_path: Path) -> None:
     assert (tmp_path / "report" / "figure-1-label-evidence-interaction.svg").stat().st_size > 1_000
     brief = (tmp_path / "report" / "pilot-brief.md").read_text(encoding="utf-8")
     assert "interim one-model result" in brief
+    outreach = (tmp_path / "report" / "monika-outreach-draft.md").read_text(encoding="utf-8")
+    assert "two questions" in outreach
 
 
 def test_audit_accepts_complete_locked_deepseek_run(tmp_path: Path) -> None:

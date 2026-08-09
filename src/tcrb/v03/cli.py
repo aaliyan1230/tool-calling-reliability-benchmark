@@ -7,6 +7,7 @@ from pathlib import Path
 from .analysis import analyze_run
 from .audit import audit_run
 from .cases import build_case_variants, validate_case_variants
+from .publishing import export_results
 from .reporting import build_report
 from .runner import build_call_specs, prepare_dataset, run_stage
 
@@ -40,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     report = subparsers.add_parser("report", help="Build figures and a concise pilot brief")
     report.add_argument("--output-dir", type=Path)
     subparsers.add_parser("audit", help="Verify saved run integrity and build a trajectory")
+    export = subparsers.add_parser("export", help="Build a shareable audited result package")
+    export.add_argument("--output-dir", type=Path, default=Path("docs/v3/results"))
     return parser
 
 
@@ -81,4 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         audit = audit_run(args.run_dir)
         print(json.dumps(audit, indent=2))
         return 0 if audit["passed"] else 1
+    if args.command == "export":
+        print(json.dumps(export_results(args.run_dir, args.output_dir), indent=2))
+        return 0
     raise AssertionError("unreachable")

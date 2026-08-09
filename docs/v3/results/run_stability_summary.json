@@ -1,0 +1,10 @@
+{
+  "completed_now": 64,
+  "estimated_extra_cost_usd": 0.39892,
+  "failed_now": 0,
+  "finished_at": "2026-08-09T13:54:50.909169+00:00",
+  "scheduled": 64,
+  "skipped_cached": 0,
+  "spend_cap_usd": 15.0,
+  "stage": "stability"
+}

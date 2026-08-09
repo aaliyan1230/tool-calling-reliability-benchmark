@@ -48,9 +48,27 @@ def load_opencode_api_key() -> str:
 
 def load_openai_api_key() -> str:
     key = os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise ProviderError("OPENAI_API_KEY is not set")
-    return key
+    if key:
+        return key
+    env_path = Path.cwd() / ".env"
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ProviderError("OPENAI_API_KEY is not set and was not found in .env") from exc
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line.removeprefix("export ").lstrip()
+        name, separator, value = line.partition("=")
+        if separator and name.strip() == "OPENAI_API_KEY":
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+                value = value[1:-1]
+            if value:
+                return value
+    raise ProviderError("OPENAI_API_KEY is empty or missing in .env")
 
 
 def call_monitor(
@@ -139,7 +157,7 @@ def _call_gpt(
                 "type": "json_schema",
                 "name": "monitor_result",
                 "strict": True,
-                "schema": MONITOR_RESULT_JSON_SCHEMA,
+                "schema": _openai_monitor_schema(),
             }
         },
     }
@@ -175,6 +193,14 @@ def _call_gpt(
         latency_ms=latency_ms,
         estimated_extra_cost_usd=cost,
     )
+
+
+def _openai_monitor_schema() -> dict[str, Any]:
+    # OpenAI strict structured outputs support only a subset of JSON Schema and
+    # reject `uniqueItems`. The parser still deduplicates cited evidence IDs.
+    schema = json.loads(json.dumps(MONITOR_RESULT_JSON_SCHEMA))
+    schema["properties"]["evidence_ids"].pop("uniqueItems", None)
+    return schema
 
 
 def _extract_openai_output_text(response: dict[str, Any]) -> str:

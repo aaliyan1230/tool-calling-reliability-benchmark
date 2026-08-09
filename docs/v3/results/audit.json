@@ -1,0 +1,32 @@
+{
+  "archived_superseded_attempts": 35,
+  "artifact_sha256": {
+    "dataset_manifest.json": "d8d02ef8ed0750cf378cc08eac5a56c59884ceec9330ecce94727142105a692e",
+    "private_gold.jsonl": "0135ab6686f46323f7242787f51d3dc3695414c3a346a63c37c0bad8bf41676f",
+    "responses.jsonl": "92d42a073d788df93176aa38678f055b8f0281686a85114a0dbc0a210250aa81",
+    "scores.jsonl": "89d648dd19bd6de54ac32cfde21bfa1d875ddffcd8f8009178cb282826644fc2",
+    "summary.json": "aa557ba78fc95ae316d54ac7ced450ba19c4bb401d1b41a92cc6537966507f26",
+    "verifier_views.jsonl": "b3ac7b81f608a6c78bc32709759e90d097249fdb0007a2a781af272da9c3aa7f"
+  },
+  "checks": {
+    "all_locked_call_ids_present": true,
+    "all_locked_calls_have_parsed_results": true,
+    "all_locked_calls_succeeded": true,
+    "dataset_validation_passed": true,
+    "estimated_paid_cost_within_15_usd": true,
+    "private_has_64_matching_variants": true,
+    "private_keys_absent_from_public_views": true,
+    "public_has_64_unique_variants": true,
+    "scores_cover_exact_locked_calls": true,
+    "served_model_ids_match_plan": true,
+    "summary_has_no_invalid_results": true
+  },
+  "current_locked_responses": 384,
+  "expected_locked_calls": 384,
+  "passed": true,
+  "providers": [
+    "deepseek",
+    "gpt"
+  ],
+  "scored_rows": 384
+}
