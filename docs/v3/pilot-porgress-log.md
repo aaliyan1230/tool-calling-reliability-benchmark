@@ -221,3 +221,33 @@
 
 - The combined `git add` command returned an ignored-path warning for `docs`, so the chained commit did not run.
 - Read-only inspection confirmed every intended file was nevertheless staged and neither `uv.lock` nor `.DS_Store` was staged. Re-staging this tracked log update and committing the verified index next.
+
+### 18:43 PKT — Second checkpoint committed
+
+- Created commit `2b2d62e` (`feat: add stability analysis and pilot figures`).
+- It contains stability scoring, reproducible figure/brief generation, tests, and the running log.
+- The worktree now contains only this new log line plus the preserved user-owned `uv.lock` and `.DS_Store` changes.
+
+### 18:47 PKT — Official GPT configuration re-verified
+
+- Checked current official OpenAI documentation before any paid call.
+- Confirmed exact model ID `gpt-5.6-terra`, Responses API support, structured-output support, and high reasoning support.
+- The live model page currently lists $2.00 per million uncached input tokens, $0.20 per million cached input tokens, and $12.00 per million output tokens. The implementation already uses these exact rates for its spend estimate.
+- Confirmed the raw Responses API structured-output shape remains `text.format` with `type=json_schema`, `name`, `strict`, and `schema`, matching the implemented request.
+- `OPENAI_API_KEY` is still absent. No GPT request was attempted, no substitute model was used, and no cost was incurred.
+
+### 18:52 PKT — Machine-readable integrity audit and recorded trajectory added
+
+- Added an `audit` command that verifies dataset balance, public/private separation, exact locked call IDs, successful parsed results, served model IDs, score coverage, invalid-result count, and the $15 cap.
+- It also writes SHA-256 hashes for the manifest, public data, private gold, raw responses, scores, and summary so later changes are detectable.
+- Added a generated walkthrough that clearly separates deterministic simulated trace data from recorded API model outputs.
+- Added a complete-run audit test. Focused v0.3 suite now passes 17/17 tests.
+- Ran the audit on the real DeepSeek run: PASS on all 11 checks; 192/192 locked calls found and scored; 19 superseded attempts retained in the raw audit trail.
+- The generated concrete trajectory uses `cs_refund_o1001__correct__warning`. Baseline returned `review` despite matching order and policy evidence, explicitly because of the warning label. Evidence-first returned `allow`, stating that the warning was not evidence of an error.
+- This exact paired response is a clean, easy-to-explain example for the eventual research note. It is recorded provider output, not a reconstructed or invented trajectory.
+
+### 18:54 PKT — Audit checkpoint validation passed
+
+- Full repository suite excluding the known pre-existing `google.genai` collection issue now passes 82 tests in 5.41 seconds.
+- `git diff --check` passed.
+- Confirmed only the audit implementation, CLI wiring, test, and running log are intended for this checkpoint; `uv.lock` and `.DS_Store` remain excluded.
