@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from tcrb.v03.analysis import analyze_run
+from tcrb.v03.audit import audit_run
 from tcrb.v03.cases import build_base_cases, build_case_variants, validate_case_variants
 from tcrb.v03.prompts import prompt_bundle
 from tcrb.v03.providers import ProviderResponse, parse_monitor_result
@@ -247,3 +248,46 @@ def test_report_is_built_from_saved_scores(tmp_path: Path) -> None:
     assert (tmp_path / "report" / "figure-1-label-evidence-interaction.svg").stat().st_size > 1_000
     brief = (tmp_path / "report" / "pilot-brief.md").read_text(encoding="utf-8")
     assert "interim one-model result" in brief
+
+
+def test_audit_accepts_complete_locked_deepseek_run(tmp_path: Path) -> None:
+    prepare_dataset(tmp_path)
+    specs = build_call_specs(stage="core", providers=("deepseek",)) + build_call_specs(
+        stage="stability", providers=("deepseek",)
+    )
+    rows = []
+    for spec in specs:
+        gold = spec.variant.private_gold
+        rows.append(
+            {
+                "call_id": spec.call_id,
+                "case_id": gold.case_id,
+                "base_case_id": gold.base_case_id,
+                "domain": gold.domain,
+                "provider": "deepseek",
+                "prompt_variant": spec.prompt_variant,
+                "repeat_index": spec.repeat_index,
+                "exploratory": False,
+                "status": "success",
+                "model_id": "deepseek-v4-flash",
+                "monitor_result": {
+                    "decision": "block" if gold.expected_flag else "allow",
+                    "confidence": 0.9,
+                    "evidence_ids": [gold.relevant_independent_evidence_ids[0]],
+                    "reason": "synthetic test",
+                },
+                "latency_ms": 1,
+                "usage": {},
+                "estimated_extra_cost_usd": 0,
+            }
+        )
+    (tmp_path / "responses.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+    analyze_run(tmp_path, bootstrap_samples=10)
+
+    audit = audit_run(tmp_path)
+
+    assert audit["passed"] is True
+    assert audit["expected_locked_calls"] == 192
+    assert (tmp_path / "trajectory-walkthrough.md").exists()
