@@ -383,3 +383,9 @@
 - Created commit `b522003` (`feat: complete two-model provenance pilot`).
 - The commit contains the final two-model implementation, paired analysis, safe `.env` key loading, publishing guard, 22-file result package, three figures, brief, trajectories, audit, and outreach draft.
 - Verified the only remaining uncommitted workspace items are the pre-existing user-owned `uv.lock` modification and `.DS_Store`.
+
+### 19:43 PKT — Post-commit verification complete
+
+- Re-ran the repository suite after the final checkpoint: 86 tests passed in 2.84 seconds, excluding only the documented pre-existing `google.genai` collection issue.
+- Verified no whitespace diff exists in the v0.3 code, tests, or result package.
+- Work is complete; the only remaining workspace changes are the untouched user-owned `uv.lock` and `.DS_Store`.
