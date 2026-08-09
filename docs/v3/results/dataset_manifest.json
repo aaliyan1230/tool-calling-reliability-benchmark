@@ -1,0 +1,14 @@
+{
+  "base_cases": 16,
+  "created_at": "2026-08-09T12:57:52.293138+00:00",
+  "domains": {
+    "customer_support": 4,
+    "developer_tools": 4,
+    "ecommerce": 4,
+    "fintech": 4
+  },
+  "git_sha": "045878386e60f72d6b6109a64e685a6743ded6de",
+  "private_gold_separate": true,
+  "validation_errors": [],
+  "variants": 64
+}

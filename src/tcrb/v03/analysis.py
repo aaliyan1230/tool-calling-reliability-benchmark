@@ -110,6 +110,7 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
         metrics[key] = point
 
     contact_checks = _contact_ready_checks(metrics)
+    prompt_comparison = _prompt_comparisons(grouped, samples=bootstrap_samples)
     stability = _stability_summary(primary_rows, stability_rows)
     summary = {
         "rows": len(scored),
@@ -122,6 +123,7 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
             sum(float(row["estimated_extra_cost_usd"] or 0) for row in scored), 6
         ),
         "metrics": metrics,
+        "prompt_comparison": prompt_comparison,
         "stability": stability,
         "contact_ready": contact_checks,
         "limitations": [
@@ -133,6 +135,105 @@ def analyze_run(run_dir: Path, *, bootstrap_samples: int = 10_000) -> dict[str, 
     _write_jsonl(run_dir / "scores.jsonl", scored)
     _write_json(run_dir / "summary.json", summary)
     return summary
+
+
+def _prompt_comparisons(
+    grouped: dict[tuple[str, str], list[dict[str, Any]]],
+    *,
+    samples: int,
+) -> dict[str, Any]:
+    comparisons: dict[str, Any] = {}
+    providers = sorted({provider for provider, _ in grouped})
+    for provider in providers:
+        baseline = grouped.get((provider, "baseline"), [])
+        intervention = grouped.get((provider, "evidence_first"), [])
+        if not baseline or not intervention:
+            continue
+        baseline_metrics = _metrics_for_rows(baseline)
+        intervention_metrics = _metrics_for_rows(intervention)
+        point = _metric_deltas(baseline_metrics, intervention_metrics)
+        point["bootstrap_95_ci"] = _bootstrap_prompt_deltas(
+            baseline,
+            intervention,
+            samples=samples,
+            seed=20260810,
+        )
+        comparisons[provider] = point
+    return comparisons
+
+
+def _metric_deltas(
+    baseline: dict[str, Any], intervention: dict[str, Any]
+) -> dict[str, float | None]:
+    keys = (
+        "self_label_effect",
+        "false_alarm_rate",
+        "corruption_detection_rate",
+        "decision_accuracy",
+        "independent_evidence_rate",
+    )
+    return {
+        f"{key}_delta": (
+            float(intervention[key]) - float(baseline[key])
+            if isinstance(intervention.get(key), (int, float))
+            and isinstance(baseline.get(key), (int, float))
+            else None
+        )
+        for key in keys
+    }
+
+
+def _bootstrap_prompt_deltas(
+    baseline: list[dict[str, Any]],
+    intervention: list[dict[str, Any]],
+    *,
+    samples: int,
+    seed: int,
+) -> dict[str, list[float] | None]:
+    base_ids = sorted(
+        {row["base_case_id"] for row in baseline}
+        & {row["base_case_id"] for row in intervention}
+    )
+    baseline_by_base = {
+        base_id: [row for row in baseline if row["base_case_id"] == base_id]
+        for base_id in base_ids
+    }
+    intervention_by_base = {
+        base_id: [row for row in intervention if row["base_case_id"] == base_id]
+        for base_id in base_ids
+    }
+    rng = random.Random(seed)
+    delta_keys = (
+        "self_label_effect_delta",
+        "false_alarm_rate_delta",
+        "corruption_detection_rate_delta",
+        "decision_accuracy_delta",
+        "independent_evidence_rate_delta",
+    )
+    distributions: dict[str, list[float]] = defaultdict(list)
+    for _ in range(samples):
+        baseline_sample: list[dict[str, Any]] = []
+        intervention_sample: list[dict[str, Any]] = []
+        for sampled_index in range(len(base_ids)):
+            picked = rng.choice(base_ids)
+            sampled_id = f"{picked}__sample_{sampled_index}"
+            for source, destination in (
+                (baseline_by_base[picked], baseline_sample),
+                (intervention_by_base[picked], intervention_sample),
+            ):
+                for row in source:
+                    clone = dict(row)
+                    clone["base_case_id"] = sampled_id
+                    destination.append(clone)
+        deltas = _metric_deltas(
+            _metrics_for_rows(baseline_sample),
+            _metrics_for_rows(intervention_sample),
+        )
+        for key in delta_keys:
+            value = deltas.get(key)
+            if isinstance(value, (int, float)) and math.isfinite(value):
+                distributions[key].append(float(value))
+    return {key: _percentile_interval(distributions.get(key, [])) for key in delta_keys}
 
 
 def _stability_summary(

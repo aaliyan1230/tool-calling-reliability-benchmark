@@ -42,6 +42,7 @@ def build_report(run_dir: Path, *, output_dir: Path | None = None) -> dict[str, 
     destination = output_dir or (run_dir / "report")
     destination.mkdir(parents=True, exist_ok=True)
     interaction_paths = _plot_interaction(primary, destination)
+    comparison_paths = _plot_prompt_improvement(summary, destination)
     stability_paths: list[Path] = []
     if summary.get("stability", {}).get("available"):
         stability_paths = _plot_stability(summary["stability"], destination)
@@ -52,8 +53,14 @@ def build_report(run_dir: Path, *, output_dir: Path | None = None) -> dict[str, 
     )
     brief_path = destination / "pilot-brief.md"
     brief_path.write_text(_pilot_brief(summary), encoding="utf-8")
+    outreach_path = destination / "monika-outreach-draft.md"
+    outreach_path.write_text(_outreach_draft(), encoding="utf-8")
 
-    paths = interaction_paths + stability_paths + [captions_path, brief_path]
+    paths = interaction_paths + comparison_paths + stability_paths + [
+        captions_path,
+        brief_path,
+        outreach_path,
+    ]
     return {
         "providers": sorted({row["provider"] for row in primary}),
         "primary_rows": len(primary),
@@ -239,7 +246,99 @@ def _plot_stability(stability: dict[str, Any], destination: Path) -> list[Path]:
         color="#5c625f",
     )
     figure.tight_layout(rect=(0.04, 0.04, 0.98, 0.78))
-    return _save_figure(figure, destination / "figure-2-repeatability")
+    return _save_figure(figure, destination / "figure-3-repeatability")
+
+
+def _plot_prompt_improvement(summary: dict[str, Any], destination: Path) -> list[Path]:
+    plt = _pyplot()
+    comparisons = summary.get("prompt_comparison", {})
+    providers = sorted(comparisons)
+    if not providers:
+        return []
+    metric_specs = (
+        ("self_label_effect_delta", "Less self-label influence", -1),
+        ("false_alarm_rate_delta", "Fewer false alarms", -1),
+        ("corruption_detection_rate_delta", "More corruption detected", 1),
+        ("decision_accuracy_delta", "Higher decision accuracy", 1),
+    )
+    colors = {"deepseek": "#1b7f79", "gpt": "#6d5ba7"}
+    markers = {"deepseek": "o", "gpt": "s"}
+    figure, axis = plt.subplots(figsize=(9.5, 5.8))
+    figure.patch.set_facecolor("#fbfaf7")
+    axis.set_facecolor("#fbfaf7")
+    offsets = _centered_offsets(len(providers), 0.16)
+    all_bounds = [0.0]
+    for provider_index, provider in enumerate(providers):
+        comparison = comparisons[provider]
+        intervals = comparison.get("bootstrap_95_ci", {})
+        for metric_index, (key, _, direction) in enumerate(metric_specs):
+            raw_value = comparison.get(key)
+            raw_interval = intervals.get(key)
+            if raw_value is None or not raw_interval:
+                continue
+            value = float(raw_value) * direction * 100
+            bounds = sorted(float(bound) * direction * 100 for bound in raw_interval)
+            y = metric_index + offsets[provider_index]
+            color = colors.get(provider, "#34495e")
+            axis.errorbar(
+                value,
+                y,
+                xerr=[[value - bounds[0]], [bounds[1] - value]],
+                fmt=markers.get(provider, "o"),
+                markersize=7,
+                color=color,
+                ecolor=color,
+                elinewidth=2,
+                capsize=4,
+                label=PROVIDER_LABELS.get(provider, provider) if metric_index == 0 else None,
+                zorder=3,
+            )
+            axis.text(
+                bounds[1] + 0.8,
+                y,
+                f"{value:+.1f}",
+                va="center",
+                ha="left",
+                fontsize=9,
+                color="#17202a",
+            )
+            all_bounds.extend(bounds)
+    axis.axvline(0, color="#7d827e", linewidth=1.2, zorder=1)
+    minimum, maximum = min(all_bounds), max(all_bounds)
+    padding = max(4.0, (maximum - minimum) * 0.18)
+    axis.set_xlim(minimum - padding, maximum + padding)
+    axis.set_yticks(range(len(metric_specs)), [label for _, label, _ in metric_specs])
+    axis.invert_yaxis()
+    axis.set_xlabel("Improvement from evidence-first prompt (percentage points)")
+    axis.grid(axis="x", color="#d8d5ce", linewidth=0.8, alpha=0.8, zorder=0)
+    axis.spines[["top", "right", "left"]].set_visible(False)
+    axis.spines["bottom"].set_color("#aaa69d")
+    axis.tick_params(axis="y", length=0)
+    axis.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.20),
+        frameon=False,
+        ncol=len(providers),
+    )
+    figure.suptitle(
+        "Evidence-first reduced false alarms without hiding corruption",
+        x=0.06,
+        y=0.97,
+        ha="left",
+        fontsize=17,
+        fontweight="bold",
+        color="#17202a",
+    )
+    figure.text(
+        0.06,
+        0.905,
+        "Paired changes with 95% bootstrap intervals over 16 base cases. Right is better.",
+        ha="left",
+        fontsize=10,
+        color="#5c625f",
+    )
+    figure.tight_layout(rect=(0.04, 0.14, 0.98, 0.83))
+    return _save_figure(figure, destination / "figure-2-prompt-improvement")
 
 
 def _figure_captions(
@@ -284,7 +383,14 @@ def _figure_captions(
     if has_stability:
         lines.extend(
             [
-                "## Figure 2 — Repeatability",
+                "## Figure 2 — Paired prompt improvement",
+                "",
+                "Points are oriented so positive values are improvements. Whiskers are 95% bootstrap intervals "
+                "from resampling the 16 base cases while keeping each prompt pair together. Both false-alarm "
+                "reductions point in the desired direction, but their intervals touch zero; this pilot is too "
+                "small for a firm population claim.",
+                "",
+                "## Figure 3 — Repeatability",
                 "",
                 "Four pre-selected base cases—one per domain—were each evaluated three times per matched "
                 "condition. The chart reports decision unanimity and majority-vote performance. This is a "
@@ -351,7 +457,23 @@ def _pilot_brief(summary: dict[str, Any]) -> str:
             "detection stayed unchanged."
         )
     if complete_two_model:
-        lines.append("The locked two-model comparison is complete; model-specific differences should be reported separately.")
+        baseline = summary["metrics"].get("gpt:baseline", {})
+        evidence = summary["metrics"].get("gpt:evidence_first", {})
+        lines.append(
+            "For GPT-5.6 Terra, evidence-first reduced false alarms by "
+            f"{_points(baseline.get('false_alarm_rate'), evidence.get('false_alarm_rate'))} and improved "
+            f"accuracy by {_points(evidence.get('decision_accuracy'), baseline.get('decision_accuracy'))}; "
+            "corruption detection again stayed at 100%."
+        )
+        stability = summary.get("stability", {}).get("by_condition", {})
+        lines.append(
+            "On the four-case repeat check, decision unanimity changed from "
+            f"{_percent(stability.get('deepseek:baseline', {}).get('unanimous_decision_rate'))} to "
+            f"{_percent(stability.get('deepseek:evidence_first', {}).get('unanimous_decision_rate'))} for "
+            "DeepSeek and from "
+            f"{_percent(stability.get('gpt:baseline', {}).get('unanimous_decision_rate'))} to "
+            f"{_percent(stability.get('gpt:evidence_first', {}).get('unanimous_decision_rate'))} for GPT."
+        )
     else:
         lines.append(
             "This is still an interim one-model result. The locked GPT-5.6 Terra run is required before external outreach."
@@ -361,8 +483,9 @@ def _pilot_brief(summary: dict[str, Any]) -> str:
             "",
             "## Limits",
             "",
-            "The traces are simulated and the 16-case sample is small. DeepSeek’s baseline label-effect confidence "
-            "interval includes zero, so the current result is promising evidence, not a firm general claim.",
+            "The traces are simulated and the 16-case sample is small. Both baseline label-effect confidence "
+            "intervals include zero. Two developer-tool cases also showed that `allow` can be confused with "
+            "approving a failed build rather than accepting a correct status report.",
             "",
             "## Next decision",
             "",
@@ -370,12 +493,29 @@ def _pilot_brief(summary: dict[str, Any]) -> str:
                 "Use the same fixed cases and prompts for GPT-5.6 Terra, then report both models without changing "
                 "the success rule."
                 if not complete_two_model
-                else "Review the two-model results against the pre-registered outreach gate and prepare the external summary."
+                else "The pre-registered contact gate did not pass. Share this as an honest early result about "
+                "model-specific label sensitivity and a promising evidence-first mitigation—not as proof of a "
+                "broad failure mode."
             ),
             "",
         ]
     )
     return "\n".join(lines)
+
+
+def _outreach_draft() -> str:
+    return """# Draft message to Monika
+
+Hi Monika,
+
+I’ve been running a small pilot on evidence provenance in agent monitoring. We built 16 matched simulated cases across four tool-use domains, varying whether an output was correct or corrupted and whether the tool called itself “verified” or warned it might be unreliable.
+
+The label effect was model-specific: 9.4 points for DeepSeek V4 Flash and 3.1 for GPT-5.6 Terra, with wide intervals. Our pre-set gate for a broad label-trust effect did not pass. The more consistent result was that a short evidence-first instruction cut false alarms from 15.6% to 3.1% on DeepSeek and 9.4% to 0% on GPT, while corruption detection stayed at 100%. It also improved repeatability on a four-case rerun.
+
+I’d really value your take on two questions: Is provenance-sensitive monitoring useful to pursue beyond prompting, and what realistic setting would make the strongest next test?
+
+Happy to send the one-page brief and exact trajectories.
+"""
 
 
 def _condition_rate(rows: list[dict[str, Any]], state: str, label: str) -> float | None:
@@ -415,6 +555,11 @@ def _pp(value: float | None) -> str:
     return f"{value * 100:.1f} pp"
 
 
+def _centered_offsets(count: int, spacing: float) -> list[float]:
+    midpoint = (count - 1) / 2
+    return [(index - midpoint) * spacing for index in range(count)]
+
+
 def _pyplot():
     try:
         import matplotlib
@@ -440,5 +585,10 @@ def _save_figure(figure: Any, stem: Path) -> list[Path]:
     svg_path = stem.with_suffix(".svg")
     figure.savefig(png_path, dpi=240, bbox_inches="tight", facecolor=figure.get_facecolor())
     figure.savefig(svg_path, bbox_inches="tight", facecolor=figure.get_facecolor())
+    svg_text = svg_path.read_text(encoding="utf-8")
+    svg_path.write_text(
+        "\n".join(line.rstrip() for line in svg_text.splitlines()) + "\n",
+        encoding="utf-8",
+    )
     figure.clear()
     return [png_path, svg_path]
