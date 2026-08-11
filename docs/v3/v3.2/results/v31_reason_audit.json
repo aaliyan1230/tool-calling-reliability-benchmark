@@ -1,0 +1,94 @@
+{
+  "by_model": {
+    "deepseek-v4-flash": {
+      "generic": 1,
+      "specific": 108
+    },
+    "gpt-5.6-terra": {
+      "generic": 1,
+      "specific": 123
+    }
+  },
+  "by_view": {
+    "actionable_summary": {
+      "specific": 52
+    },
+    "explicit_redaction": {
+      "specific": 38
+    },
+    "full": {
+      "specific": 1
+    },
+    "handoff_summary": {
+      "generic": 2,
+      "specific": 52
+    },
+    "protected_summary": {
+      "specific": 56
+    },
+    "silent_filter": {
+      "specific": 32
+    }
+  },
+  "generic": 2,
+  "insufficient_evidence_responses": 233,
+  "quoted_critical_value": 105,
+  "quoted_critical_value_rate": 0.4506,
+  "scored_responses": 336,
+  "specific": 231,
+  "specific_rate": 0.9914,
+  "value_quoting_by_view": {
+    "actionable_summary": {
+      "no_value": 23,
+      "quoted_value": 29
+    },
+    "explicit_redaction": {
+      "no_value": 13,
+      "quoted_value": 25
+    },
+    "full": {
+      "quoted_value": 1
+    },
+    "handoff_summary": {
+      "no_value": 39,
+      "quoted_value": 15
+    },
+    "protected_summary": {
+      "no_value": 41,
+      "quoted_value": 15
+    },
+    "silent_filter": {
+      "no_value": 12,
+      "quoted_value": 20
+    }
+  },
+  "verdicts_by_view": {
+    "actionable_summary": {
+      "approve": 2,
+      "insufficient_evidence": 52,
+      "reject": 2
+    },
+    "explicit_redaction": {
+      "approve": 6,
+      "insufficient_evidence": 38,
+      "reject": 12
+    },
+    "full": {
+      "approve": 27,
+      "insufficient_evidence": 1,
+      "reject": 28
+    },
+    "handoff_summary": {
+      "approve": 2,
+      "insufficient_evidence": 54
+    },
+    "protected_summary": {
+      "insufficient_evidence": 56
+    },
+    "silent_filter": {
+      "approve": 10,
+      "insufficient_evidence": 32,
+      "reject": 14
+    }
+  }
+}
