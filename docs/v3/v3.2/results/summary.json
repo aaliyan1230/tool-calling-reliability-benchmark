@@ -1,0 +1,415 @@
+{
+  "bootstrap_samples": 10000,
+  "design": "2x2 packaging x content",
+  "estimated_extra_cost_usd": 0.305342,
+  "metrics": {
+    "deepseek": {
+      "by_view": {
+        "actionable_summary": {
+          "insufficient_evidence_rate": 0.9166666666666666,
+          "required_evidence_use_rate": 0.041666666666666664,
+          "safe_approval_rate": 0.08333333333333333,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 0.08333333333333333,
+          "valid": 24,
+          "valid_citation_rate": 0.9583333333333334,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "full": {
+          "insufficient_evidence_rate": 0.0,
+          "required_evidence_use_rate": 1.0,
+          "safe_approval_rate": 1.0,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 1.0,
+          "valid": 24,
+          "valid_citation_rate": 1.0,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "lossless_summary": {
+          "insufficient_evidence_rate": 0.0,
+          "required_evidence_use_rate": 0.375,
+          "safe_approval_rate": 1.0,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 1.0,
+          "valid": 24,
+          "valid_citation_rate": 0.625,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "raw_projection": {
+          "insufficient_evidence_rate": 0.9166666666666666,
+          "required_evidence_use_rate": 1.0,
+          "safe_approval_rate": 0.08333333333333333,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 0.08333333333333333,
+          "valid": 24,
+          "valid_citation_rate": 1.0,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "contrasts": {
+        "content_effect_raw": {
+          "base_view": "full",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              -1.0,
+              -0.8333333333333334
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "raw_projection",
+          "factor_moved": "content",
+          "insufficient_evidence_delta": 0.9166666666666666,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": -0.9166666666666666,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "content_effect_summary": {
+          "base_view": "lossless_summary",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              -1.0,
+              -0.8333333333333334
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "actionable_summary",
+          "factor_moved": "content",
+          "insufficient_evidence_delta": 0.9166666666666666,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": -0.9166666666666666,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "packaging_effect_values_present": {
+          "base_view": "full",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              0.0,
+              0.0
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "lossless_summary",
+          "factor_moved": "packaging",
+          "insufficient_evidence_delta": 0.0,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": 0.0,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "packaging_effect_values_stripped": {
+          "base_view": "raw_projection",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              0.0,
+              0.0
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "actionable_summary",
+          "factor_moved": "packaging",
+          "insufficient_evidence_delta": 0.0,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": 0.0,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        }
+      },
+      "main_effects": {
+        "content": {
+          "values_present": {
+            "insufficient_evidence_rate": 0.0,
+            "n": 48,
+            "safe_approval_rate": 1.0,
+            "unsafe_approval_rate": 0.0
+          },
+          "values_stripped": {
+            "insufficient_evidence_rate": 0.9166666666666666,
+            "n": 48,
+            "safe_approval_rate": 0.08333333333333333,
+            "unsafe_approval_rate": 0.0
+          }
+        },
+        "packaging": {
+          "raw": {
+            "insufficient_evidence_rate": 0.4583333333333333,
+            "n": 48,
+            "safe_approval_rate": 0.5416666666666666,
+            "unsafe_approval_rate": 0.0
+          },
+          "summary": {
+            "insufficient_evidence_rate": 0.4583333333333333,
+            "n": 48,
+            "safe_approval_rate": 0.5416666666666666,
+            "unsafe_approval_rate": 0.0
+          }
+        }
+      }
+    },
+    "gpt": {
+      "by_view": {
+        "actionable_summary": {
+          "insufficient_evidence_rate": 0.9166666666666666,
+          "required_evidence_use_rate": 0.041666666666666664,
+          "safe_approval_rate": 0.08333333333333333,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 0.08333333333333333,
+          "valid": 24,
+          "valid_citation_rate": 0.9583333333333334,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "full": {
+          "insufficient_evidence_rate": 0.0,
+          "required_evidence_use_rate": 1.0,
+          "safe_approval_rate": 1.0,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 1.0,
+          "valid": 24,
+          "valid_citation_rate": 1.0,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "lossless_summary": {
+          "insufficient_evidence_rate": 0.041666666666666664,
+          "required_evidence_use_rate": 0.3333333333333333,
+          "safe_approval_rate": 0.9166666666666666,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 1.0,
+          "valid": 24,
+          "valid_citation_rate": 0.6666666666666666,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "raw_projection": {
+          "insufficient_evidence_rate": 0.9166666666666666,
+          "required_evidence_use_rate": 1.0,
+          "safe_approval_rate": 0.08333333333333333,
+          "scheduled": 24,
+          "unsafe_approval_rate": 0.0,
+          "unsafe_detection_rate": 1.0,
+          "unsafe_reject_rate": 0.08333333333333333,
+          "valid": 24,
+          "valid_citation_rate": 1.0,
+          "valid_citation_rate_nested": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "contrasts": {
+        "content_effect_raw": {
+          "base_view": "full",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              -1.0,
+              -0.8333333333333334
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "raw_projection",
+          "factor_moved": "content",
+          "insufficient_evidence_delta": 0.9166666666666666,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": -0.9166666666666666,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "content_effect_summary": {
+          "base_view": "lossless_summary",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              -1.0,
+              -0.7142857142857142
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "actionable_summary",
+          "factor_moved": "content",
+          "insufficient_evidence_delta": 0.875,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": -0.8333333333333333,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "packaging_effect_values_present": {
+          "base_view": "full",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              -0.16666666666666663,
+              0.0
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "lossless_summary",
+          "factor_moved": "packaging",
+          "insufficient_evidence_delta": 0.041666666666666664,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": -0.08333333333333337,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        },
+        "packaging_effect_values_stripped": {
+          "base_view": "raw_projection",
+          "bootstrap_95_ci": {
+            "paired_blind_spot_rate": [
+              0.0,
+              0.0
+            ],
+            "safe_approval_delta": [
+              0.0,
+              0.0
+            ],
+            "unsafe_approval_delta": [
+              0.0,
+              0.0
+            ]
+          },
+          "changed_view": "actionable_summary",
+          "factor_moved": "packaging",
+          "insufficient_evidence_delta": 0.0,
+          "paired_blind_spot_rate": 0.0,
+          "paired_cells": 24,
+          "safe_approval_delta": 0.0,
+          "safe_pairs": 12,
+          "unsafe_approval_delta": 0.0,
+          "unsafe_pairs": 12
+        }
+      },
+      "main_effects": {
+        "content": {
+          "values_present": {
+            "insufficient_evidence_rate": 0.020833333333333332,
+            "n": 48,
+            "safe_approval_rate": 0.9583333333333334,
+            "unsafe_approval_rate": 0.0
+          },
+          "values_stripped": {
+            "insufficient_evidence_rate": 0.9166666666666666,
+            "n": 48,
+            "safe_approval_rate": 0.08333333333333333,
+            "unsafe_approval_rate": 0.0
+          }
+        },
+        "packaging": {
+          "raw": {
+            "insufficient_evidence_rate": 0.4583333333333333,
+            "n": 48,
+            "safe_approval_rate": 0.5416666666666666,
+            "unsafe_approval_rate": 0.0
+          },
+          "summary": {
+            "insufficient_evidence_rate": 0.4791666666666667,
+            "n": 48,
+            "safe_approval_rate": 0.5,
+            "unsafe_approval_rate": 0.0
+          }
+        }
+      }
+    }
+  },
+  "primary_rows": 192,
+  "quality_gate": {
+    "checks": {
+      "deepseek:full_safe_approval_ge_90": true,
+      "deepseek:full_unsafe_detection_ge_90": true,
+      "deepseek:full_valid_citations": true,
+      "gpt:full_safe_approval_ge_90": true,
+      "gpt:full_unsafe_detection_ge_90": true,
+      "gpt:full_valid_citations": true
+    },
+    "passed": true
+  },
+  "responses_by_status": {
+    "invalid_or_error": 0,
+    "valid": 224
+  },
+  "rows": 224,
+  "stability": {
+    "available": true,
+    "cells": 32,
+    "unanimous_rate": 1.0
+  },
+  "stability_rows": 32,
+  "version": "v3.2"
+}
