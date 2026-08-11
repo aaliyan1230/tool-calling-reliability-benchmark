@@ -37,11 +37,11 @@ from .tasks import (
     get_oracle_actions,
     get_split,
 )
+from .metrics import count_diagnostic_labels, is_recovery
 from .tools import TOOL_REGISTRY
 from .types import (
     Abort,
     Clarify,
-    DiagnosticLabel,
     EpisodeTrace,
     FinalAnswer,
     TaskDef,
@@ -110,14 +110,6 @@ def _episode_success(trace: EpisodeTrace, task: TaskDef) -> bool:
         _contains_ordered_sequence(tool_names, expected)
         for expected in task.valid_tool_sequences
     )
-
-
-def _count_labels(traces: list[EpisodeTrace]) -> dict[DiagnosticLabel, int]:
-    counts: dict[DiagnosticLabel, int] = {}
-    for trace in traces:
-        for label in trace.diagnostic_labels:
-            counts[label] = counts.get(label, 0) + 1
-    return counts
 
 
 def run_eval(
@@ -407,7 +399,7 @@ def run_eval(
                     "success": f["success"],
                     "clean_success": r["clean"]["success"],
                     "fault_applied": f["fault_applied"],
-                    "recovery": f["success"] and f["fault_applied"],
+                    "recovery": is_recovery(f),
                 })
 
         fault_total = len(fault_results)
@@ -444,8 +436,7 @@ def run_eval(
         fault_passed = 0
         by_hazard = {}
 
-    all_traces = [EpisodeTrace(task_id="", domain="", success=False)]
-    diagnostic_counts = _count_labels(all_traces)
+    diagnostic_counts = count_diagnostic_labels(results)
 
     summary = {
         "model_id": model_id,
