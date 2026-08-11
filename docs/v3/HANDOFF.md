@@ -343,3 +343,106 @@ Note `docs` is in `.gitignore`; the v3 packages are tracked via `git add -f`, ma
 | v3.3 results + log | `docs/v3/v3.3/` |
 | Monika transcript | `docs/v3/v3.0/transcript.md` |
 | Earlier pilots | `docs/v3/v3.0/`, `docs/v3/v3.1/`, `docs/v3/RESEARCH-SUMMARY.md` |
+
+---
+
+# ADDENDUM — added after the document above was first written
+
+**Date:** 2026-08-11, same day, later.
+
+Three cheap checks were run after the main document was written. One of them **overturns a conclusion stated above**. If you read this document earlier, read this section — section 7's "unresolved questions" is now partly wrong.
+
+## Check A — does the τ-bench (tau2) environment still work? **Yes**
+
+The environment from the v3.1 external arm survived at `/tmp/tau2-inspect.tLSziM`. tau2 1.0.1, Python 3.12 venv, imports and task loading both work.
+
+Five domains are available, not just the two v3.1 used:
+
+| Domain | Tasks | Reference actions (min / max / mean) | Tasks with ≥8 actions |
+|---|---:|---|---:|
+| retail | 114 | 0 / 13 / 4.8 | 18 |
+| airline | 50 | 0 / 19 / 2.8 | 4 |
+| **telecom** | **2,285** | 1 / 12 / 5.8 | 444 |
+| banking_knowledge | 97 | 1 / 37 / 9.8 | 52 |
+
+## Check B — does ControlArena ship pre-generated trajectories? **No**
+
+It ships infrastructure, not data — agents must be run to produce trajectories, and Docker is expected. ~17 settings including BashArena. Treat it as a build cost, not a download.
+
+## Check C — trace length. **The document above draws the wrong conclusion**
+
+**What section 7 implies:** τ-bench traces are probably too short for compression experiments.
+
+**First measurement, which supported that:** the `full` views in the v3.1 τ arm hold **2–7 events, mean 4.8**. But that is an artifact of how that arm was built — `scripts/run_tau2_visibility_smoke.py` never ran an agent. It replayed the official reference action list from `task.evaluation_criteria.actions`. So those are gold actions, not agent behaviour.
+
+**Then this was found:** tau2 ships **576 MB of real agent simulation runs** under `data/tau2/results/final` — 26 files covering Claude 3.7 Sonnet, GPT-4.1, GPT-4.1-mini and o4-mini, 4 trials each, across retail, airline, telecom and telecom-workflow.
+
+**10,832 real agent trajectories, already generated, already on disk, no API cost.**
+
+| Property | Value |
+|---|---|
+| Messages per trajectory | min 3, **mean 38.8**, median 32, **max 208** |
+| ≥20 messages | 9,072 |
+| ≥40 messages | 3,977 |
+| ≥60 messages | 1,808 |
+| Task failed (`reward < 1.0`) | **3,651 (33.7%)** |
+| `db_check.db_match == False` | **7,336** |
+
+Telecom holds the long ones — mean ~60 messages, and GPT-4.1-mini on telecom averages 83.
+
+**Structure of each simulation:**
+
+```
+id, task_id, timestamp, start_time, end_time, duration,
+termination_reason, agent_cost, user_cost, trial, seed,
+messages[]        # full conversation: assistant / user / tool roles
+reward_info{
+  reward,                    # overall
+  db_check{db_match, db_reward},
+  action_checks[]            # per reference action, action_match + reward
+  reward_breakdown{DB, COMMUNICATE},
+  env_assertions, nl_assertions, communicate_checks
+}
+```
+
+So each trajectory carries **computed ground truth** — database state comparison and per-action matching against the reference — consistent with the no-LLM-judge standard used throughout v3.
+
+### Why this matters relative to the discussion in section 7
+
+Three constraints were treated there as blockers: trajectory length, verifiable ground truth, and failures that weren't manufactured. All three are satisfied by data that was already on disk. In particular, the 3,651 failed runs are **naturally occurring** — a real agent genuinely failed a real task — so the injection-seam risk discussed in section 7 largely does not apply to them.
+
+### Caveats that were not resolved
+
+- **"Task failed" ≠ "a monitor should have caught something."** A `reward < 1.0` trajectory might be an agent that politely gave up rather than one that did damage. `db_match == False` (7,336) is closer to "took a wrong action with real effect" and is probably the more useful label, but **neither has been eyeballed**. Reading twenty by hand before trusting either is the obvious precaution and was not done.
+- Trajectory counts include 4 trials per task, so simulations are **not independent** — clustering by task matters for any statistics.
+- The `telecom-workflow` / `no-user` / `op` variants are different conditions, not duplicates; what they mean was not investigated.
+
+## The data has been copied out of `/tmp`
+
+`/tmp` is cleared periodically and this data is expensive to regenerate. The whole environment was copied to:
+
+```
+/Users/ayesha/Projects/agent evals & observability/tau2-snapshot/
+```
+
+1.0 GB total, sitting **outside** the git repo so the 576 MB cannot be committed by accident.
+
+Verification performed:
+- a large results file compared byte-for-byte against the original — identical
+- 26/26 result files present, 576 MB
+- the venv's editable install originally still pointed at `/private/tmp/...`; `_editable_impl_tau2.pth` in site-packages was rewritten to the snapshot path
+- re-verified afterwards: `tau2` imports from the snapshot, `load_tasks('retail')` returns 114 tasks, simulation files load. **No remaining dependency on `/tmp`.**
+
+Use it with `"/Users/ayesha/Projects/agent evals & observability/tau2-snapshot/.venv/bin/python"`.
+
+The original `/tmp` copy was left in place and untouched.
+
+## Net effect on section 7
+
+- *"How long are the existing τ-bench trajectories"* — **answered.** The v3.1 arm's are 2–7 events, but that arm replayed reference actions; real agent trajectories averaging 39 messages are available.
+- *"Does ControlArena ship usable pre-generated trajectories"* — **answered: no.**
+- *"Is MonitoringBench obtainable"* — still open.
+- *"Organisational agents vs coding agents"* — still open, and still a decision rather than a finding.
+- The cost-scaling concern is **unchanged** — long traces monitored several ways across two models is a different order of magnitude from the $0.30 pilots.
+
+Everything in this addendum cost $0.
