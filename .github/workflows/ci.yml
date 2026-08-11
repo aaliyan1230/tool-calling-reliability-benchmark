@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dev dependencies
+        run: uv sync --extra dev
+      - name: Run core test suite
+        # The research and torch-backed v0.2 test files import torch/peft at
+        # module level, which is not part of the dev extras; they are excluded
+        # so the documented dev-only pytest path is green in CI.
+        run: uv run pytest tests/ \
+          --ignore=tests/test_research.py \
+          --ignore=tests/test_v02_eval_runner.py \
+          --ignore=tests/test_v02_hf_agent.py
