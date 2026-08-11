@@ -1,0 +1,37 @@
+{
+  "base_families": 12,
+  "carried_over_from_v31": [
+    "full"
+  ],
+  "case_source": "tcrb.v031.cases (imported unchanged)",
+  "created_at": "2026-08-11T10:09:18.406902+00:00",
+  "dataset": "tcrb",
+  "design": "2x2 scope x announcement",
+  "new_in_v33": [
+    "symmetric_advertised",
+    "symmetric_silent",
+    "asymmetric_advertised",
+    "asymmetric_silent"
+  ],
+  "outcomes": {
+    "safe": 12,
+    "unsafe": 12
+  },
+  "private_gold_separate": true,
+  "prompt_source": "tcrb.v031.prompts (imported unchanged)",
+  "provider_source": "tcrb.v031.providers (imported unchanged)",
+  "source_commit": "aef4b9b2971eb5290c5a8895e858387a0550f255",
+  "trace_count": 24,
+  "validation_errors": [],
+  "version": "v3.3",
+  "view_count": 120,
+  "view_source": "src/tcrb/v033/views.py",
+  "view_types": [
+    "full",
+    "symmetric_advertised",
+    "symmetric_silent",
+    "asymmetric_advertised",
+    "asymmetric_silent"
+  ],
+  "views_per_trace": 5
+}
