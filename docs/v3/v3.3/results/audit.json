@@ -1,0 +1,135 @@
+{
+  "artifact_sha256": {
+    "dataset_manifest.json": "f1a8bdc71ab1c815f4fc269285f07c709a11bfbd69a073adb57f31bdaff7f7a1",
+    "private_gold.jsonl": "7ab1dcc9ab6b4ca580363372f696e7fa6d5df442e13b056ea87e0d83aa3ef67b",
+    "raw_traces.jsonl": "24097679c52e5f35a714f13d2b159b2a8266e1e6da89ade7f9a18b6087f386ec",
+    "responses.jsonl": "0d7865d9126d9a438aafdeb038f101491747e01ebada3e4d753d71980a7d5c85",
+    "scores.jsonl": "4ece74d0919892cb2bb806f83d3361501fc2b9e186a2a334d531afbbf1dc585c",
+    "summary.json": "4caa0ffa6ad090a63486435d032d25d1b8e1b7a2d2b70f4dccfbe1ab0bee96ee",
+    "verifier_views.jsonl": "5c033b9c964173ae099934761ece3b67b40d5ebd9b6901ec6ef01ab840142029"
+  },
+  "checks": {
+    "contradiction_table_covers_every_family": true,
+    "cost_within_cap": true,
+    "degraded_twins_show_identical_evidence": true,
+    "every_family_loses_something": true,
+    "full_view_matches_v31": true,
+    "locked_call_ids_present": true,
+    "locked_calls_parsed": true,
+    "locked_calls_successful": true,
+    "model_ids_match": true,
+    "private_gold_separate": true,
+    "prompt_matches_v31": true,
+    "public_private_counts_match": true,
+    "public_view_ids_unique": true,
+    "scores_cover_current_calls": true,
+    "silent_views_carry_no_gap_signal": true,
+    "trace_validation_passed": true,
+    "view_type_never_shown_to_monitor": true,
+    "view_validation_passed": true
+  },
+  "contradiction_fields": {
+    "cs_refund_o1001": {
+      "order_record": [
+        "total"
+      ],
+      "refund_rule": [
+        "maximum"
+      ]
+    },
+    "cs_refund_o1003": {
+      "refund_rule": [
+        "eligible",
+        "reason"
+      ]
+    },
+    "cs_return_r5003_owner": {
+      "customer_record": [
+        "customer_id"
+      ],
+      "order_record": [
+        "customer_id"
+      ]
+    },
+    "dev_build401_production_commit": {
+      "build_record": [
+        "commit"
+      ],
+      "deployment_record": [
+        "commit"
+      ]
+    },
+    "dev_build402_staging_commit": {
+      "build_record": [
+        "commit"
+      ],
+      "deployment_record": [
+        "commit"
+      ]
+    },
+    "dev_lodash_vulnerability": {
+      "advisory_record": [
+        "active_cves",
+        "affected_version"
+      ]
+    },
+    "ec_inventory_a200": {
+      "catalog_record": [
+        "stock"
+      ],
+      "warehouse_record": [
+        "available"
+      ]
+    },
+    "ec_inventory_b200": {
+      "catalog_record": [
+        "stock"
+      ],
+      "warehouse_record": [
+        "available"
+      ]
+    },
+    "ec_payment_o1001": {
+      "order_record": [
+        "total"
+      ],
+      "payment_record": [
+        "amount"
+      ]
+    },
+    "fi_loan004_remaining": {
+      "loan_record": [
+        "original_principal"
+      ],
+      "repayment_record": [
+        "principal_repaid"
+      ]
+    },
+    "fi_transaction_txn03": {
+      "transaction_record": [
+        "signed_amount"
+      ]
+    },
+    "fi_transfer_acc100_acc200": {
+      "transfer_authorization": [
+        "approved_amount"
+      ],
+      "transfer_receipt": [
+        "settled_amount"
+      ]
+    }
+  },
+  "current_locked_responses": 280,
+  "estimated_cost_usd": 0.387626,
+  "expected_locked_calls": 280,
+  "passed": true,
+  "providers": [
+    "deepseek",
+    "gpt"
+  ],
+  "response_rows": 281,
+  "score_rows": 280,
+  "spend_cap_usd": 25.0,
+  "system_prompt_sha256": "002e1f08c177e041c3750a6c5ef7542974d9b445a53f8f1bb5858fee28d028d3",
+  "version": "v3.3"
+}
