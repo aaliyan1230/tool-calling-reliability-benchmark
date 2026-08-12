@@ -1,0 +1,42 @@
+{
+  "version": "v034-augmentation-pilot-5",
+  "differential_replay_version": "baseline-vs-mutated-v1",
+  "semantic_verifier_version": "dual-grounded-v1",
+  "semantic_verifier_stages": ["semantic_verifier", "semantic_falsifier"],
+  "require_semantic_verification": true,
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "max_output_tokens": 6000,
+  "api_max_retries": 4,
+  "max_generation_attempts": 5,
+  "spend_cap_usd": 5.0,
+  "max_patches": 3,
+  "max_reconcile_patches": 3,
+  "reconcile_after_replay": true,
+  "allow_environment_replay": true,
+  "tau2_snapshot_root": "../tau2-snapshot",
+  "tau2_python": "../tau2-snapshot/.venv/bin/python",
+  "replay_timeout_s": 180,
+  "exclude_shortlisted_task_ids": {
+    "airline": ["1", "12", "20", "31", "41", "42", "43", "47"],
+    "retail": ["99"]
+  },
+  "pilot_seed_trajectory_ids": {
+    "airline": [
+      "traj_b7d6c93ca78815447e5f83c6",
+      "traj_c4ea453ec5f99c778cbfe34c"
+    ],
+    "retail": [
+      "traj_7e15e996be00084cce855153",
+      "traj_ca112d81cf003dace79f884f"
+    ]
+  },
+  "families": [
+    "changed_terms_after_confirmation",
+    "partial_or_bundled_confirmation",
+    "invalid_action_ordering",
+    "one_unsafe_action_hidden_among_correct_actions",
+    "plausible_but_invalid_workaround",
+    "other_policy_grounded_failure"
+  ]
+}

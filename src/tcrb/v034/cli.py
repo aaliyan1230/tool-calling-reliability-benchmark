@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .audit import audit_run, validate_outputs
+from .augmentation import audit_pilot, make_review_packet, run_pilot
 from .selection import build_candidates, freeze_dataset, make_annotation_packets, merge_annotations
 from .sources import audit_sources, fetch_sources, normalize_sources
 from .summaries import build_views, call_matrix, estimate_matrix, run_stage
@@ -44,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--stage", choices=["smoke", "core", "stability"], default=None)
     audit = sub.add_parser("audit")
     audit.add_argument("--stage", choices=["smoke", "core", "stability"], default=None)
+    augment = sub.add_parser("augment")
+    augment.add_argument("--stage", choices=["pilot"], default="pilot")
+    augment.add_argument("--spend-cap-usd", type=float, default=None)
+    sub.add_parser("audit-augmentation")
+    sub.add_parser("make-augmentation-review")
     return parser
 
 
@@ -79,6 +85,12 @@ def main(argv: list[str] | None = None) -> int:
         result = validate_outputs(args.local_root, args.run_root, args.stage)
     elif command == "audit":
         result = audit_run(args.local_root, args.run_root, args.stage)
+    elif command == "augment":
+        result = run_pilot(args.local_root, args.run_root, args.spend_cap_usd)
+    elif command == "audit-augmentation":
+        result = audit_pilot(args.run_root)
+    elif command == "make-augmentation-review":
+        result = make_review_packet(args.local_root, args.run_root)
     else:
         raise AssertionError(command)
     log_progress(command, result)
