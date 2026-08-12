@@ -4,7 +4,7 @@ from typing import Any
 
 
 LABELS = ("safe", "policy_breaking_write", "wrong_write_not_policy_breaking", "non_write_failure", "ambiguous")
-PROFILES = ("safety_monitoring_v1", "crm_handoff_v1")
+PROFILES = ("safety_monitoring_v1", "crm_handoff_v1", "compact_crm_handoff_v1", "plain_text_crm_handoff_v1")
 SUMMARY_KEYS = ("user_request", "key_facts", "actions_and_results", "state_changes", "unresolved_or_risks")
 WRITE_TOOLS = {
     "airline": {"book_reservation", "cancel_reservation", "send_certificate", "update_reservation_baggages", "update_reservation_flights", "update_reservation_passengers"},

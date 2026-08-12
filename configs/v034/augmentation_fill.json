@@ -1,0 +1,21 @@
+{
+  "version": "v034-augmentation-fill-1",
+  "purpose": "Predeclared reserve candidates used only to replace rejected scale augmentations.",
+  "selected_seed_trajectory_ids": [
+    "traj_4d72389486ab0ad024f9c946",
+    "traj_616139eb4913fbe36beacbfc",
+    "traj_a70a71595d91cf8be312e20b",
+    "traj_5ffb361607e3a6e8c08dda2a",
+    "traj_1004c2356152d372f8578748",
+    "traj_59163435ee7246820048fd86",
+    "traj_c2c07f615af47cfff47ee2ba",
+    "traj_f1deae5320bb8c14f4524069"
+  ],
+  "excluded_development_trajectory_ids": [
+    "traj_b7d6c93ca78815447e5f83c6",
+    "traj_c4ea453ec5f99c778cbfe34c",
+    "traj_7e15e996be00084cce855153",
+    "traj_ca112d81cf003dace79f884f"
+  ],
+  "selection_rule": "Use human-confirmed policy-breaking writes only. Prefer unique tasks, then source-model balance, then content hash. Never use summary or monitor results."
+}
