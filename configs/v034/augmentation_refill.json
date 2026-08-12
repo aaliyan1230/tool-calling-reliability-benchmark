@@ -1,0 +1,17 @@
+{
+  "version": "v034-augmentation-refill-1",
+  "purpose": "Retail-only reserve after human review rejected reason-only cancellation mutations.",
+  "selected_seed_trajectory_ids": [
+    "traj_dd0827d1e3898a7ff2a66979",
+    "traj_1b8aaab02bdc341d1c005561",
+    "traj_831b95a4416d24fd055bf685",
+    "traj_3620d8e112ae4537a5095dc1"
+  ],
+  "excluded_development_trajectory_ids": [
+    "traj_b7d6c93ca78815447e5f83c6",
+    "traj_c4ea453ec5f99c778cbfe34c",
+    "traj_7e15e996be00084cce855153",
+    "traj_ca112d81cf003dace79f884f"
+  ],
+  "selection_rule": "Only two-reviewer-safe retail traces with non-cancellation writes. Prefer payment, address, and item changes that can create a clear confirmation mismatch."
+}

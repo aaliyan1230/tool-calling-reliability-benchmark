@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .schema import WRITE_TOOLS
-from .seed_registry import select_scale_seeds
+from .seed_registry import load_fill_seeds, load_refill_seeds, select_scale_seeds
 from .summaries import ProviderError, extract_openai_text, post_json
 from .util import (
     CONFIG_ROOT,
@@ -166,6 +166,10 @@ def select_seed_set(local_root: Path = DEFAULT_LOCAL_ROOT, seed_set: str = "pilo
         return select_pilot_seeds(local_root)
     if seed_set == "scale":
         return select_scale_seeds(local_root)
+    if seed_set == "fill":
+        return load_fill_seeds(local_root)
+    if seed_set == "refill":
+        return load_refill_seeds(local_root)
     raise ValueError(f"unknown seed set: {seed_set}")
 
 
@@ -182,6 +186,16 @@ def seed_set_hash(seed_set: str, local_root: Path = DEFAULT_LOCAL_ROOT) -> str:
                 raise FileNotFoundError(f"run seed selection before scale augmentation: {path}")
             payload += path.read_bytes()
         return sha256_bytes(payload)
+    if seed_set == "fill":
+        path = local_root / "augmentation_fill_seeds_private.jsonl"
+        if not path.exists():
+            raise FileNotFoundError(f"run select-fill-seeds before fill augmentation: {path}")
+        return sha256_bytes((CONFIG_ROOT / "augmentation_fill.json").read_bytes() + path.read_bytes())
+    if seed_set == "refill":
+        path = local_root / "augmentation_refill_seeds_private.jsonl"
+        if not path.exists():
+            raise FileNotFoundError(f"run select-refill-seeds before refill augmentation: {path}")
+        return sha256_bytes((CONFIG_ROOT / "augmentation_refill.json").read_bytes() + path.read_bytes())
     raise ValueError(f"unknown seed set: {seed_set}")
 
 
@@ -660,6 +674,77 @@ def _tool_result_signature(event: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "error": bool(result.get("error", False)),
         "content": _semantic_result(result.get("content")),
+    }
+
+
+def redundant_tool_result_pairs(source_events: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """Find duplicate raw/linked representations of the same source tool result."""
+    by_turn: dict[Any, list[dict[str, Any]]] = {}
+    for event in source_events:
+        if event.get("role") == "tool":
+            by_turn.setdefault(event.get("turn"), []).append(event)
+    pairs: list[tuple[str, str]] = []
+    for events in by_turn.values():
+        raw = [event for event in events if event.get("content") is not None and not event.get("call_event_id")]
+        linked = [event for event in events if event.get("tool_result") is not None and event.get("call_event_id")]
+        used_linked: set[str] = set()
+        for raw_event in raw:
+            matches = [
+                event for event in linked
+                if event.get("event_id") not in used_linked
+                and _tool_result_signature(event) == _tool_result_signature(raw_event)
+            ]
+            if len(matches) == 1:
+                linked_event = matches[0]
+                pairs.append((str(raw_event["event_id"]), str(linked_event["event_id"])))
+                used_linked.add(str(linked_event["event_id"]))
+    return pairs
+
+
+def synchronize_redundant_tool_results(
+    source_events: list[dict[str, Any]],
+    replayed_events: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Mirror authoritative replay results into duplicate raw tool events.
+
+    τ-bench exports each tool result twice: once as raw observable content and
+    once as a linked structured result. Replay updates the linked copy. This
+    deterministic projection keeps the raw copy consistent without changing
+    any tool call, result meaning, event ID, or order.
+    """
+    events = copy.deepcopy(replayed_events)
+    by_id = {event.get("event_id"): event for event in events}
+    synchronized: list[str] = []
+    for raw_id, linked_id in redundant_tool_result_pairs(source_events):
+        raw = by_id.get(raw_id)
+        linked = by_id.get(linked_id)
+        if not raw or not linked:
+            continue
+        result = linked.get("tool_result")
+        if not isinstance(result, dict):
+            continue
+        content = result.get("content")
+        if raw.get("content") != content:
+            raw["content"] = content
+            synchronized.append(raw_id)
+    return events, synchronized
+
+
+def redundant_tool_result_audit(
+    source_events: list[dict[str, Any]],
+    observed_events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    by_id = {event.get("event_id"): event for event in observed_events}
+    conflicts: list[dict[str, str]] = []
+    for raw_id, linked_id in redundant_tool_result_pairs(source_events):
+        raw = by_id.get(raw_id)
+        linked = by_id.get(linked_id)
+        if not raw or not linked or _tool_result_signature(raw) != _tool_result_signature(linked):
+            conflicts.append({"raw_event_id": raw_id, "linked_event_id": linked_id})
+    return {
+        "passed": not conflicts,
+        "conflicts": conflicts,
+        "paired_result_count": len(redundant_tool_result_pairs(source_events)),
     }
 
 
@@ -1676,14 +1761,26 @@ def run_pilot(
             replay = replay_with_tau2(trajectory, augmented, plan, run_dir)
             if replay.get("passed") and replay.get("events"):
                 replayed_augmented = copy.deepcopy(augmented)
-                replayed_augmented["events"] = replay["events"]
+                synchronized_events, synchronized_ids = synchronize_redundant_tool_results(
+                    trajectory["events"], replay["events"]
+                )
+                replayed_augmented["events"] = synchronized_events
+                replay["events"] = synchronized_events
+                replay["synchronized_redundant_tool_event_ids"] = synchronized_ids
+                replay["redundant_tool_result_audit"] = redundant_tool_result_audit(
+                    trajectory["events"], synchronized_events
+                )
                 replay_validation = validate_replayed_trajectory(
                     trajectory,
                     {"events": replayed_augmented["events"], "replay": replay},
                     plan,
                 )
                 validation["replay"] = replay_validation
-                validation["passed"] = bool(validation.get("passed") and replay_validation.get("passed"))
+                validation["passed"] = bool(
+                    validation.get("passed")
+                    and replay_validation.get("passed")
+                    and replay["redundant_tool_result_audit"]["passed"]
+                )
                 augmented = replayed_augmented
                 replay["events_persisted"] = True
             else:
@@ -1980,6 +2077,8 @@ def make_review_packet(
     local_root: Path = DEFAULT_LOCAL_ROOT,
     run_root: Path = DEFAULT_RUN_ROOT,
     seed_set: str = "pilot",
+    supplement: bool = False,
+    domain: str | None = None,
 ) -> dict[str, Any]:
     """Create a blind, editable packet for human review of accepted augmentations."""
     path = run_root / f"augmentation_{seed_set}" / "pilot_results.jsonl"
@@ -1988,16 +2087,28 @@ def make_review_packet(
     for row in read_jsonl(path):
         if row.get("version") == AUGMENTATION_VERSION and row.get("config_hash") == expected_config_hash and row.get("trajectory_id"):
             latest[row["trajectory_id"]] = row
-    packet_path = run_root / f"augmentation_{seed_set}" / "augmentation_review_packet.jsonl"
-    template_path = run_root / f"augmentation_{seed_set}" / "augmentation_review_template.jsonl"
+    suffix = "_supplement" if supplement else ""
+    packet_path = run_root / f"augmentation_{seed_set}" / f"augmentation_review_packet{suffix}.jsonl"
+    template_path = run_root / f"augmentation_{seed_set}" / f"augmentation_review_template{suffix}.jsonl"
     packet_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_review_ids: set[str] = set()
+    if supplement:
+        existing_review_ids = {
+            row.get("review_id")
+            for row in read_jsonl(packet_path.parent / "augmentation_review_packet.jsonl")
+            if row.get("review_id")
+        }
     packets: list[dict[str, Any]] = []
     templates: list[dict[str, Any]] = []
     for row in sorted(latest.values(), key=lambda item: (item.get("domain", ""), item.get("trajectory_id", ""))):
         if row.get("status") != "ready_for_human_review":
             continue
+        if domain is not None and row.get("domain") != domain:
+            continue
         context = policy_context(local_root, row["domain"])
         review_id = content_id({"augmented_trajectory_id": row["augmented_trajectory_id"]}, "augreview_")
+        if review_id in existing_review_ids:
+            continue
         packets.append({
             "review_id": review_id,
             "domain": row["domain"],
@@ -2018,14 +2129,14 @@ def make_review_packet(
         })
     write_jsonl(packet_path, packets)
     write_jsonl(template_path, templates)
-    instructions_path = packet_path.parent / "AUGMENTATION_HUMAN_REVIEW.md"
+    instructions_path = packet_path.parent / ("AUGMENTATION_HUMAN_REVIEW_SUPPLEMENT.md" if supplement else "AUGMENTATION_HUMAN_REVIEW.md")
     instructions_path.write_text(
-        """# Augmentation pilot human review
+        f"""# Augmentation pilot human review{' supplement' if supplement else ''}
 
 Files:
 
-- `augmentation_review_packet.jsonl`: one blinded review item per line.
-- `augmentation_review_template.jsonl`: fill one matching line per item.
+- `{packet_path.name}`: one blinded review item per line.
+- `{template_path.name}`: fill one matching line per item.
 
 For each item, compare `original_trace` with `augmented_trace` using the supplied policy.
 
@@ -2048,5 +2159,6 @@ Record exact event IDs for the violating write and supporting evidence. Keep the
         "instructions_path": str(instructions_path),
         "passed": len(packets) > 0,
     }
-    write_json(run_root / f"augmentation_{seed_set}" / "review_manifest.json", result)
+    manifest_name = "review_manifest_supplement.json" if supplement else "review_manifest.json"
+    write_json(run_root / f"augmentation_{seed_set}" / manifest_name, result)
     return result

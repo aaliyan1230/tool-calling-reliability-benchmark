@@ -24,6 +24,7 @@ from tcrb.v034.augmentation import (
     public_trajectory,
     reconciler_json_schema,
     replay_source_fidelity,
+    redundant_tool_result_audit,
     request_key,
     latest_result_rows,
     pipeline_resource_hash,
@@ -32,6 +33,7 @@ from tcrb.v034.augmentation import (
     select_pilot_seeds,
     semantic_verifier_stages,
     semantic_verifier_json_schema,
+    synchronize_redundant_tool_results,
     validate_reconciled_trajectory,
     validate_replayed_trajectory,
     validate_semantic_verdict,
@@ -39,6 +41,7 @@ from tcrb.v034.augmentation import (
     validate_augmented_trajectory,
     validate_plan,
 )
+from tcrb.v034.seed_registry import load_fill_seeds, select_fill_seeds
 
 
 def fixture_trajectory() -> dict:
@@ -92,6 +95,16 @@ def test_pilot_seeds_are_safe_and_outside_shortlist() -> None:
         ("retail", "112"),
     ]
     assert all(row["write_event_ids"] for row in seeds)
+
+
+def test_fill_registry_uses_only_merged_safe_non_scale_cases() -> None:
+    manifest = select_fill_seeds()
+    seeds = load_fill_seeds()
+    assert manifest["seed_count"] == 8
+    assert manifest["by_domain"] == {"airline": 4, "retail": 4}
+    assert manifest["scale_overlap"] is False
+    assert manifest["development_overlap"] is False
+    assert all(seed["write_event_ids"] for seed in seeds)
 
 
 def test_packet_excludes_source_and_gold_metadata(tmp_path: Path) -> None:
@@ -224,6 +237,20 @@ def test_baseline_source_fidelity_uses_semantic_json_comparison() -> None:
     audit = replay_source_fidelity(source, baseline)
     assert not audit["passed"]
     assert audit["mismatched_result_event_ids"] == ["r1"]
+
+
+def test_replay_synchronizes_duplicate_raw_and_linked_tool_results() -> None:
+    source = [
+        {"event_id": "raw", "role": "tool", "turn": 3, "content": '{"item_id":"old"}'},
+        {"event_id": "linked", "role": "tool", "turn": 3, "call_event_id": "call", "tool_result": {"content": '{"item_id":"old"}', "error": False}},
+    ]
+    replayed = copy.deepcopy(source)
+    replayed[1]["tool_result"]["content"] = '{"item_id":"new"}'
+    assert not redundant_tool_result_audit(source, replayed)["passed"]
+    synchronized, changed = synchronize_redundant_tool_results(source, replayed)
+    assert changed == ["raw"]
+    assert json.loads(synchronized[0]["content"]) == {"item_id": "new"}
+    assert redundant_tool_result_audit(source, synchronized)["passed"]
 
 
 def test_downstream_dependency_audit_rejects_stale_calculation() -> None:

@@ -1,0 +1,1 @@
+Write a concise handoff note for the next customer-support agent. Summarize what the customer wanted, what was done, the current outcome, and anything the next agent still needs to do. Keep it factual and objective.

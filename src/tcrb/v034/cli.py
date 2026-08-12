@@ -8,7 +8,8 @@ from pathlib import Path
 from .audit import audit_run, validate_outputs
 from .airline_expansion import prepare_airline_seed_expansion, self_review_airline_seeds, select_airline_seeds
 from .augmentation import audit_pilot, make_review_packet, run_pilot
-from .seed_registry import select_retail_seeds
+from .augmentation_freeze import audit_augmented_dataset, freeze_augmented_dataset
+from .seed_registry import select_fill_seeds, select_refill_seeds, select_retail_seeds
 from .selection import build_candidates, freeze_dataset, make_annotation_packets, merge_annotations
 from .sources import audit_sources, fetch_sources, normalize_sources
 from .summaries import build_views, call_matrix, estimate_matrix, run_stage
@@ -38,11 +39,15 @@ def build_parser() -> argparse.ArgumentParser:
     matrix = sub.add_parser("matrix")
     matrix.add_argument("--stage", choices=["smoke", "core", "stability"], required=True)
     matrix.add_argument("--providers", default="deepseek,gpt")
+    matrix.add_argument("--profiles", default="safety_monitoring_v1,crm_handoff_v1,compact_crm_handoff_v1,plain_text_crm_handoff_v1")
+    matrix.add_argument("--dataset", choices=["natural", "augmented"], default="natural")
     summarize = sub.add_parser("summarize")
     summarize.add_argument("--stage", choices=["smoke", "core", "stability"], required=True)
     summarize.add_argument("--providers", default="deepseek,gpt")
+    summarize.add_argument("--profiles", default="safety_monitoring_v1,crm_handoff_v1,compact_crm_handoff_v1,plain_text_crm_handoff_v1")
     summarize.add_argument("--spend-cap-usd", type=float, default=25.0)
     summarize.add_argument("--build-views", action="store_true")
+    summarize.add_argument("--dataset", choices=["natural", "augmented"], default="natural")
     validate = sub.add_parser("validate")
     validate.add_argument("--stage", choices=["smoke", "core", "stability"], default=None)
     audit = sub.add_parser("audit")
@@ -50,12 +55,19 @@ def build_parser() -> argparse.ArgumentParser:
     augment = sub.add_parser("augment")
     augment.add_argument("--stage", choices=["pilot"], default="pilot")
     augment.add_argument("--spend-cap-usd", type=float, default=None)
-    augment.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    augment.add_argument("--seed-set", choices=["pilot", "scale", "fill", "refill"], default="pilot")
     audit_aug = sub.add_parser("audit-augmentation")
-    audit_aug.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    audit_aug.add_argument("--seed-set", choices=["pilot", "scale", "fill", "refill"], default="pilot")
     review_aug = sub.add_parser("make-augmentation-review")
-    review_aug.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    review_aug.add_argument("--seed-set", choices=["pilot", "scale", "fill", "refill"], default="pilot")
+    review_aug.add_argument("--supplement", action="store_true")
+    review_aug.add_argument("--domain", choices=["airline", "retail"], default=None)
     sub.add_parser("select-retail-seeds")
+    sub.add_parser("select-fill-seeds")
+    sub.add_parser("select-refill-seeds")
+    freeze_aug = sub.add_parser("freeze-augmented-dataset")
+    freeze_aug.add_argument("--pairs-per-domain", type=int, default=15)
+    sub.add_parser("audit-augmented-dataset")
     sub.add_parser("expand-airline-seeds")
     sub.add_parser("review-airline-seeds")
     sub.add_parser("select-airline-seeds")
@@ -83,13 +95,16 @@ def main(argv: list[str] | None = None) -> int:
         result = freeze_dataset(args.local_root, args.pairs_per_domain)
     elif command == "matrix":
         providers = tuple(x.strip() for x in args.providers.split(",") if x.strip())
-        specs = call_matrix(args.local_root, args.run_root, args.stage, providers)
+        profiles = tuple(x.strip() for x in args.profiles.split(",") if x.strip())
+        specs = call_matrix(args.local_root, args.run_root, args.stage, providers, args.dataset, profiles)
         result = {"stage": args.stage, **estimate_matrix(args.local_root, specs)}
+        result["dataset"] = args.dataset
     elif command == "summarize":
         providers = tuple(x.strip() for x in args.providers.split(",") if x.strip())
-        result = run_stage(args.local_root, args.run_root, args.stage, providers, args.spend_cap_usd)
+        profiles = tuple(x.strip() for x in args.profiles.split(",") if x.strip())
+        result = run_stage(args.local_root, args.run_root, args.stage, providers, args.spend_cap_usd, dataset=args.dataset, profiles=profiles)
         if args.build_views:
-            result["views"] = build_views(args.local_root, args.run_root, args.stage)
+            result["views"] = build_views(args.local_root, args.run_root, args.stage, args.dataset, providers, profiles)
     elif command == "validate":
         result = validate_outputs(args.local_root, args.run_root, args.stage)
     elif command == "audit":
@@ -99,9 +114,17 @@ def main(argv: list[str] | None = None) -> int:
     elif command == "audit-augmentation":
         result = audit_pilot(args.run_root, args.seed_set, args.local_root)
     elif command == "make-augmentation-review":
-        result = make_review_packet(args.local_root, args.run_root, args.seed_set)
+        result = make_review_packet(args.local_root, args.run_root, args.seed_set, args.supplement, args.domain)
     elif command == "select-retail-seeds":
         result = select_retail_seeds(args.local_root)
+    elif command == "select-fill-seeds":
+        result = select_fill_seeds(args.local_root)
+    elif command == "select-refill-seeds":
+        result = select_refill_seeds(args.local_root)
+    elif command == "freeze-augmented-dataset":
+        result = freeze_augmented_dataset(args.local_root, args.run_root, args.pairs_per_domain)
+    elif command == "audit-augmented-dataset":
+        result = audit_augmented_dataset(args.local_root)
     elif command == "expand-airline-seeds":
         result = prepare_airline_seed_expansion(args.local_root)
     elif command == "review-airline-seeds":
