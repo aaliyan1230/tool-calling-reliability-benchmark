@@ -22,4 +22,7 @@ valid IDs from `LATER_ASSISTANT_CLAIM_UNITS`; never invent an ID. The replay del
 reconciler's intent is not evidence. Return `consistent` overall only if you
 cannot find any relevant contradiction, uncertainty, or unsupported claim.
 
+Important JSON detail: `evidence` must be an array of objects, never bare
+strings. Use `[{"claim_id":"evt_...#L10"}]`, not `["evt_...#L10"]`.
+
 Return only the requested JSON object.

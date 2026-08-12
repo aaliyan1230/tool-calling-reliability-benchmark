@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,6 +10,14 @@ from .audit import audit_run, validate_outputs
 from .airline_expansion import prepare_airline_seed_expansion, self_review_airline_seeds, select_airline_seeds
 from .augmentation import audit_pilot, make_review_packet, run_pilot
 from .augmentation_freeze import audit_augmented_dataset, freeze_augmented_dataset
+from .hard import (
+    audit_hard_dataset,
+    audit_hard_run,
+    freeze_hard_dataset,
+    hard_config_context,
+    make_hard_review_packet,
+    select_hard_seeds,
+)
 from .seed_registry import select_fill_seeds, select_refill_seeds, select_retail_seeds
 from .selection import build_candidates, freeze_dataset, make_annotation_packets, merge_annotations
 from .sources import audit_sources, fetch_sources, normalize_sources
@@ -71,6 +80,28 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("expand-airline-seeds")
     sub.add_parser("review-airline-seeds")
     sub.add_parser("select-airline-seeds")
+    sub.add_parser("hard-preflight")
+    sub.add_parser("audit-hard-source-pool")
+    hard_seeds = sub.add_parser("select-hard-seeds")
+    hard_seeds.add_argument("--stage", choices=["smoke", "core", "reserve"], default="core")
+    hard_aug = sub.add_parser("augment-hard")
+    hard_aug.add_argument("--stage", choices=["smoke", "core", "reserve"], required=True)
+    hard_aug.add_argument("--spend-cap-usd", type=float, default=None)
+    hard_audit = sub.add_parser("audit-hard")
+    hard_audit.add_argument("--stage", choices=["smoke", "core", "reserve"], default=None)
+    hard_review = sub.add_parser("make-hard-review")
+    hard_review.add_argument("--stage", choices=["smoke", "core", "reserve"], required=True)
+    seed_review = sub.add_parser("make-hard-seed-review")
+    seed_review.add_argument("--limit-per-domain", type=int, default=40)
+    seed_review.add_argument("--supplement", action="store_true")
+    seed_review.add_argument("--domain", choices=["airline", "retail"], default="airline")
+    merge_seed_review = sub.add_parser("merge-hard-seed-review")
+    merge_seed_review.add_argument("--supplement", action="store_true")
+    sub.add_parser("propose-hard-seed-mapping")
+    register_seeds = sub.add_parser("register-hard-seeds")
+    register_seeds.add_argument("--mapping", type=Path, required=True)
+    sub.add_parser("freeze-hard")
+    sub.add_parser("audit-hard-dataset")
     return parser
 
 
@@ -131,6 +162,60 @@ def main(argv: list[str] | None = None) -> int:
         result = self_review_airline_seeds(args.local_root)
     elif command == "select-airline-seeds":
         result = select_airline_seeds(args.local_root)
+    elif command == "hard-preflight":
+        stage_results = {}
+        with hard_config_context():
+            for stage in ("smoke", "core", "reserve"):
+                try:
+                    rows = select_hard_seeds(args.local_root, stage, args.run_root)
+                    stage_results[stage] = {
+                        "passed": True,
+                        "rows": len(rows),
+                        "by_domain": dict(Counter(row["domain"] for row in rows)),
+                    }
+                except ValueError as exc:
+                    stage_results[stage] = {"passed": False, "errors": str(exc).splitlines()[1:]}
+        result = {"version": "tcrb-hard-1", "stages": stage_results, "passed": all(item["passed"] for item in stage_results.values())}
+    elif command == "audit-hard-source-pool":
+        from .hard import audit_hard_source_pool
+
+        result = audit_hard_source_pool(args.local_root, args.run_root)
+    elif command == "select-hard-seeds":
+        with hard_config_context():
+            rows = select_hard_seeds(args.local_root, args.stage, args.run_root)
+        result = {"version": "tcrb-hard-1", "stage": args.stage, "rows": len(rows), "case_ids": [row["case_id"] for row in rows], "passed": True}
+    elif command == "augment-hard":
+        with hard_config_context():
+            result = run_pilot(args.local_root, args.run_root, args.spend_cap_usd, seed_set=f"hard_{args.stage}")
+    elif command == "audit-hard":
+        stages = [args.stage] if args.stage else ["smoke", "core", "reserve"]
+        results = [audit_hard_run(args.local_root, args.run_root, stage) for stage in stages]
+        result = {"version": "tcrb-hard-1", "stages": results, "passed": all(item["passed"] for item in results)}
+    elif command == "make-hard-review":
+        result = make_hard_review_packet(args.local_root, args.run_root, args.stage)
+    elif command == "make-hard-seed-review":
+        from .hard import make_hard_seed_review_packet, make_hard_seed_review_supplement
+
+        if args.supplement:
+            result = make_hard_seed_review_supplement(args.local_root, args.run_root, args.limit_per_domain, args.domain)
+        else:
+            result = make_hard_seed_review_packet(args.local_root, args.run_root, args.limit_per_domain)
+    elif command == "merge-hard-seed-review":
+        from .hard import merge_hard_seed_review
+
+        result = merge_hard_seed_review(args.local_root, args.run_root, args.supplement)
+    elif command == "propose-hard-seed-mapping":
+        from .hard import propose_hard_seed_mapping
+
+        result = propose_hard_seed_mapping(args.local_root, args.run_root)
+    elif command == "register-hard-seeds":
+        from .hard import register_hard_seed_mapping
+
+        result = register_hard_seed_mapping(args.local_root, args.run_root, args.mapping)
+    elif command == "freeze-hard":
+        result = freeze_hard_dataset(args.local_root, args.run_root)
+    elif command == "audit-hard-dataset":
+        result = audit_hard_dataset(args.local_root)
     else:
         raise AssertionError(command)
     log_progress(command, result)
