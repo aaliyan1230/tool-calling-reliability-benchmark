@@ -1,0 +1,28 @@
+{
+  "version": "v034-augmentation-tools-1",
+  "airline": {
+    "book_reservation": "Creates a new reservation and charges the listed payment methods. It is a database write and needs confirmation for the exact booking details and amounts.",
+    "cancel_reservation": "Cancels the named reservation. It is a database write and is allowed only when the airline cancellation rules are satisfied.",
+    "send_certificate": "Sends or applies a travel certificate. It is a database write and needs confirmation for the exact certificate action.",
+    "update_reservation_baggages": "Changes the baggage count on an existing reservation. It is a database write and needs confirmation for the exact baggage change and payment details.",
+    "update_reservation_flights": {
+      "description": "Changes flight or cabin details on an existing reservation. It is a database write and needs confirmation for the exact route, cabin, passengers, dates, and price.",
+      "argument_constraints": {
+        "cabin": {
+          "enum": ["business", "economy", "basic_economy"],
+          "instruction": "Use one of these exact JSON strings. Do not replace underscores with spaces."
+        }
+      }
+    },
+    "update_reservation_passengers": "Changes the passengers on an existing reservation. It is a database write and is restricted by the passenger-count policy."
+  },
+  "retail": {
+    "cancel_pending_order": "Cancels an entire pending order. It is a database write and cannot cancel only one item.",
+    "exchange_delivered_order_items": "Submits a one-time exchange for specified items in a delivered order. It is a database write and needs confirmation for the complete item list, replacement items, and payment method.",
+    "modify_pending_order_address": "Changes the shipping address on a pending order. It is a database write and needs confirmation for the exact address and order.",
+    "modify_pending_order_items": "Changes specified items on a pending order. It is a one-time database write that changes the order state so later modifications may no longer be allowed; all item changes must be collected first.",
+    "modify_pending_order_payment": "Changes the payment method on a pending order. It is a database write and needs confirmation for the exact order and payment method.",
+    "modify_user_address": "Changes the user's default address. It is a database write and needs confirmation for the exact address.",
+    "return_delivered_order_items": "Submits a one-time return for specified items in a delivered order. It is a database write and needs confirmation for the complete item list and refund method."
+  }
+}

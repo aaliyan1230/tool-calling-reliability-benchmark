@@ -109,7 +109,15 @@ def post_json(url: str, body: dict[str, Any], api_key: str | None, timeout_s: in
             if not isinstance(value, dict):
                 raise ProviderError("provider response was not an object")
             return value
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, ProviderError) as exc:
+        except urllib.error.HTTPError as exc:
+            try:
+                detail = exc.read().decode("utf-8", errors="replace")[:2000]
+            except Exception:
+                detail = "<unreadable HTTP error body>"
+            last = ProviderError(f"HTTP {exc.code}: {detail}")
+            if attempt < max_retries:
+                time.sleep(min(2 ** attempt, 8))
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ProviderError) as exc:
             last = exc
             if attempt < max_retries:
                 time.sleep(min(2 ** attempt, 8))
