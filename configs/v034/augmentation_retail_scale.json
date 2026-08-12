@@ -1,0 +1,11 @@
+{
+  "version": "v034-retail-scale-seeds-1",
+  "registry_path": "local/v034/augmentation_retail_seeds_private.jsonl",
+  "seed_count": 15,
+  "domain": "retail",
+  "unique_task_count": 15,
+  "development_seeds_excluded": [
+    "traj_7e15e996be00084cce855153",
+    "traj_ca112d81cf003dace79f884f"
+  ]
+}

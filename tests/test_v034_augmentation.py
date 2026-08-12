@@ -11,6 +11,8 @@ from tcrb.v034.augmentation import (
     apply_patches,
     apply_reconciliation_patches,
     assistant_claim_units_after_target,
+    augmentation_config_hash,
+    AUGMENTATION_VERSION,
     build_packet,
     call_luna,
     differential_replay_delta,
@@ -23,6 +25,9 @@ from tcrb.v034.augmentation import (
     reconciler_json_schema,
     replay_source_fidelity,
     request_key,
+    latest_result_rows,
+    pipeline_resource_hash,
+    result_cache_eligible,
     run_pilot,
     select_pilot_seeds,
     semantic_verifier_stages,
@@ -487,6 +492,98 @@ def test_run_pilot_automatically_retries_rejected_generation(tmp_path: Path, mon
     retry_packets = [packet for packet in seen_packets if packet.get("generation_attempt") == 1]
     assert retry_packets
     assert retry_packets[0]["prior_rejection"]["previous_status"] == "planner_invalid"
+
+
+def test_latest_results_filter_config_and_keep_last_attempt(tmp_path: Path) -> None:
+    path = tmp_path / "results.jsonl"
+    rows = [
+        {"version": AUGMENTATION_VERSION, "config_hash": "old", "trajectory_id": "t1", "status": "ready_for_human_review"},
+        {"version": AUGMENTATION_VERSION, "config_hash": "current", "trajectory_id": "t1", "status": "planner_invalid"},
+        {"version": AUGMENTATION_VERSION, "config_hash": "current", "trajectory_id": "t1", "status": "ready_for_human_review"},
+        {"version": "old-version", "config_hash": "current", "trajectory_id": "t2", "status": "ready_for_human_review"},
+    ]
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    latest = latest_result_rows(path, "current")
+    assert set(latest) == {"t1"}
+    assert latest["t1"]["status"] == "ready_for_human_review"
+
+
+def test_accepted_cache_survives_retry_code_change_but_not_resource_change() -> None:
+    row = {
+        "version": AUGMENTATION_VERSION,
+        "pipeline_resource_hash": pipeline_resource_hash(),
+        "pipeline_code_hash": "previous-runner-hash",
+        "status": "ready_for_human_review",
+        "validation": {"passed": True, "requires_environment_replay": False},
+    }
+    assert result_cache_eligible(row, pipeline_resource_hash(), {"reconcile_after_replay": True, "require_semantic_verification": True})
+    assert not result_cache_eligible(row, "changed-resource", {"reconcile_after_replay": True, "require_semantic_verification": True})
+
+
+def test_resume_calls_only_rejected_traces(tmp_path: Path, monkeypatch) -> None:
+    accepted = fixture_trajectory()
+    rejected = copy.deepcopy(accepted)
+    rejected["trajectory_id"] = "traj_rejected"
+    seeds = [
+        {"domain": "airline", "trajectory": accepted, "write_event_ids": ["c1"]},
+        {"domain": "airline", "trajectory": rejected, "write_event_ids": ["c1"]},
+    ]
+    monkeypatch.setattr(augmentation_module, "select_pilot_seeds", lambda local_root: seeds)
+    monkeypatch.setattr(augmentation_module, "build_packet", lambda local_root, value: fixture_packet(value))
+    run_dir = tmp_path / "outputs" / "augmentation_pilot"
+    run_dir.mkdir(parents=True)
+    config_hash = augmentation_config_hash()
+    resource_hash = pipeline_resource_hash()
+    accepted_row = {
+        "version": AUGMENTATION_VERSION,
+        "pipeline_code_hash": "previous-runner-hash",
+        "pipeline_resource_hash": resource_hash,
+        "config_hash": config_hash,
+        "trajectory_id": accepted["trajectory_id"],
+        "domain": "airline",
+        "status": "ready_for_human_review",
+        "validation": {"passed": True, "requires_environment_replay": False},
+    }
+    rejected_row = {
+        "version": AUGMENTATION_VERSION,
+        "pipeline_code_hash": "previous-runner-hash",
+        "pipeline_resource_hash": resource_hash,
+        "config_hash": config_hash,
+        "trajectory_id": rejected["trajectory_id"],
+        "domain": "airline",
+        "generation_attempt": 0,
+        "status": "planner_invalid",
+        "planner": {},
+        "validation": {"passed": False, "errors": ["bad prior plan"]},
+    }
+    (run_dir / "pilot_results.jsonl").write_text(
+        json.dumps(accepted_row) + "\n" + json.dumps(rejected_row) + "\n"
+    )
+    seen: list[str] = []
+
+    def fake_call(stage: str, packet: dict, plan: dict | None = None) -> dict:
+        seen.append(f"{packet['trajectory']['trajectory_id']}:{stage}")
+        if stage == "planner":
+            output = valid_plan()
+        elif stage == "editor":
+            output = {
+                "decision": "apply",
+                "patches": [{
+                    "operation": "replace_content", "event_id": "a1", "new_content": "Please confirm the booking.",
+                    "new_arguments_json": None, "event_ids": [], "new_order": [], "reason": "test",
+                }],
+                "requires_environment_replay": False,
+                "changed_event_ids": ["a1"],
+                "violation_explanation": "The amount is omitted.",
+            }
+        else:
+            raise AssertionError(stage)
+        return {"output_text": json.dumps(output), "estimated_cost_usd": 0.0}
+
+    result = run_pilot(tmp_path / "local", tmp_path / "outputs", call_fn=fake_call)
+    assert result["passed"], result
+    assert seen == ["traj_rejected:planner", "traj_rejected:editor"]
+    assert result["counters"]["result_cache_hits"] == 1
 
 
 def test_replay_validation_requires_successful_state_change_and_preserves_links() -> None:

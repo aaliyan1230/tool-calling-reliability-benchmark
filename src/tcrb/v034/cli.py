@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .audit import audit_run, validate_outputs
+from .airline_expansion import prepare_airline_seed_expansion, self_review_airline_seeds, select_airline_seeds
 from .augmentation import audit_pilot, make_review_packet, run_pilot
+from .seed_registry import select_retail_seeds
 from .selection import build_candidates, freeze_dataset, make_annotation_packets, merge_annotations
 from .sources import audit_sources, fetch_sources, normalize_sources
 from .summaries import build_views, call_matrix, estimate_matrix, run_stage
@@ -48,8 +50,15 @@ def build_parser() -> argparse.ArgumentParser:
     augment = sub.add_parser("augment")
     augment.add_argument("--stage", choices=["pilot"], default="pilot")
     augment.add_argument("--spend-cap-usd", type=float, default=None)
-    sub.add_parser("audit-augmentation")
-    sub.add_parser("make-augmentation-review")
+    augment.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    audit_aug = sub.add_parser("audit-augmentation")
+    audit_aug.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    review_aug = sub.add_parser("make-augmentation-review")
+    review_aug.add_argument("--seed-set", choices=["pilot", "scale"], default="pilot")
+    sub.add_parser("select-retail-seeds")
+    sub.add_parser("expand-airline-seeds")
+    sub.add_parser("review-airline-seeds")
+    sub.add_parser("select-airline-seeds")
     return parser
 
 
@@ -86,11 +95,19 @@ def main(argv: list[str] | None = None) -> int:
     elif command == "audit":
         result = audit_run(args.local_root, args.run_root, args.stage)
     elif command == "augment":
-        result = run_pilot(args.local_root, args.run_root, args.spend_cap_usd)
+        result = run_pilot(args.local_root, args.run_root, args.spend_cap_usd, seed_set=args.seed_set)
     elif command == "audit-augmentation":
-        result = audit_pilot(args.run_root)
+        result = audit_pilot(args.run_root, args.seed_set, args.local_root)
     elif command == "make-augmentation-review":
-        result = make_review_packet(args.local_root, args.run_root)
+        result = make_review_packet(args.local_root, args.run_root, args.seed_set)
+    elif command == "select-retail-seeds":
+        result = select_retail_seeds(args.local_root)
+    elif command == "expand-airline-seeds":
+        result = prepare_airline_seed_expansion(args.local_root)
+    elif command == "review-airline-seeds":
+        result = self_review_airline_seeds(args.local_root)
+    elif command == "select-airline-seeds":
+        result = select_airline_seeds(args.local_root)
     else:
         raise AssertionError(command)
     log_progress(command, result)
