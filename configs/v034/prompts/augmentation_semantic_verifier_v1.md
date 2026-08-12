@@ -22,4 +22,7 @@ correctness from the reconciler's intent or explanation. Return
 `consistent` overall only when every delta is consistent or genuinely not
 mentioned and no relevant unsupported claim remains.
 
+Important JSON detail: `evidence` must be an array of objects, never bare
+strings. Use `[{"claim_id":"evt_...#L10"}]`, not `["evt_...#L10"]`.
+
 Return only the requested JSON object.
