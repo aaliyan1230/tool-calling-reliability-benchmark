@@ -1,0 +1,29 @@
+{
+  "version": "v034-airline-scale-seeds-1",
+  "registry_path": "local/v034/augmentation_airline_seeds_private.jsonl",
+  "seed_count": 15,
+  "domain": "airline",
+  "unique_task_count": 15,
+  "trajectory_ids": [
+    "traj_b57277c3a7120e470c629579",
+    "traj_1484d5c3e843da1d4f952d55",
+    "traj_fe56bb5d338ffcf97d0085af",
+    "traj_e970c1e0e31ca2fbc79aa60c",
+    "traj_66f275dbe3237fad88be03f6",
+    "traj_a4173d7b3dec9d7a2bf2d8a7",
+    "traj_7b484239b6835c99f7870fbe",
+    "traj_67db81e7fe92545ee8d3bc44",
+    "traj_25d6578456c7fcaa68fcf7bd",
+    "traj_f0b972c31ceac12bfecd956f",
+    "traj_258d60ddfb521ec6ee7b5605",
+    "traj_ab87c5689133c0cf7e121780",
+    "traj_0fd8cefe798065ce7959494d",
+    "traj_765a14ca8b1d61068b9ea850",
+    "traj_c58a8f7d77489a292d61d292"
+  ],
+  "development_seeds_excluded": [
+    "traj_b7d6c93ca78815447e5f83c6",
+    "traj_c4ea453ec5f99c778cbfe34c"
+  ],
+  "review_note": "Eight seeds have two-reviewer merged safe labels; seven are codex_self labels authorized for pilot preparation. Re-review the seven before publication."
+}

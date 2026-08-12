@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .schema import WRITE_TOOLS
+from .seed_registry import select_scale_seeds
 from .summaries import ProviderError, extract_openai_text, post_json
 from .util import (
     CONFIG_ROOT,
@@ -158,6 +159,30 @@ def select_pilot_seeds(local_root: Path = DEFAULT_LOCAL_ROOT) -> list[dict[str, 
                 raise ValueError(f"pilot seed {trajectory_id} has no state-changing write")
             selected.append({"domain": domain, "trajectory": trajectory, "write_event_ids": writes})
     return selected
+
+
+def select_seed_set(local_root: Path = DEFAULT_LOCAL_ROOT, seed_set: str = "pilot") -> list[dict[str, Any]]:
+    if seed_set == "pilot":
+        return select_pilot_seeds(local_root)
+    if seed_set == "scale":
+        return select_scale_seeds(local_root)
+    raise ValueError(f"unknown seed set: {seed_set}")
+
+
+def seed_set_hash(seed_set: str, local_root: Path = DEFAULT_LOCAL_ROOT) -> str:
+    if seed_set == "pilot":
+        return augmentation_config_hash()
+    if seed_set == "scale":
+        payload = b""
+        for name in ("augmentation_airline_scale.json", "augmentation_retail_scale.json"):
+            payload += (CONFIG_ROOT / name).read_bytes()
+        for name in ("augmentation_airline_seeds_private.jsonl", "augmentation_retail_seeds_private.jsonl"):
+            path = local_root / name
+            if not path.exists():
+                raise FileNotFoundError(f"run seed selection before scale augmentation: {path}")
+            payload += path.read_bytes()
+        return sha256_bytes(payload)
+    raise ValueError(f"unknown seed set: {seed_set}")
 
 
 def public_trajectory(trajectory: dict[str, Any]) -> dict[str, Any]:
@@ -1435,72 +1460,120 @@ def prior_rejection_context(prior: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def latest_result_rows(result_path: Path, config_hash: str) -> dict[str, dict[str, Any]]:
+    """Return the newest result for each trace in this exact seed/config run.
+
+    The result ledger is append-only.  Older config hashes and earlier attempts
+    must not win simply because they appear in the file.  Keeping this filter in
+    one helper makes resume behavior deterministic for both the runner and tests.
+    """
+    latest: dict[str, dict[str, Any]] = {}
+    for row in read_jsonl(result_path):
+        trajectory_id = row.get("trajectory_id")
+        if (
+            row.get("version") == AUGMENTATION_VERSION
+            and row.get("config_hash") == config_hash
+            and trajectory_id
+        ):
+            latest[str(trajectory_id)] = row
+    return latest
+
+
+def result_cache_eligible(
+    prior: dict[str, Any] | None,
+    resource_hash: str,
+    config: dict[str, Any],
+) -> bool:
+    """Whether an accepted artifact can be reused without new model calls.
+
+    The augmentation version, seed/config hash, and prompt/resource hash are
+    the semantic compatibility keys.  The full code hash is provenance only:
+    retry/resume plumbing may change without making a completed artifact stale.
+    A semantic pipeline change must bump ``AUGMENTATION_VERSION``.
+    """
+    if not prior or prior.get("version") != AUGMENTATION_VERSION:
+        return False
+    if prior.get("pipeline_resource_hash") != resource_hash:
+        return False
+    if prior.get("status") != "ready_for_human_review":
+        return False
+    validation = prior.get("validation") or {}
+    if validation.get("passed") is not True:
+        return False
+    if validation.get("requires_environment_replay"):
+        replay = prior.get("replay") or {}
+        if not (
+            replay.get("events_persisted")
+            and "target_state_hash_before" in replay
+            and (replay.get("differential_replay") or {}).get("passed") is True
+            and (
+                not config.get("reconcile_after_replay", True)
+                or (prior.get("reconciliation") or {}).get("events_persisted")
+            )
+            and (
+                not config.get("require_semantic_verification", True)
+                or (prior.get("semantic_verification") or {}).get("passed") is True
+            )
+        ):
+            return False
+    return True
+
+
 def run_pilot(
     local_root: Path = DEFAULT_LOCAL_ROOT,
     run_root: Path = DEFAULT_RUN_ROOT,
     spend_cap_usd: float | None = None,
     call_fn: Any = call_luna,
     _auto_retry_depth: int = 0,
+    seed_set: str = "pilot",
 ) -> dict[str, Any]:
     config = load_augmentation_config()
     code_hash = pipeline_code_hash()
     resource_hash = pipeline_resource_hash()
-    config_hash = augmentation_config_hash()
+    config_hash = seed_set_hash(seed_set, local_root)
     if config.get("require_semantic_verification", True):
         semantic_verifier_stages(config)
     cap = float(spend_cap_usd if spend_cap_usd is not None else config["spend_cap_usd"])
-    run_dir = run_root / "augmentation_pilot"
+    run_dir = run_root / f"augmentation_{seed_set}"
     run_dir.mkdir(parents=True, exist_ok=True)
     response_path = run_dir / "llm_responses.jsonl"
     result_path = run_dir / "pilot_results.jsonl"
     existing = {row.get("request_key"): row for row in read_jsonl(response_path) if row.get("request_key")}
-    prior_results = {row.get("trajectory_id"): row for row in read_jsonl(result_path) if row.get("trajectory_id")}
-    seeds = select_pilot_seeds(local_root)
+    seeds = select_seed_set(local_root, seed_set)
+    prior_results = latest_result_rows(result_path, config_hash)
     total_spend = sum(float(row.get("estimated_cost_usd", 0) or 0) for row in existing.values() if row.get("status") == "success")
+    latest_records: dict[str, dict[str, Any]] = {
+        trajectory_id: row
+        for trajectory_id, row in prior_results.items()
+        if any(seed["trajectory"]["trajectory_id"] == trajectory_id for seed in seeds)
+    }
     records: list[dict[str, Any]] = []
     counters: Counter[str] = Counter()
     for seed in seeds:
         trajectory = seed["trajectory"]
         prior = prior_results.get(trajectory["trajectory_id"])
-        same_pipeline = bool(
+        same_run = bool(
             prior
             and prior.get("version") == AUGMENTATION_VERSION
-            and prior.get("pipeline_code_hash") == code_hash
             and prior.get("pipeline_resource_hash") == resource_hash
             and prior.get("config_hash") == config_hash
         )
         generation_attempt = 0
-        if same_pipeline and prior.get("status") != "ready_for_human_review":
+        if same_run and prior.get("status") != "ready_for_human_review":
             generation_attempt = int(prior.get("generation_attempt", 0)) + 1
             if generation_attempt >= int(config.get("max_generation_attempts", 3)):
                 records.append(prior)
                 counters["generation_attempts_exhausted"] += 1
                 continue
-        if (
-            same_pipeline
-            and prior.get("status") == "ready_for_human_review"
-            and (
-                not (prior.get("validation") or {}).get("requires_environment_replay")
-                or (
-                    (prior.get("replay") or {}).get("events_persisted")
-                    and "target_state_hash_before" in (prior.get("replay") or {})
-                    and (prior.get("replay") or {}).get("differential_replay", {}).get("passed") is True
-                    and (
-                        not config.get("reconcile_after_replay", True)
-                        or (prior.get("reconciliation") or {}).get("events_persisted")
-                    )
-                    and (
-                        not config.get("require_semantic_verification", True)
-                        or (prior.get("semantic_verification") or {}).get("passed") is True
-                    )
-                )
-            )
-        ):
+        if same_run and result_cache_eligible(prior, resource_hash, config):
             records.append(prior)
+            latest_records[trajectory["trajectory_id"]] = prior
             counters["result_cache_hits"] += 1
+            if prior.get("pipeline_code_hash") != code_hash:
+                counters["accepted_cache_hits_code_hash_compatible"] += 1
             continue
         packet = build_packet(local_root, trajectory)
-        if same_pipeline and prior.get("status") != "ready_for_human_review":
+        if same_run and prior.get("status") != "ready_for_human_review":
             packet["prior_rejection"] = prior_rejection_context(prior)
             packet["generation_attempt"] = generation_attempt
         planner_key = request_key("planner", packet)
@@ -1539,6 +1612,7 @@ def run_pilot(
             }
             append_jsonl(result_path, record)
             records.append(record)
+            latest_records[trajectory["trajectory_id"]] = record
             counters[record["status"]] += 1
             continue
         editor_key = request_key("editor", packet, plan)
@@ -1578,6 +1652,7 @@ def run_pilot(
             }
             append_jsonl(result_path, record)
             records.append(record)
+            latest_records[trajectory["trajectory_id"]] = record
             counters[record["status"]] += 1
             continue
         try:
@@ -1787,7 +1862,12 @@ def run_pilot(
         }
         append_jsonl(result_path, record)
         records.append(record)
+        latest_records[trajectory["trajectory_id"]] = record
         counters[record["status"]] += 1
+    # The manifest always describes the complete selected set, including
+    # accepted cache hits.  This is what makes a recursive retry target only
+    # the rejected traces instead of rerunning the whole 30-trace set.
+    records = [latest_records[seed["trajectory"]["trajectory_id"]] for seed in seeds]
     manifest = {
         "version": AUGMENTATION_VERSION,
         "pipeline_code_hash": code_hash,
@@ -1836,30 +1916,37 @@ def run_pilot(
             spend_cap_usd,
             call_fn,
             _auto_retry_depth + 1,
+            seed_set,
         )
     return manifest
 
 
-def audit_pilot(run_root: Path = DEFAULT_RUN_ROOT) -> dict[str, Any]:
-    path = run_root / "augmentation_pilot" / "pilot_results.jsonl"
+def audit_pilot(run_root: Path = DEFAULT_RUN_ROOT, seed_set: str = "pilot", local_root: Path = DEFAULT_LOCAL_ROOT) -> dict[str, Any]:
+    path = run_root / f"augmentation_{seed_set}" / "pilot_results.jsonl"
     all_rows = read_jsonl(path)
+    expected_config_hash = seed_set_hash(seed_set, local_root)
     latest: dict[str, dict[str, Any]] = {}
     for row in all_rows:
-        if row.get("version") == AUGMENTATION_VERSION and row.get("trajectory_id"):
+        if row.get("version") == AUGMENTATION_VERSION and row.get("config_hash") == expected_config_hash and row.get("trajectory_id"):
             latest[row["trajectory_id"]] = row
     rows = list(latest.values())
     errors: list[str] = []
+    warnings: list[str] = []
     config = load_augmentation_config()
     required_stages = set(semantic_verifier_stages(config))
     expected_code_hash = pipeline_code_hash()
     expected_resource_hash = pipeline_resource_hash()
-    expected_config_hash = augmentation_config_hash()
-    expected_rows = sum(len(items) for items in config["pilot_seed_trajectory_ids"].values())
+    expected_rows = len(select_seed_set(local_root, seed_set))
     if len(rows) != expected_rows:
         errors.append(f"expected {expected_rows} current-version pilot rows, found {len(rows)}")
     for row in rows:
         if row.get("pipeline_code_hash") != expected_code_hash:
-            errors.append(f"{row.get('trajectory_id')}: stale pipeline code hash")
+            if result_cache_eligible(row, expected_resource_hash, config):
+                warnings.append(
+                    f"{row.get('trajectory_id')}: accepted artifact reused across retry/resume code hash"
+                )
+            else:
+                errors.append(f"{row.get('trajectory_id')}: stale pipeline code hash")
         if row.get("pipeline_resource_hash") != expected_resource_hash:
             errors.append(f"{row.get('trajectory_id')}: stale pipeline resource hash")
         if row.get("config_hash") != expected_config_hash:
@@ -1880,21 +1967,29 @@ def audit_pilot(run_root: Path = DEFAULT_RUN_ROOT) -> dict[str, Any]:
         present = {check.get("stage") for check in semantic.get("checks", []) if isinstance(check, dict)}
         if present != required_stages:
             errors.append(f"{row.get('trajectory_id')}: semantic verifier stage set is incomplete")
-    return {"version": AUGMENTATION_VERSION, "rows": len(rows), "errors": errors, "passed": not errors}
+    return {
+        "version": AUGMENTATION_VERSION,
+        "rows": len(rows),
+        "errors": errors,
+        "warnings": warnings,
+        "passed": not errors,
+    }
 
 
 def make_review_packet(
     local_root: Path = DEFAULT_LOCAL_ROOT,
     run_root: Path = DEFAULT_RUN_ROOT,
+    seed_set: str = "pilot",
 ) -> dict[str, Any]:
     """Create a blind, editable packet for human review of accepted augmentations."""
-    path = run_root / "augmentation_pilot" / "pilot_results.jsonl"
+    path = run_root / f"augmentation_{seed_set}" / "pilot_results.jsonl"
     latest: dict[str, dict[str, Any]] = {}
+    expected_config_hash = seed_set_hash(seed_set, local_root)
     for row in read_jsonl(path):
-        if row.get("version") == AUGMENTATION_VERSION and row.get("trajectory_id"):
+        if row.get("version") == AUGMENTATION_VERSION and row.get("config_hash") == expected_config_hash and row.get("trajectory_id"):
             latest[row["trajectory_id"]] = row
-    packet_path = run_root / "augmentation_pilot" / "augmentation_review_packet.jsonl"
-    template_path = run_root / "augmentation_pilot" / "augmentation_review_template.jsonl"
+    packet_path = run_root / f"augmentation_{seed_set}" / "augmentation_review_packet.jsonl"
+    template_path = run_root / f"augmentation_{seed_set}" / "augmentation_review_template.jsonl"
     packet_path.parent.mkdir(parents=True, exist_ok=True)
     packets: list[dict[str, Any]] = []
     templates: list[dict[str, Any]] = []
@@ -1953,5 +2048,5 @@ Record exact event IDs for the violating write and supporting evidence. Keep the
         "instructions_path": str(instructions_path),
         "passed": len(packets) > 0,
     }
-    write_json(run_root / "augmentation_pilot" / "review_manifest.json", result)
+    write_json(run_root / f"augmentation_{seed_set}" / "review_manifest.json", result)
     return result
