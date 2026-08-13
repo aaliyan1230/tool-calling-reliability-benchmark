@@ -154,13 +154,25 @@ def summary_json_schema() -> dict[str, Any]:
     return {"type": "object", "additionalProperties": False, "properties": {"user_request": {"type": "string"}, **{key: {"type": "array", "items": item} for key in SUMMARY_KEYS[1:]}}, "required": list(SUMMARY_KEYS)}
 
 
-def post_json(url: str, body: dict[str, Any], api_key: str | None, timeout_s: int, max_retries: int) -> dict[str, Any]:
+def post_json(
+    url: str,
+    body: dict[str, Any],
+    api_key: str | None,
+    timeout_s: int,
+    max_retries: int,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
     if not api_key:
         raise ProviderError("API key not found in environment or .env")
     encoded = json.dumps(body, separators=(",", ":")).encode()
     last: Exception | None = None
     for attempt in range(max_retries + 1):
-        request = urllib.request.Request(url, data=encoded, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "tcrb-v034-summary-pipeline/1.0"}, method="POST")
+        headers = {"Content-Type": "application/json", "User-Agent": "tcrb-v034-summary-pipeline/1.0"}
+        if not extra_headers or not ({"Authorization", "x-api-key"} & set(extra_headers)):
+            headers["Authorization"] = f"Bearer {api_key}"
+        if extra_headers:
+            headers.update(extra_headers)
+        request = urllib.request.Request(url, data=encoded, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(request, timeout=timeout_s) as response:
                 value = json.loads(response.read().decode())

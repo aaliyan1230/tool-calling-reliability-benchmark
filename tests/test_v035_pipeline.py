@@ -1,6 +1,6 @@
 from tcrb.v035.pipeline import FAMILIES, NOISE_LEVELS, build_trace, monitor_prompt
 from tcrb.v035.prewrite import build_pair as build_prewrite_pair, public_row
-from tcrb.v035.prewrite_monitor import monitor_input
+from tcrb.v035.prewrite_monitor import build_request_body, extract_response_text, monitor_input
 from tcrb.v035.registries import model_settings, policy_bundle, policy_bundle_sha256
 from tcrb.v035.tau_seeded import build_pair
 
@@ -212,7 +212,35 @@ def test_broad_monitor_input_changes_only_policy_registry():
 
 
 def test_model_registry_is_plug_in_ready_for_current_models():
-    for model in ("deepseek-v4-flash", "gpt-5.6-luna", "gpt-5.6-terra"):
+    for model in ("deepseek-v4-flash", "gpt-5.6-luna", "gpt-5.6-terra", "deepseek-v4-pro", "qwen3.7-plus"):
         settings = model_settings(model)
         assert settings["endpoint"].startswith("https://")
         assert settings["max_tokens_field"] in {"max_tokens", "max_completion_tokens"}
+
+
+def test_model_registry_records_protocol_and_auth_boundary():
+    deepseek = model_settings("deepseek-v4-pro")
+    qwen = model_settings("qwen3.7-plus")
+    assert deepseek["protocol"] == "openai_chat"
+    assert deepseek["auth_header"] == "Authorization"
+    assert qwen["protocol"] == "anthropic_messages"
+    assert qwen["auth_header"] == "x-api-key"
+    assert qwen["max_tokens_field"] == "max_tokens"
+
+
+def test_protocol_request_shapes_and_response_parsers_are_separate():
+    payload = {"task": "test", "events": [], "policy_rules": [], "proposed_action": {}}
+    qwen = model_settings("qwen3.7-plus")
+    qwen_body = build_request_body("qwen3.7-plus", qwen, payload)
+    assert qwen_body["model"] == "qwen3.7-plus"
+    assert qwen_body["system"]
+    assert qwen_body["messages"] == [{"role": "user", "content": '{"events": [], "policy_rules": [], "proposed_action": {}, "task": "test"}'}]
+    assert "response_format" not in qwen_body
+    anthropic_text = '{"decision":"ALLOW"}'
+    assert extract_response_text({"content": [{"type": "text", "text": anthropic_text}]}, "anthropic_messages") == anthropic_text
+
+    deepseek = model_settings("deepseek-v4-pro")
+    deepseek_body = build_request_body("deepseek-v4-pro", deepseek, payload)
+    assert deepseek_body["messages"][0]["role"] == "system"
+    assert deepseek_body["response_format"] == {"type": "json_object"}
+    assert extract_response_text({"choices": [{"message": {"content": "{}"}}]}, "openai_chat") == "{}"

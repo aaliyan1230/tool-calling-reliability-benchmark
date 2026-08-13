@@ -62,7 +62,16 @@ def model_settings(model: str) -> dict[str, Any]:
     missing = required - set(settings)
     if missing:
         raise ValueError(f"model {model!r} is missing registry fields: {sorted(missing)}")
-    return dict(settings)
+    normalized = dict(settings)
+    normalized.setdefault("protocol", "openai_chat")
+    normalized.setdefault("auth_header", "Authorization")
+    if normalized["protocol"] not in {"openai_chat", "anthropic_messages"}:
+        raise ValueError(f"model {model!r} has unsupported protocol: {normalized['protocol']!r}")
+    if normalized["auth_header"] not in {"Authorization", "x-api-key"}:
+        raise ValueError(f"model {model!r} has unsupported auth header: {normalized['auth_header']!r}")
+    if normalized["protocol"] == "anthropic_messages" and normalized["max_tokens_field"] != "max_tokens":
+        raise ValueError("Anthropic Messages models must use max_tokens")
+    return normalized
 
 
 def model_registry_sha256() -> str:
