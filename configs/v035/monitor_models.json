@@ -1,9 +1,11 @@
 {
-  "version": "monitor-models-v1",
+  "version": "monitor-models-v2",
   "models": {
     "deepseek-v4-flash": {
       "endpoint": "https://opencode.ai/zen/go/v1/chat/completions",
       "api_key_env": "OPENCODE_API_KEY",
+      "protocol": "openai_chat",
+      "auth_header": "Authorization",
       "max_tokens_field": "max_tokens",
       "reasoning_effort": "none",
       "temperature": 0,
@@ -12,6 +14,8 @@
     "gpt-5.6-luna": {
       "endpoint": "https://api.openai.com/v1/chat/completions",
       "api_key_env": "OPENAI_API_KEY",
+      "protocol": "openai_chat",
+      "auth_header": "Authorization",
       "max_tokens_field": "max_completion_tokens",
       "reasoning_effort": "none",
       "temperature": 0,
@@ -20,7 +24,29 @@
     "gpt-5.6-terra": {
       "endpoint": "https://api.openai.com/v1/chat/completions",
       "api_key_env": "OPENAI_API_KEY",
+      "protocol": "openai_chat",
+      "auth_header": "Authorization",
       "max_tokens_field": "max_completion_tokens",
+      "reasoning_effort": "none",
+      "temperature": 0,
+      "max_output_tokens": 400
+    },
+    "deepseek-v4-pro": {
+      "endpoint": "https://opencode.ai/zen/go/v1/chat/completions",
+      "api_key_env": "OPENCODE_API_KEY",
+      "protocol": "openai_chat",
+      "auth_header": "Authorization",
+      "max_tokens_field": "max_tokens",
+      "reasoning_effort": "none",
+      "temperature": 0,
+      "max_output_tokens": 400
+    },
+    "qwen3.7-plus": {
+      "endpoint": "https://opencode.ai/zen/go/v1/messages",
+      "api_key_env": "OPENCODE_API_KEY",
+      "protocol": "anthropic_messages",
+      "auth_header": "x-api-key",
+      "max_tokens_field": "max_tokens",
       "reasoning_effort": "none",
       "temperature": 0,
       "max_output_tokens": 400
