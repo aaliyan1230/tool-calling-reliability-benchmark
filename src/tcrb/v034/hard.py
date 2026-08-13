@@ -30,6 +30,8 @@ HARD_SEED_SETS = ("hard_smoke", "hard_core", "hard_reserve")
 HARD_SEED_REVIEW_DIR_NAME = "augmentation_hard_seed_review"
 HARD_SEED_SUPPLEMENT_DIR_NAME = "augmentation_hard_seed_review_supplement"
 HARD_SEED_REGISTRY_NAME = "augmentation_hard_seed_registry_private.json"
+HARD_SUPPLEMENT_REGISTRY_NAME = "augmentation_hard_supplement_registry_private.json"
+HARD_SUPPLEMENT2_REGISTRY_NAME = "augmentation_hard_supplement2_registry_private.json"
 
 
 def load_hard_config() -> dict[str, Any]:
@@ -56,14 +58,12 @@ def _source_rows(local_root: Path) -> dict[str, dict[str, Any]]:
 def _safe_ids(local_root: Path, run_root: Path = DEFAULT_RUN_ROOT) -> set[str]:
     from .augmentation import annotation_id
 
+    merged_rows = read_jsonl(local_root / "annotations" / "merged.jsonl")
+    merged_by_id = {item.get("annotation_id"): item for item in merged_rows}
     safe_ids = {
         row["trajectory_id"]
         for row in _source_rows(local_root).values()
-        if any(
-            item.get("annotation_id") == annotation_id(row["trajectory_id"])
-            and item.get("final_label") == "safe"
-            for item in read_jsonl(local_root / "annotations" / "merged.jsonl")
-        )
+        if merged_by_id.get(annotation_id(row["trajectory_id"]), {}).get("final_label") == "safe"
     }
     for review_dir_name in (HARD_SEED_REVIEW_DIR_NAME, HARD_SEED_SUPPLEMENT_DIR_NAME):
         accepted_path = run_root / review_dir_name / "accepted_safe_candidates_private.jsonl"
@@ -79,8 +79,19 @@ def _v034_task_ids(local_root: Path) -> set[tuple[str, str]]:
 
 def _case_rows(stage: str, local_root: Path = DEFAULT_LOCAL_ROOT) -> list[dict[str, Any]]:
     config = load_hard_config()
-    if stage not in {"smoke", "core", "reserve"}:
-        raise ValueError("Hard stage must be smoke, core, or reserve")
+    if stage not in {"smoke", "core", "reserve", "supplement", "supplement2"}:
+        raise ValueError("Hard stage must be smoke, core, reserve, supplement, or supplement2")
+    if stage in {"supplement", "supplement2"}:
+        registry_path = local_root / (
+            HARD_SUPPLEMENT2_REGISTRY_NAME if stage == "supplement2" else HARD_SUPPLEMENT_REGISTRY_NAME
+        )
+        if not registry_path.exists():
+            raise ValueError(f"supplement registry is missing: {registry_path}")
+        registry = read_json(registry_path)
+        rows = registry.get("cases")
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("supplement registry has no cases")
+        return rows
     if stage in {"core", "reserve"}:
         registry_path = local_root / HARD_SEED_REGISTRY_NAME
         if registry_path.exists():
@@ -159,6 +170,9 @@ def _validate_case_registry(
         for key, expected_count in expected.items():
             if counts[key] != expected_count:
                 errors.append(f"reserve quota {key} expected {expected_count}, found {counts[key]}")
+    elif stage in {"supplement", "supplement2"}:
+        if not rows:
+            errors.append("supplement registry must contain at least one case")
     else:
         if len(rows) != 4 or Counter(row.get("domain") for row in rows) != Counter({"airline": 2, "retail": 2}):
             errors.append("smoke registry must contain exactly two airline and two retail cases")
@@ -183,7 +197,11 @@ def select_hard_seeds(
             "case_id": case["case_id"],
             "domain": case["domain"],
             "family": case["family"],
-            "case_role": "reserve" if stage == "reserve" else "primary",
+            "case_role": (
+                "reserve" if stage == "reserve" else
+                ("supplement2" if stage == "supplement2" else
+                 ("supplement" if stage == "supplement" else "primary"))
+            ),
             "trajectory": trace,
             "write_event_ids": [
                 event["event_id"]
@@ -194,7 +212,11 @@ def select_hard_seeds(
                 "case_id": case["case_id"],
                 "family": case["family"],
                 "domain": case["domain"],
-                "case_role": "reserve" if stage == "reserve" else "primary",
+                "case_role": (
+                    "reserve" if stage == "reserve" else
+                    ("supplement2" if stage == "supplement2" else
+                     ("supplement" if stage == "supplement" else "primary"))
+                ),
                 "allowed_target_rules": family_spec["allowed_target_rules"][case["domain"]],
                 "required_intervening_events": family_spec["required_intervening_events"],
                 "min_source_writes": family_spec.get("min_source_writes", 1),
@@ -326,7 +348,11 @@ def hard_seed_set_hash(
         raise ValueError("cannot hash invalid Hard registry:\n- " + "\n- ".join(errors))
     source_path = local_root / "normalized" / "trajectories.jsonl"
     payload = HARD_CONFIG_PATH.read_bytes() + source_path.read_bytes()
-    registry_path = local_root / HARD_SEED_REGISTRY_NAME
+    registry_path = local_root / (
+        HARD_SUPPLEMENT2_REGISTRY_NAME if stage == "supplement2" else (
+            HARD_SUPPLEMENT_REGISTRY_NAME if stage == "supplement" else HARD_SEED_REGISTRY_NAME
+        )
+    )
     if registry_path.exists():
         payload += registry_path.read_bytes()
     payload += stage.encode()

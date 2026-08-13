@@ -193,10 +193,16 @@ def select_seed_set(
         return load_fill_seeds(local_root)
     if seed_set == "refill":
         return load_refill_seeds(local_root)
-    if seed_set in {"hard_smoke", "hard_core", "hard_reserve"}:
+    if seed_set in {"hard_smoke", "hard_core", "hard_reserve", "hard_supplement", "hard_supplement2"}:
         from .hard import select_hard_seeds
 
-        stage = {"hard_smoke": "smoke", "hard_core": "core", "hard_reserve": "reserve"}[seed_set]
+        stage = {
+            "hard_smoke": "smoke",
+            "hard_core": "core",
+            "hard_reserve": "reserve",
+            "hard_supplement": "supplement",
+            "hard_supplement2": "supplement2",
+        }[seed_set]
         return select_hard_seeds(local_root, stage, run_root)
     raise ValueError(f"unknown seed set: {seed_set}")
 
@@ -228,10 +234,16 @@ def seed_set_hash(
         if not path.exists():
             raise FileNotFoundError(f"run select-refill-seeds before refill augmentation: {path}")
         return sha256_bytes((CONFIG_ROOT / "augmentation_refill.json").read_bytes() + path.read_bytes())
-    if seed_set in {"hard_smoke", "hard_core", "hard_reserve"}:
+    if seed_set in {"hard_smoke", "hard_core", "hard_reserve", "hard_supplement", "hard_supplement2"}:
         from .hard import hard_seed_set_hash
 
-        stage = {"hard_smoke": "smoke", "hard_core": "core", "hard_reserve": "reserve"}[seed_set]
+        stage = {
+            "hard_smoke": "smoke",
+            "hard_core": "core",
+            "hard_reserve": "reserve",
+            "hard_supplement": "supplement",
+            "hard_supplement2": "supplement2",
+        }[seed_set]
         return hard_seed_set_hash(stage, local_root, run_root)
     raise ValueError(f"unknown seed set: {seed_set}")
 
