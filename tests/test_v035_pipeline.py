@@ -212,10 +212,10 @@ def test_broad_monitor_input_changes_only_policy_registry():
 
 
 def test_model_registry_is_plug_in_ready_for_current_models():
-    for model in ("deepseek-v4-flash", "gpt-5.6-luna", "gpt-5.6-terra", "deepseek-v4-pro", "qwen3.7-plus"):
+    for model in ("deepseek-v4-flash", "gpt-5.6-luna", "gpt-5.6-terra", "deepseek-v4-pro", "qwen3.7-plus", "gemini-3.6-flash"):
         settings = model_settings(model)
         assert settings["endpoint"].startswith("https://")
-        assert settings["max_tokens_field"] in {"max_tokens", "max_completion_tokens"}
+        assert settings["max_tokens_field"] in {"max_tokens", "max_completion_tokens", "maxOutputTokens"}
 
 
 def test_model_registry_records_protocol_and_auth_boundary():
@@ -226,6 +226,10 @@ def test_model_registry_records_protocol_and_auth_boundary():
     assert qwen["protocol"] == "anthropic_messages"
     assert qwen["auth_header"] == "x-api-key"
     assert qwen["max_tokens_field"] == "max_tokens"
+    gemini = model_settings("gemini-3.6-flash")
+    assert gemini["protocol"] == "gemini_generate_content"
+    assert gemini["auth_header"] == "x-goog-api-key"
+    assert gemini["max_tokens_field"] == "maxOutputTokens"
 
 
 def test_protocol_request_shapes_and_response_parsers_are_separate():
@@ -244,3 +248,12 @@ def test_protocol_request_shapes_and_response_parsers_are_separate():
     assert deepseek_body["messages"][0]["role"] == "system"
     assert deepseek_body["response_format"] == {"type": "json_object"}
     assert extract_response_text({"choices": [{"message": {"content": "{}"}}]}, "openai_chat") == "{}"
+
+    gemini = model_settings("gemini-3.6-flash")
+    gemini_body = build_request_body("gemini-3.6-flash", gemini, payload)
+    assert gemini_body["systemInstruction"]["parts"][0]["text"]
+    assert gemini_body["contents"][0]["parts"][0]["text"].startswith('{"events"')
+    assert gemini_body["generationConfig"]["responseMimeType"] == "application/json"
+    assert gemini_body["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "minimal"}
+    assert "temperature" not in gemini_body["generationConfig"]
+    assert extract_response_text({"candidates": [{"content": {"parts": [{"text": "{}"}]}}]}, "gemini_generate_content") == "{}"

@@ -91,9 +91,20 @@ def build_request_body(model: str, settings: dict[str, Any], payload: dict[str, 
             "messages": [{"role": "user", "content": user_text}],
             "temperature": settings["temperature"],
         }
+    elif protocol == "gemini_generate_content":
+        body = {
+            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+            "generationConfig": {
+                settings["max_tokens_field"]: settings["max_output_tokens"],
+                "responseMimeType": "application/json",
+                "thinkingConfig": {"thinkingLevel": settings.get("thinking_level", "minimal")},
+            },
+        }
     else:
         raise ValueError(f"unsupported monitor protocol: {protocol}")
-    body[settings["max_tokens_field"]] = settings["max_output_tokens"]
+    if protocol != "gemini_generate_content":
+        body[settings["max_tokens_field"]] = settings["max_output_tokens"]
     return body
 
 
@@ -104,6 +115,10 @@ def extract_response_text(response: dict[str, Any], protocol: str) -> str:
     elif protocol == "anthropic_messages":
         content = response.get("content") or []
         raw = "".join(item.get("text", "") for item in content if isinstance(item, dict) and isinstance(item.get("text"), str))
+    elif protocol == "gemini_generate_content":
+        candidates = response.get("candidates") or []
+        parts = ((candidates[0].get("content") or {}).get("parts") or []) if candidates else []
+        raw = "".join(item.get("text", "") for item in parts if isinstance(item, dict) and isinstance(item.get("text"), str))
     else:
         raise ValueError(f"unsupported monitor protocol: {protocol}")
     if not isinstance(raw, str) or not raw.strip():
@@ -135,6 +150,7 @@ def _one(row: dict[str, Any], view: str, model: str = MODEL, policy_mode: str = 
         "policy_mode": policy_mode,
         "model": served_model,
         "protocol": protocol,
+        "thinking_level": settings.get("thinking_level"),
         "study_role": row["study_role"],
         "cohort": row.get("cohort", "development"),
         "family": row["case_family"],
@@ -180,10 +196,12 @@ def run(view: str = "runtime", role: str = "main", workers: int = 4, cohort: str
             "policy_bundle_version": policy_version,
             "policy_bundle_sha256": policy_hash,
             "reasoning_effort": settings["reasoning_effort"],
+            "thinking_level": settings.get("thinking_level"),
             "temperature": settings["temperature"],
             "max_output_tokens": settings["max_output_tokens"],
             "endpoint": settings["endpoint"],
             "protocol": settings["protocol"],
+            "temperature_applied": settings["protocol"] != "gemini_generate_content",
             "auth_header": settings["auth_header"],
             "role": role,
             "cohort": cohort,
@@ -236,6 +254,8 @@ def smoke(model: str, policy_mode: str = "broad", view: str = "runtime") -> dict
             "dataset_id": read_json(OUTPUT / "manifest.json")["dataset_id"],
             "model": model,
             "protocol": settings["protocol"],
+            "thinking_level": settings.get("thinking_level"),
+            "temperature_applied": settings["protocol"] != "gemini_generate_content",
             "auth_header": settings["auth_header"],
             "view": view,
             "policy_mode": policy_mode,

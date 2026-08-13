@@ -19,7 +19,13 @@ reports/*
 !reports/reliability-study/**
 !reports/reliability-study-plan.md
 RESEARCH_PLAN.md
-docs
+docs/*
+!docs/v3/
+docs/v3/*
+!docs/v3/TCRB_V3_V3.5_REPORT.md
+!docs/v3/figures/
+docs/v3/figures/*
+!docs/v3/figures/*.png
 .playwright-mcp
 session_logs/
 kaggle/__pycache__/
