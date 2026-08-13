@@ -82,15 +82,25 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("select-airline-seeds")
     sub.add_parser("hard-preflight")
     sub.add_parser("audit-hard-source-pool")
+    sub.add_parser("scan-hard-families")
+    supplement_proposal = sub.add_parser("propose-hard-supplement")
+    supplement_proposal.add_argument("--cases-per-domain", type=int, default=8)
+    sub.add_parser("register-hard-supplement")
+    wave_proposal = sub.add_parser("propose-hard-supplement-wave")
+    wave_proposal.add_argument("--wave", type=int, default=2)
+    wave_proposal.add_argument("--cases-per-domain-family", type=int, default=3)
+    wave_register = sub.add_parser("register-hard-supplement-wave")
+    wave_register.add_argument("--wave", type=int, default=2)
+    wave_register.add_argument("--cases-per-domain-family", type=int, default=3)
     hard_seeds = sub.add_parser("select-hard-seeds")
-    hard_seeds.add_argument("--stage", choices=["smoke", "core", "reserve"], default="core")
+    hard_seeds.add_argument("--stage", choices=["smoke", "core", "reserve", "supplement", "supplement2"], default="core")
     hard_aug = sub.add_parser("augment-hard")
-    hard_aug.add_argument("--stage", choices=["smoke", "core", "reserve"], required=True)
+    hard_aug.add_argument("--stage", choices=["smoke", "core", "reserve", "supplement", "supplement2"], required=True)
     hard_aug.add_argument("--spend-cap-usd", type=float, default=None)
     hard_audit = sub.add_parser("audit-hard")
-    hard_audit.add_argument("--stage", choices=["smoke", "core", "reserve"], default=None)
+    hard_audit.add_argument("--stage", choices=["smoke", "core", "reserve", "supplement", "supplement2"], default=None)
     hard_review = sub.add_parser("make-hard-review")
-    hard_review.add_argument("--stage", choices=["smoke", "core", "reserve"], required=True)
+    hard_review.add_argument("--stage", choices=["smoke", "core", "reserve", "supplement", "supplement2"], required=True)
     seed_review = sub.add_parser("make-hard-seed-review")
     seed_review.add_argument("--limit-per-domain", type=int, default=40)
     seed_review.add_argument("--supplement", action="store_true")
@@ -180,6 +190,36 @@ def main(argv: list[str] | None = None) -> int:
         from .hard import audit_hard_source_pool
 
         result = audit_hard_source_pool(args.local_root, args.run_root)
+    elif command == "scan-hard-families":
+        from .hard_scan import scan_hard_families
+
+        result = scan_hard_families(args.local_root, args.run_root)
+    elif command == "propose-hard-supplement":
+        from .hard_scan import propose_hard_supplement
+
+        result = propose_hard_supplement(args.local_root, args.run_root, args.cases_per_domain)
+    elif command == "register-hard-supplement":
+        from .hard_scan import register_hard_supplement
+
+        result = register_hard_supplement(args.local_root, args.run_root)
+    elif command == "propose-hard-supplement-wave":
+        from .hard_scan import propose_hard_supplement_wave
+
+        result = propose_hard_supplement_wave(
+            args.local_root,
+            args.run_root,
+            wave=args.wave,
+            cases_per_domain_family=args.cases_per_domain_family,
+        )
+    elif command == "register-hard-supplement-wave":
+        from .hard_scan import register_hard_supplement_wave
+
+        result = register_hard_supplement_wave(
+            args.local_root,
+            args.run_root,
+            wave=args.wave,
+            cases_per_domain_family=args.cases_per_domain_family,
+        )
     elif command == "select-hard-seeds":
         with hard_config_context():
             rows = select_hard_seeds(args.local_root, args.stage, args.run_root)
