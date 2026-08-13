@@ -40,6 +40,18 @@ The recovery instructions are the strongest completed intervention. They improve
 
 The evidence supports a reliability benchmark and a cautious empirical finding, not a claim that training has solved tool recovery. The highest-value next step is multi-seed replication of the baseline and recovery-prompt results. After that, DPO or a Gemini reviewer should be evaluated as separate interventions.
 
+## v3–v3.5 Monitor-Safety Experiments
+
+The later TCRB work studies a different question: can a monitor catch an unsafe tool write when it must connect the policy, the full trace, and the current database state?
+
+The research progressed in small pilots. Early versions tested self-labels and missing evidence. They found that monitors usually failed closed: they rejected safe work instead of approving unsafe work. v3.3 also showed that the first hand-built cases could not express the intended blind spot cleanly.
+
+v3.4 rebuilt the data pipeline around official τ-bench v1.0.1 traces. It added blinded human labels, constrained LLM mutations, replay checks, downstream consistency checks, and frozen private gold. v3.5 used 26 matched airline and retail pairs across four monitor models.
+
+The clearest current result is that direct mistakes are easy, while stale-target mistakes are hard. On a fresh six-pair holdout, broad-policy unsafe blocking was `2/6` for GPT-5.6 Terra, `0/6` for DeepSeek V4 Pro, `3/6` for Qwen3.7 Plus, and `5/6` for Gemini 3.6 Flash. A simple deterministic target-join check solved all 28 stale-target traces.
+
+Read the full report: [`docs/v3/TCRB_V3_V3.5_REPORT.md`](docs/v3/TCRB_V3_V3.5_REPORT.md).
+
 ## Earlier Routing Study
 
 The strongest result in this repo is a targeted router-repair run on a real HF planner:

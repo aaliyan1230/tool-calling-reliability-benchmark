@@ -168,7 +168,7 @@ def post_json(
     last: Exception | None = None
     for attempt in range(max_retries + 1):
         headers = {"Content-Type": "application/json", "User-Agent": "tcrb-v034-summary-pipeline/1.0"}
-        if not extra_headers or not ({"Authorization", "x-api-key"} & set(extra_headers)):
+        if not extra_headers:
             headers["Authorization"] = f"Bearer {api_key}"
         if extra_headers:
             headers.update(extra_headers)

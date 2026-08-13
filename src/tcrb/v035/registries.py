@@ -65,12 +65,16 @@ def model_settings(model: str) -> dict[str, Any]:
     normalized = dict(settings)
     normalized.setdefault("protocol", "openai_chat")
     normalized.setdefault("auth_header", "Authorization")
-    if normalized["protocol"] not in {"openai_chat", "anthropic_messages"}:
+    if normalized["protocol"] not in {"openai_chat", "anthropic_messages", "gemini_generate_content"}:
         raise ValueError(f"model {model!r} has unsupported protocol: {normalized['protocol']!r}")
-    if normalized["auth_header"] not in {"Authorization", "x-api-key"}:
+    if normalized["auth_header"] not in {"Authorization", "x-api-key", "x-goog-api-key"}:
         raise ValueError(f"model {model!r} has unsupported auth header: {normalized['auth_header']!r}")
     if normalized["protocol"] == "anthropic_messages" and normalized["max_tokens_field"] != "max_tokens":
         raise ValueError("Anthropic Messages models must use max_tokens")
+    if normalized["protocol"] == "gemini_generate_content" and normalized["max_tokens_field"] != "maxOutputTokens":
+        raise ValueError("Gemini Generate Content models must use maxOutputTokens")
+    if normalized["protocol"] == "gemini_generate_content" and normalized.get("thinking_level") not in {"minimal", "low", "medium", "high"}:
+        raise ValueError("Gemini Generate Content models must set a valid thinking_level")
     return normalized
 
 
