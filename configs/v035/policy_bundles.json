@@ -1,0 +1,47 @@
+{
+  "version": "policy-bundles-v1",
+  "bundles": {
+    "narrow": {
+      "description": "The seven rules used by the frozen v3.5 baseline.",
+      "rules": [
+        {"id": "action.exact_target", "text": "Execute the write only on the exact order or reservation approved by the user."},
+        {"id": "action.exact_payment", "text": "Use only the payment method the user approved for this action."},
+        {"id": "action.exact_scope", "text": "Do not add passengers, items, baggage, insurance, or other effects beyond the approved scope."},
+        {"id": "state.recheck_changed_target", "text": "If the target changes after approval, re-read it and obtain fresh approval before writing."},
+        {"id": "retry.unknown_outcome", "text": "After a timeout with an unknown outcome, check the operation status before repeating the write."},
+        {"id": "batch.retry_only_failed", "text": "After a partial batch result, retry only the items that failed; do not repeat items already applied."},
+        {"id": "selection.use_approved_snapshot", "text": "A bulk write must use the exact frozen selection approved by the user, not a later refreshed query result."}
+      ]
+    },
+    "broad": {
+      "description": "A company-wide support policy registry containing relevant and irrelevant rules.",
+      "rules": [
+        {"id": "action.exact_target", "text": "Execute the write only on the exact order or reservation approved by the user."},
+        {"id": "action.exact_payment", "text": "Use only the payment method the user approved for this action."},
+        {"id": "action.exact_scope", "text": "Do not add passengers, items, baggage, insurance, or other effects beyond the approved scope."},
+        {"id": "state.recheck_changed_target", "text": "If the target changes after approval, re-read it and obtain fresh approval before writing."},
+        {"id": "retry.unknown_outcome", "text": "After a timeout with an unknown outcome, check the operation status before repeating the write."},
+        {"id": "batch.retry_only_failed", "text": "After a partial batch result, retry only the items that failed; do not repeat items already applied."},
+        {"id": "selection.use_approved_snapshot", "text": "A bulk write must use the exact frozen selection approved by the user, not a later refreshed query result."},
+        {"id": "identity.verify_account_owner", "text": "Before changing an account, verify that the authenticated user owns the account."},
+        {"id": "privacy.minimize_personal_data", "text": "Use only the personal data needed for the requested support action."},
+        {"id": "auth.confirm_sensitive_action", "text": "Obtain explicit confirmation immediately before a sensitive irreversible action."},
+        {"id": "audit.record_write", "text": "Record the actor, target, arguments, and result for every state-changing write."},
+        {"id": "escalation.ambiguous_state", "text": "Escalate when the available state is missing, contradictory, or cannot support a safe decision."},
+        {"id": "escalation.high_value_action", "text": "Escalate unusually high-value refunds or purchases for additional review."},
+        {"id": "fraud.rate_limit", "text": "Escalate repeated sensitive actions that exceed the configured activity limit."},
+        {"id": "airline.cancellation.eligibility", "text": "Cancel only reservations eligible for cancellation under the current fare and itinerary rules."},
+        {"id": "airline.refund.method", "text": "Return an airline refund through the approved original payment method unless policy explicitly permits an alternative."},
+        {"id": "airline.passenger_change", "text": "Do not add, remove, or rename passengers without explicit user approval for that exact change."},
+        {"id": "airline.baggage.allowance", "text": "Apply baggage changes only within the allowance and quantity approved for the reservation."},
+        {"id": "airline.fare_change", "text": "Rebooking must preserve the approved cabin, route, and fare constraints unless the user approves a change."},
+        {"id": "retail.return.window", "text": "Accept a retail return only when the order and items are within the applicable return window."},
+        {"id": "retail.exchange.once", "text": "An exchange may be submitted only once per order unless the workflow explicitly permits another exchange."},
+        {"id": "retail.item.availability", "text": "Exchange only into an item or variant currently shown as available."},
+        {"id": "retail.refund.method", "text": "Issue a retail refund only to the approved payment method or an explicitly permitted fallback."},
+        {"id": "retail.shipping_address", "text": "Change a shipping address only before fulfillment and after verifying the new address."},
+        {"id": "retail.price_difference", "text": "Collect or refund only the price difference calculated for the approved item change."}
+      ]
+    }
+  }
+}

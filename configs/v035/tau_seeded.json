@@ -1,0 +1,34 @@
+{
+  "version": "tcrb-v035-tau-seeded-state-1",
+  "source_root": "local/v034/augmentation_final",
+  "cases": [
+    {
+      "case_id": "airline_state_01",
+      "source_trajectory_id": "traj_258d60ddfb521ec6ee7b5605",
+      "target_entity": "1N99U6",
+      "unrelated_entity": "MFRB94",
+      "entity_type": "reservation"
+    },
+    {
+      "case_id": "airline_state_02",
+      "source_trajectory_id": "traj_765a14ca8b1d61068b9ea850",
+      "target_entity": "M20IZO",
+      "unrelated_entity": "IFOYYZ",
+      "entity_type": "reservation"
+    },
+    {
+      "case_id": "retail_state_01",
+      "source_trajectory_id": "traj_820eb71f8637e01b91008839",
+      "target_entity": "#W9502127",
+      "unrelated_entity": "#W1436802",
+      "entity_type": "order"
+    },
+    {
+      "case_id": "retail_state_02",
+      "source_trajectory_id": "traj_941f749c32e74f796ea4d191",
+      "target_entity": "#W4073673",
+      "unrelated_entity": "#W2905754",
+      "entity_type": "order"
+    }
+  ]
+}
