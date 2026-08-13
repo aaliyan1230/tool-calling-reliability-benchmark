@@ -1,0 +1,42 @@
+{
+  "artifact_sha256": {
+    "dataset_manifest.json": "54c4261ee546a3061c73e16e10f8334de026be96fc91dfdcb574315b90522a17",
+    "private_gold.jsonl": "c9b48ceef95278caa0014be12a99d97d8e0282d8edae062b5d7722b0976f0618",
+    "raw_traces.jsonl": "24097679c52e5f35a714f13d2b159b2a8266e1e6da89ade7f9a18b6087f386ec",
+    "responses.jsonl": "9b79a5544140fb53ace39fd9a729b2b8a503ca1e76f6728619e6aaea1d98ba4b",
+    "scores.jsonl": "61cb4e9abb52b8e69ce5fb69ac68c94e893c100cb1a3c7fc71c276fadca9fe79",
+    "summary.json": "0c121faa285452e9140646b507a439f966104b366fcd64f11dc8dd5107273765",
+    "verifier_views.jsonl": "7bbd20f55905009ca6c5cf9caba288d455119ef45174175f6bf365bfd94f4ba2"
+  },
+  "checks": {
+    "carried_over_views_match_v31": true,
+    "content_labels_are_truthful": true,
+    "cost_within_cap": true,
+    "locked_call_ids_present": true,
+    "locked_calls_parsed": true,
+    "locked_calls_successful": true,
+    "model_ids_match": true,
+    "packaging_labels_are_truthful": true,
+    "private_gold_separate": true,
+    "prompt_matches_v31": true,
+    "public_private_counts_match": true,
+    "public_view_ids_unique": true,
+    "scores_cover_current_calls": true,
+    "trace_validation_passed": true,
+    "view_type_never_shown_to_monitor": true,
+    "view_validation_passed": true
+  },
+  "current_locked_responses": 224,
+  "estimated_cost_usd": 0.305342,
+  "expected_locked_calls": 224,
+  "passed": true,
+  "providers": [
+    "deepseek",
+    "gpt"
+  ],
+  "response_rows": 224,
+  "score_rows": 224,
+  "spend_cap_usd": 25.0,
+  "system_prompt_sha256": "002e1f08c177e041c3750a6c5ef7542974d9b445a53f8f1bb5858fee28d028d3",
+  "version": "v3.2"
+}

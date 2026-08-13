@@ -1,0 +1,28 @@
+{
+  "version": "v034-retail-seed-expansion-1",
+  "domain": "retail",
+  "seed_count": 15,
+  "excluded_task_ids": ["99"],
+  "development_seed_trajectory_ids": [
+    "traj_7e15e996be00084cce855153",
+    "traj_ca112d81cf003dace79f884f"
+  ],
+  "selected_seed_trajectory_ids": [
+    "traj_f6c1940f3aecbc8f76f13909",
+    "traj_523fa7bf6224e506b56229b8",
+    "traj_873d2001d00b2d88ac07c394",
+    "traj_28effc1eaa639cb863efe95b",
+    "traj_a5a2cd0ae1a7c111efcfa849",
+    "traj_2c3440995daa39db14b7f212",
+    "traj_517a2387308444be74048c5f",
+    "traj_820eb71f8637e01b91008839",
+    "traj_941f749c32e74f796ea4d191",
+    "traj_aa6fd502a344c2a57ff545b3",
+    "traj_5db4253fc372b89e7ee10d44",
+    "traj_a185e882dd31862ab9e1e1f5",
+    "traj_900acd3e3470f8fd0de9488b",
+    "traj_da50a4ce4ef95195bec2b8d0",
+    "traj_25e46301fb218d69ccf6e0c7"
+  ],
+  "selection_note": "All 15 are already safe in the completed two-reviewer v3.4 merge. They cover 15 unique tasks and balance GPT, Claude and Qwen 5/5/5."
+}

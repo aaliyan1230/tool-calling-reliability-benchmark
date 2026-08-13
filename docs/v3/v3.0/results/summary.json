@@ -1,0 +1,574 @@
+{
+  "contact_ready": {
+    "deepseek": {
+      "checks": {
+        "baseline_label_effect_at_least_10pp": false,
+        "detection_not_down_more_than_5pp": true,
+        "effect_reduced_at_least_30pct": true,
+        "false_alarms_not_up_more_than_5pp": true,
+        "positive_in_at_least_three_domains": true
+      },
+      "detection_delta": 0.0,
+      "false_alarm_delta": -0.125,
+      "positive_domains": 3,
+      "ready": false,
+      "relative_effect_reduction": 0.6666666666666666
+    },
+    "gpt": {
+      "checks": {
+        "baseline_label_effect_at_least_10pp": false,
+        "detection_not_down_more_than_5pp": true,
+        "effect_reduced_at_least_30pct": true,
+        "false_alarms_not_up_more_than_5pp": true,
+        "positive_in_at_least_three_domains": false
+      },
+      "detection_delta": 0.0,
+      "false_alarm_delta": -0.09375,
+      "positive_domains": 1,
+      "ready": false,
+      "relative_effect_reduction": 1.0
+    }
+  },
+  "estimated_extra_cost_usd": 0.39892,
+  "limitations": [
+    "The traces are deterministic simulations, not production logs.",
+    "The core pilot has 16 base cases; confidence intervals may be wide.",
+    "Provider model aliases are logged with run dates but may change upstream."
+  ],
+  "metrics": {
+    "deepseek:baseline": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate": [
+          1.0,
+          1.0
+        ],
+        "corruption_sensitivity": [
+          0.71875,
+          0.9375
+        ],
+        "false_alarm_rate": [
+          0.0625,
+          0.28125
+        ],
+        "independent_evidence_rate": [
+          1.0,
+          1.0
+        ],
+        "self_label_effect": [
+          -0.03125,
+          0.21875
+        ]
+      },
+      "by_domain": {
+        "customer_support": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.875,
+          "decision_accuracy": 0.9375,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 7967.3125,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.125,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "developer_tools": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.875,
+          "decision_accuracy": 0.9375,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 9665.75,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": -0.125,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "ecommerce": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.875,
+          "decision_accuracy": 0.9375,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 7922.625,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.125,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "fintech": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.75,
+          "decision_accuracy": 0.875,
+          "false_alarm_rate": 0.25,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 8349.1875,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.25,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "corrupt_verified_miss_rate": 0.0,
+      "corruption_detection_rate": 1.0,
+      "corruption_sensitivity": 0.84375,
+      "decision_accuracy": 0.921875,
+      "false_alarm_rate": 0.15625,
+      "independent_evidence_rate": 1.0,
+      "mean_latency_ms": 8476.21875,
+      "relevant_evidence_rate": 1.0,
+      "scheduled": 64,
+      "self_label_effect": 0.09375,
+      "valid_evidence_id_rate": 1.0,
+      "valid_json_rate": 1.0
+    },
+    "deepseek:evidence_first": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate": [
+          1.0,
+          1.0
+        ],
+        "corruption_sensitivity": [
+          0.90625,
+          1.0
+        ],
+        "false_alarm_rate": [
+          0.0,
+          0.09375
+        ],
+        "independent_evidence_rate": [
+          1.0,
+          1.0
+        ],
+        "self_label_effect": [
+          0.0,
+          0.09375
+        ]
+      },
+      "by_domain": {
+        "customer_support": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 5297.1875,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "developer_tools": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 7389.4375,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "ecommerce": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.875,
+          "decision_accuracy": 0.9375,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 6996.0,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.125,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "fintech": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 6217.8125,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "corrupt_verified_miss_rate": 0.0,
+      "corruption_detection_rate": 1.0,
+      "corruption_sensitivity": 0.96875,
+      "decision_accuracy": 0.984375,
+      "false_alarm_rate": 0.03125,
+      "independent_evidence_rate": 1.0,
+      "mean_latency_ms": 6475.109375,
+      "relevant_evidence_rate": 1.0,
+      "scheduled": 64,
+      "self_label_effect": 0.03125,
+      "valid_evidence_id_rate": 1.0,
+      "valid_json_rate": 1.0
+    },
+    "gpt:baseline": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate": [
+          1.0,
+          1.0
+        ],
+        "corruption_sensitivity": [
+          0.8125,
+          1.0
+        ],
+        "false_alarm_rate": [
+          0.0,
+          0.1875
+        ],
+        "independent_evidence_rate": [
+          1.0,
+          1.0
+        ],
+        "self_label_effect": [
+          -0.0625,
+          0.125
+        ]
+      },
+      "by_domain": {
+        "customer_support": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2653.75,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "developer_tools": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.875,
+          "decision_accuracy": 0.9375,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2712.75,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": -0.125,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "ecommerce": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.75,
+          "decision_accuracy": 0.875,
+          "false_alarm_rate": 0.25,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2479.5625,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.25,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "fintech": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2261.75,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "corrupt_verified_miss_rate": 0.0,
+      "corruption_detection_rate": 1.0,
+      "corruption_sensitivity": 0.90625,
+      "decision_accuracy": 0.953125,
+      "false_alarm_rate": 0.09375,
+      "independent_evidence_rate": 1.0,
+      "mean_latency_ms": 2526.953125,
+      "relevant_evidence_rate": 1.0,
+      "scheduled": 64,
+      "self_label_effect": 0.03125,
+      "valid_evidence_id_rate": 1.0,
+      "valid_json_rate": 1.0
+    },
+    "gpt:evidence_first": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate": [
+          1.0,
+          1.0
+        ],
+        "corruption_sensitivity": [
+          1.0,
+          1.0
+        ],
+        "false_alarm_rate": [
+          0.0,
+          0.0
+        ],
+        "independent_evidence_rate": [
+          1.0,
+          1.0
+        ],
+        "self_label_effect": [
+          0.0,
+          0.0
+        ]
+      },
+      "by_domain": {
+        "customer_support": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2254.9375,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "developer_tools": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2394.875,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "ecommerce": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2817.1875,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "fintech": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 3280.125,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        }
+      },
+      "corrupt_verified_miss_rate": 0.0,
+      "corruption_detection_rate": 1.0,
+      "corruption_sensitivity": 1.0,
+      "decision_accuracy": 1.0,
+      "false_alarm_rate": 0.0,
+      "independent_evidence_rate": 1.0,
+      "mean_latency_ms": 2686.78125,
+      "relevant_evidence_rate": 1.0,
+      "scheduled": 64,
+      "self_label_effect": 0.0,
+      "valid_evidence_id_rate": 1.0,
+      "valid_json_rate": 1.0
+    }
+  },
+  "primary_rows": 256,
+  "prompt_comparison": {
+    "deepseek": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate_delta": [
+          0.0,
+          0.0
+        ],
+        "decision_accuracy_delta": [
+          0.0,
+          0.125
+        ],
+        "false_alarm_rate_delta": [
+          -0.25,
+          0.0
+        ],
+        "independent_evidence_rate_delta": [
+          0.0,
+          0.0
+        ],
+        "self_label_effect_delta": [
+          -0.1875,
+          0.09375
+        ]
+      },
+      "corruption_detection_rate_delta": 0.0,
+      "decision_accuracy_delta": 0.0625,
+      "false_alarm_rate_delta": -0.125,
+      "independent_evidence_rate_delta": 0.0,
+      "self_label_effect_delta": -0.0625
+    },
+    "gpt": {
+      "bootstrap_95_ci": {
+        "corruption_detection_rate_delta": [
+          0.0,
+          0.0
+        ],
+        "decision_accuracy_delta": [
+          0.0,
+          0.09375
+        ],
+        "false_alarm_rate_delta": [
+          -0.1875,
+          0.0
+        ],
+        "independent_evidence_rate_delta": [
+          0.0,
+          0.0
+        ],
+        "self_label_effect_delta": [
+          -0.125,
+          0.0625
+        ]
+      },
+      "corruption_detection_rate_delta": 0.0,
+      "decision_accuracy_delta": 0.046875,
+      "false_alarm_rate_delta": -0.09375,
+      "independent_evidence_rate_delta": 0.0,
+      "self_label_effect_delta": -0.03125
+    }
+  },
+  "responses_by_status": {
+    "invalid_or_error": 0,
+    "valid": 384
+  },
+  "rows": 384,
+  "stability": {
+    "additional_repeat_rows": 128,
+    "available": true,
+    "by_condition": {
+      "deepseek:baseline": {
+        "complete_three_run_cells": 16,
+        "expected_three_run_cells": 16,
+        "majority_vote_metrics": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 0.75,
+          "decision_accuracy": 0.875,
+          "false_alarm_rate": 0.25,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 8820.625,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.25,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "pairwise_decision_agreement": 0.9166666666666666,
+        "unanimous_decision_rate": 0.875
+      },
+      "deepseek:evidence_first": {
+        "complete_three_run_cells": 16,
+        "expected_three_run_cells": 16,
+        "majority_vote_metrics": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 6069.5,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "pairwise_decision_agreement": 1.0,
+        "unanimous_decision_rate": 1.0
+      },
+      "gpt:baseline": {
+        "complete_three_run_cells": 16,
+        "expected_three_run_cells": 16,
+        "majority_vote_metrics": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 0.875,
+          "corruption_sensitivity": 0.75,
+          "decision_accuracy": 0.875,
+          "false_alarm_rate": 0.125,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2813.8125,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "pairwise_decision_agreement": 0.875,
+        "unanimous_decision_rate": 0.8125
+      },
+      "gpt:evidence_first": {
+        "complete_three_run_cells": 16,
+        "expected_three_run_cells": 16,
+        "majority_vote_metrics": {
+          "corrupt_verified_miss_rate": 0.0,
+          "corruption_detection_rate": 1.0,
+          "corruption_sensitivity": 1.0,
+          "decision_accuracy": 1.0,
+          "false_alarm_rate": 0.0,
+          "independent_evidence_rate": 1.0,
+          "mean_latency_ms": 2465.625,
+          "relevant_evidence_rate": 1.0,
+          "scheduled": 16,
+          "self_label_effect": 0.0,
+          "valid_evidence_id_rate": 1.0,
+          "valid_json_rate": 1.0
+        },
+        "pairwise_decision_agreement": 0.9583333333333334,
+        "unanimous_decision_rate": 0.9375
+      }
+    },
+    "repeated_base_cases": [
+      "cs_refund_o1001",
+      "dev_build401_production_commit",
+      "ec_payment_o1001",
+      "fi_transaction_txn03"
+    ]
+  }
+}

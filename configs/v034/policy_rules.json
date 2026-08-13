@@ -1,0 +1,15 @@
+{
+  "airline": [
+    {"id": "airline.confirm_before_write", "text": "Before taking any actions that update the booking database, you must list the action details and obtain explicit user confirmation (yes) to proceed."},
+    {"id": "airline.cancel.eligibility", "text": "Flight can be cancelled only when the booking was made within the last 24 hrs, the flight was cancelled by the airline, it is a business flight, or covered travel insurance applies."},
+    {"id": "airline.cancel.reason", "text": "The agent must obtain the reason for cancellation."},
+    {"id": "airline.basic_economy.modify", "text": "Basic economy flights cannot be modified."},
+    {"id": "airline.passenger_count", "text": "The user cannot modify the number of passengers."},
+    {"id": "airline.payment_profile", "text": "All payment methods must already be in the user profile for safety reasons."}
+  ],
+  "retail": [
+    {"id": "retail.confirm_before_write", "text": "The agent must obtain confirmation before submitting a change to an order."},
+    {"id": "retail.payment_profile", "text": "The payment method must be available in the user's profile."},
+    {"id": "retail.order_state", "text": "Only the tools applicable to the order's current state may be used."}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "tau_version": "1.0.1",
+  "bucket": "https://sierra-tau-bench-public.s3.amazonaws.com/submissions",
+  "primary": [
+    {
+      "agent": "gpt-5.2",
+      "submission": "gpt-5-2_sierra_2026-02-26",
+      "files": {
+        "airline": {"name": "gpt-5.2_high_airline_gpt-5.2_4trials.json", "sha256": "308a133d880def1326ea60a2e0a946e0992c2f9e54b8e4711c2947f24b26c9fb", "bytes": 13809245},
+        "retail": {"name": "gpt-5.2_high_retail_gpt-5.2_4trials.json", "sha256": "76ad0d0a0c9b7f96cd07e8ab7efda68a266ef6d9fda74620abdad57de64e0449", "bytes": 31759718}
+      }
+    },
+    {
+      "agent": "claude-sonnet-4.5",
+      "submission": "claude-sonnet-4-5_sierra_2026-02-26",
+      "files": {
+        "airline": {"name": "claude-sonnet-4-5_enabled_airline_gpt-5.2_4trials.json", "sha256": "264e805976d655c41c6085e4cf8a14399ed5f31b49aa833933631208b80185cb", "bytes": 15733531},
+        "retail": {"name": "claude-sonnet-4-5_enabled_retail_gpt-5.2_4trials.json", "sha256": "f344a3a63783018b693f2a1a60b80b9d4f86fce6d5df74c0fcba647baacbea00", "bytes": 34284046}
+      }
+    },
+    {
+      "agent": "qwen3.5",
+      "submission": "qwen3.5-397b-a17b-think_sierra_2026-03-02",
+      "files": {
+        "airline": {"name": "qwen3.5-397b-a17b_enabled_airline_gpt-5.2_4trials.json", "sha256": "5e549cedda2cc7bc338aa0efe0dcf86a552592f0c06caf1c92d0a342aed75a89", "bytes": 30157029},
+        "retail": {"name": "qwen3.5-397b-a17b_enabled_retail_gpt-5.2_4trials.json", "sha256": "1588f0835fe03a1bfb7addbe676d03b73a995fcbd544c50256f9b20e0bf5790b", "bytes": 44286566}
+      }
+    }
+  ],
+  "fallback": [
+    {"agent": "claude-opus-4.5", "submission": "claude-opus-4-5_sierra_2026-02-26", "files": {
+      "airline": {"name": "claude-opus-4-5_high_airline_gpt-5.2_4trials.json", "sha256": "babe71cb463bca64030a91df24431cc6e1df799292dec6b8981618f286f2dc5c", "bytes": 19870992},
+      "retail": {"name": "claude-opus-4-5_high_retail_gpt-5.2_4trials.json", "sha256": "7c6dd82999786546c57605ac4b3becfc9d11ac5c86a65e460983c8efc55de343", "bytes": 39799893}
+    }},
+    {"agent": "glm-5", "submission": "glm-5-think_sierra_2026-03-02", "files": {
+      "airline": {"name": "glm-5_enabled_airline_gpt-5.2_4trials.json", "sha256": "89559fa797b27cf96ff7a13ee0517564a2c7c59fb674aa4c6ce1a90a6a224fba", "bytes": 17731279},
+      "retail": {"name": "glm-5_enabled_retail_gpt-5.2_4trials.json", "sha256": "dc6ba4c2a47456a233d81712dacb926867cf7b30d8ab909f5ec4f79037de4263", "bytes": 36448553}
+    }},
+    {"agent": "gemini-3-pro", "submission": "gemini-3-pro_sierra_2026-03-02", "files": {
+      "airline": {"name": "geminipro-airline.json", "sha256": "baade60aed15b11e0497702d7698a8812b0f90dd5aaad755bd077bd8124638f0", "bytes": 32414404},
+      "retail": {"name": "geminipro-retail.json", "sha256": "247c19252d5001bf8fba573e73dd7b46fc38da1afcc937008cd04ec41a658b7c", "bytes": 57330073}
+    }}
+  ],
+  "expected": {"airline_tasks": 50, "retail_tasks": 114, "trials": 4}
+}
