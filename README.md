@@ -262,14 +262,14 @@ TCRB requires Python 3.11 or newer and uses `uv` for environment management.
 git clone https://github.com/aaliyan1230/tool-calling-reliability-benchmark.git
 cd tool-calling-reliability-benchmark
 uv sync --extra dev
-uv run pytest --ignore=tests/test_v02_eval_runner.py --ignore=tests/test_v02_hf_agent.py
+uv run pytest -m "not local_data" --ignore=tests/test_v02_eval_runner.py --ignore=tests/test_v02_hf_agent.py
 ```
 
 This runs the core suite without downloading the larger research-model packages. To run every test, including the HF and Gemini adapters:
 
 ```bash
 uv sync --extra dev --extra research
-uv run --with google-genai python -m pytest
+uv run --with google-genai python -m pytest -m "not local_data"
 ```
 
 Keep API keys in `.env`. The repository ignores that file, and scripts must never print or copy its values into artifacts.
@@ -323,7 +323,7 @@ For a clean contribution:
 Run the test suite before opening a pull request:
 
 ```bash
-uv run --with google-genai python -m pytest
+uv run --with google-genai python -m pytest -m "not local_data"
 ```
 
 For new planner types, start with [Extending planners](docs/extending-planners.md). The benchmark's completion criteria are in [Core goals](docs/core-goals.md).

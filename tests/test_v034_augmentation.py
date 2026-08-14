@@ -86,6 +86,7 @@ def valid_plan() -> dict:
     }
 
 
+@pytest.mark.local_data
 def test_pilot_seeds_are_safe_and_outside_shortlist() -> None:
     seeds = select_pilot_seeds()
     assert [(row["domain"], row["trajectory"]["task_id"]) for row in seeds] == [
@@ -97,6 +98,7 @@ def test_pilot_seeds_are_safe_and_outside_shortlist() -> None:
     assert all(row["write_event_ids"] for row in seeds)
 
 
+@pytest.mark.local_data
 def test_fill_registry_uses_only_merged_safe_non_scale_cases() -> None:
     manifest = select_fill_seeds()
     seeds = load_fill_seeds()

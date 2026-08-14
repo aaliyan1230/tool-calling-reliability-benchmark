@@ -61,6 +61,7 @@ def hard_fixture() -> tuple[dict, dict, dict, dict, dict, list[str]]:
     return original, augmented, plan, editor, packet, ["c2"]
 
 
+@pytest.mark.local_data
 def test_hard_registry_has_locked_quota_and_no_v034_overlap() -> None:
     smoke = select_hard_seeds(stage="smoke")
     assert len(smoke) == 4
@@ -230,6 +231,7 @@ def test_hard_case_validation_rejects_easy_or_tampered_candidates(change: str) -
     assert result["errors"]
 
 
+@pytest.mark.local_data
 def test_hard_smoke_full_runner_with_fake_provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Exercise the resumable full path without making paid API or tau2 calls."""
     def fake_replay(original, augmented, plan, run_dir):

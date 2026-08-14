@@ -37,3 +37,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "local_data: requires ignored local research data under local/",
+]
