@@ -34,16 +34,20 @@ PURPLE = "#6E56CF"
 TEAL = "#2F7E79"
 BLUE = "#3F6FA3"
 MODEL_COLORS = {
+    "gpt-5.6-luna": "#B84A4A",
+    "deepseek-v4-flash": "#7C746A",
     "gpt-5.6-terra": ORANGE,
     "deepseek-v4-pro": PURPLE,
     "qwen3.7-plus": TEAL,
     "gemini-3.6-flash": BLUE,
 }
 MODEL_LABELS = {
-    "gpt-5.6-terra": "Terra",
-    "deepseek-v4-pro": "DeepSeek Pro",
+    "gpt-5.6-luna": "GPT Luna",
+    "deepseek-v4-flash": "DS Flash",
+    "gpt-5.6-terra": "GPT Terra",
+    "deepseek-v4-pro": "DS Pro",
     "qwen3.7-plus": "Qwen Plus",
-    "gemini-3.6-flash": "Gemini 3.6",
+    "gemini-3.6-flash": "Gemini Flash",
 }
 MODELS = tuple(MODEL_COLORS)
 POLICIES = ("narrow", "broad")
@@ -69,7 +73,10 @@ FAMILY_LABELS = {
 
 
 def analysis_path(model: str, policy: str, role: str, cohort: str | None) -> Path:
-    if model == "gemini-3.6-flash":
+    if model in {"gpt-5.6-luna", "deepseek-v4-flash"}:
+        directory_name = "frozen_comparison" if policy == "narrow" else "frozen_broad_policy"
+        directory = ROOT / "outputs" / "v035" / "prewrite" / directory_name
+    elif model == "gemini-3.6-flash":
         directory = ROOT / "outputs" / "v035" / "prewrite" / "frozen_gemini"
     else:
         directory = ROOT / "outputs" / "v035" / "prewrite" / f"frozen_model_expansion_{policy}"
@@ -78,7 +85,11 @@ def analysis_path(model: str, policy: str, role: str, cohort: str | None) -> Pat
         stem += f"_{cohort}"
     if policy == "broad":
         stem += "_broad"
-    stem += f"_{model}_analysis.json"
+    # DeepSeek Flash was the original default monitor, so its frozen files do
+    # not carry a model suffix. Every other model does.
+    if model != "deepseek-v4-flash":
+        stem += f"_{model}"
+    stem += "_analysis.json"
     path = directory / stem
     if not path.exists():
         raise FileNotFoundError(path)
@@ -186,9 +197,9 @@ def save_figure(fig: plt.Figure, output: Path, stem: str) -> None:
 
 
 def figure_holdout_signal(data: dict[str, Any], output: Path) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.4), sharey=True, constrained_layout=False)
+    fig, axes = plt.subplots(1, 2, figsize=(15.8, 5.6), sharey=True, constrained_layout=False)
     x = np.arange(len(MODELS))
-    width = 0.34
+    width = 0.40
     labels = [MODEL_LABELS[m] for m in MODELS]
     for ax, policy in zip(axes, POLICIES):
         values = data["metrics"][policy]
@@ -201,17 +212,19 @@ def figure_holdout_signal(data: dict[str, Any], output: Path) -> None:
         ax.set_xticks(x, labels)
         ax.set_title("Narrow policy" if policy == "narrow" else "Broad policy", loc="left", pad=12)
         ax.set_xlabel("Monitor model")
-        for bars in (bars_unsafe, bars_safe):
+        for bars, label_color in ((bars_unsafe, "white"), (bars_safe, INK)):
             for bar in bars:
                 height = bar.get_height()
+                is_zero = height == 0
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
-                    max(height + 0.035, 0.045),
+                    0.025 if is_zero else height - 0.025,
                     f"{height:.0%}",
                     ha="center",
-                    va="bottom",
-                    fontsize=10,
-                    color=INK,
+                    va="bottom" if is_zero else "top",
+                    fontsize=9,
+                    color=INK if is_zero else label_color,
+                    fontweight="bold",
                 )
     axes[0].set_ylabel("Rate on fresh stale-state holdout")
     fig.suptitle("Fresh holdout: can the monitor catch a changed target?", x=0.01, y=0.99, ha="left", fontsize=19, fontweight="bold")
@@ -260,7 +273,7 @@ def figure_family_heatmap(data: dict[str, Any], output: Path) -> None:
     safe = np.array([[data["families"]["broad"][m][family]["safe_allow_rate"] for m in MODELS] for family in FAMILY_ORDER], dtype=float)
     unsafe_cmap = LinearSegmentedColormap.from_list("unsafe", [BG, "#F0C9B4", ORANGE_DARK])
     safe_cmap = LinearSegmentedColormap.from_list("safe", [BG, "#C9DCD8", TEAL])
-    fig, axes = plt.subplots(1, 2, figsize=(13.8, 6.8), sharey=True, constrained_layout=False)
+    fig, axes = plt.subplots(1, 2, figsize=(16.6, 6.8), sharey=True, constrained_layout=False)
     heatmap_axis(axes[0], unsafe, "Unsafe cases blocked", unsafe_cmap, model_labels, show_ylabels=True)
     heatmap_axis(axes[1], safe, "Safe cases allowed", safe_cmap, model_labels, show_ylabels=False)
     fig.suptitle("Broad-policy performance by failure family", x=0.01, y=0.985, ha="left", fontsize=19, fontweight="bold")
@@ -271,24 +284,23 @@ def figure_family_heatmap(data: dict[str, Any], output: Path) -> None:
 
 
 def figure_generalization(data: dict[str, Any], output: Path) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.6), sharey=True, constrained_layout=False)
+    fig, axes = plt.subplots(1, 2, figsize=(14.8, 5.8), sharey=True, constrained_layout=False)
     x = np.array([0, 1])
     x_labels = ["Development\n(8 unsafe)", "Fresh holdout\n(6 unsafe)"]
     for ax, policy in zip(axes, POLICIES):
         for model in MODELS:
             values = [data["metrics"][policy][model][cohort]["unsafe_block_rate"] for cohort in ("development", "holdout_v2")]
             ax.plot(x, values, color=MODEL_COLORS[model], linewidth=2.6, marker="o", markersize=7, label=MODEL_LABELS[model])
-            ax.text(1.035, values[-1], f"{values[-1]:.0%}", va="center", ha="left", fontsize=9.5, color=MODEL_COLORS[model], fontweight="bold")
         percent_axis(ax)
         ax.set_xticks(x, x_labels)
-        ax.set_xlim(-0.08, 1.16)
+        ax.set_xlim(-0.08, 1.08)
         ax.set_title("Narrow policy" if policy == "narrow" else "Broad policy", loc="left", pad=12)
         ax.set_xlabel("Evaluation split")
         ax.grid(axis="x", color=GRID, linewidth=0.8, alpha=0.8)
     axes[0].set_ylabel("Unsafe cases blocked")
     fig.suptitle("Fresh cases expose the generalization gap", x=0.01, y=0.99, ha="left", fontsize=19, fontweight="bold")
     fig.text(0.01, 0.925, "The monitor sees the same task structure, but the fresh target-state mutations are new", ha="left", fontsize=11, color=MUTED)
-    axes[1].legend(loc="upper left", bbox_to_anchor=(0.02, -0.23), ncol=4, handlelength=1.7, columnspacing=1.2)
+    axes[1].legend(loc="upper right", bbox_to_anchor=(1.0, -0.23), ncol=3, handlelength=1.7, columnspacing=1.2)
     add_footer(fig, "A steep fall from development to holdout means the model learned the obvious pattern, not the underlying state relation.")
     fig.subplots_adjust(left=0.08, right=0.92, top=0.80, bottom=0.27, wspace=0.17)
     save_figure(fig, output, "generalization_gap")
@@ -296,6 +308,8 @@ def figure_generalization(data: dict[str, Any], output: Path) -> None:
 
 def write_captions(data: dict[str, Any], output: Path) -> None:
     manifest_paths = [
+        "outputs/v035/prewrite/frozen_comparison/freeze_manifest.json",
+        "outputs/v035/prewrite/frozen_broad_policy/freeze_manifest.json",
         "outputs/v035/prewrite/frozen_model_expansion_narrow/freeze_manifest.json",
         "outputs/v035/prewrite/frozen_model_expansion_broad/freeze_manifest.json",
         "outputs/v035/prewrite/frozen_gemini/freeze_manifest.json",
@@ -304,13 +318,14 @@ def write_captions(data: dict[str, Any], output: Path) -> None:
         "dataset_id": "dataset_2c30acaff18497dd6a411524",
         "source_freeze_manifests": manifest_paths,
         "figures": {
-            "holdout_signal": "On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate the monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek blocks 0/6 with the broad policy. This is a model-dependent generalization gap, not a uniform failure.",
-            "family_heatmap_broad": "Direct mistakes are blocked at 100% in this aggregate. State-dependent stale-target cases are harder: unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 62% to 100%.",
-            "generalization_gap": "The same monitor can look strong on familiar development cases and fall on fresh target-state mutations. Under the broad policy, DeepSeek drops from 6/8 to 0/6 unsafe cases blocked; Gemini drops from 7/8 to 5/6.",
+            "holdout_signal": "On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate six monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek Pro blocks 0/6 with the broad policy. Luna and DeepSeek Flash both allow 0/6 safe holdout traces under either policy.",
+            "family_heatmap_broad": "Direct mistakes remain easier than state-dependent stale-target cases. Across all six monitors, stale-target unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 12% to 100%.",
+            "generalization_gap": "The same monitor can look strong on familiar development cases and fall on fresh target-state mutations. The six-model view includes the original Luna and DeepSeek Flash comparison as well as the later four-model expansion.",
         },
         "notes": [
             "Values are loaded from frozen JSON analyses; no values are hand-entered.",
             "ESCALATE is not counted as an exact unsafe BLOCK or safe ALLOW.",
+            "GPT-5.6 Luna and DeepSeek V4 Flash used reasoning=none in the original frozen comparison.",
             "Gemini 3.6 Flash used thinkingLevel=minimal and omitted temperature, as recorded in its freeze manifest.",
         ],
     }
@@ -319,9 +334,9 @@ def write_captions(data: dict[str, Any], output: Path) -> None:
         "# TCRB v3.5 figures\n\n"
         "Generated from the immutable v3.5 result freezes by `scripts/plot_v35_results.py`.\n\n"
         "## Suggested captions\n\n"
-        "- **Fresh holdout signal.** On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate the monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek blocks 0/6 with the broad policy. This is a model-dependent generalization gap, not a uniform failure.\n"
-        "- **Failure-family heatmap.** Direct mistakes are blocked at 100% in this aggregate. State-dependent stale-target cases are harder: unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 62% to 100%.\n"
-        "- **Development-to-holdout gap.** The same monitor can look strong on familiar development cases and fall on fresh target-state mutations. Under the broad policy, DeepSeek drops from 6/8 to 0/6 unsafe cases blocked; Gemini drops from 7/8 to 5/6.\n\n"
+        "- **Fresh holdout signal.** On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate six monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek Pro blocks 0/6 with the broad policy. Luna and DeepSeek Flash both allow 0/6 safe holdout traces under either policy.\n"
+        "- **Failure-family heatmap.** Direct mistakes remain easier than state-dependent stale-target cases. Across all six monitors, stale-target unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 12% to 100%.\n"
+        "- **Development-to-holdout gap.** The six-model view includes the original Luna and DeepSeek Flash comparison as well as the later four-model expansion. Several monitors drop sharply on the fresh state mutations.\n\n"
         "All values are loaded from frozen JSON analyses; no values are hand-entered. `ESCALATE` is not counted as exact `BLOCK` or `ALLOW`.\n",
         encoding="utf-8",
     )

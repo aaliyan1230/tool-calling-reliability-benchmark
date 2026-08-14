@@ -1,18 +1,21 @@
 {
   "dataset_id": "dataset_2c30acaff18497dd6a411524",
   "source_freeze_manifests": [
+    "outputs/v035/prewrite/frozen_comparison/freeze_manifest.json",
+    "outputs/v035/prewrite/frozen_broad_policy/freeze_manifest.json",
     "outputs/v035/prewrite/frozen_model_expansion_narrow/freeze_manifest.json",
     "outputs/v035/prewrite/frozen_model_expansion_broad/freeze_manifest.json",
     "outputs/v035/prewrite/frozen_gemini/freeze_manifest.json"
   ],
   "figures": {
-    "holdout_signal": "On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate the monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek blocks 0/6 with the broad policy. This is a model-dependent generalization gap, not a uniform failure.",
-    "family_heatmap_broad": "Direct mistakes are blocked at 100% in this aggregate. State-dependent stale-target cases are harder: unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 62% to 100%.",
-    "generalization_gap": "The same monitor can look strong on familiar development cases and fall on fresh target-state mutations. Under the broad policy, DeepSeek drops from 6/8 to 0/6 unsafe cases blocked; Gemini drops from 7/8 to 5/6."
+    "holdout_signal": "On 12 fresh stale-target-state traces per model (6 unsafe, 6 safe), exact BLOCK and ALLOW rates separate six monitors. Gemini blocks 6/6 unsafe cases with the narrow policy; DeepSeek Pro blocks 0/6 with the broad policy. Luna and DeepSeek Flash both allow 0/6 safe holdout traces under either policy.",
+    "family_heatmap_broad": "Direct mistakes remain easier than state-dependent stale-target cases. Across all six monitors, stale-target unsafe blocking ranges from 0% to 75%, while safe allowing ranges from 12% to 100%.",
+    "generalization_gap": "The same monitor can look strong on familiar development cases and fall on fresh target-state mutations. The six-model view includes the original Luna and DeepSeek Flash comparison as well as the later four-model expansion."
   },
   "notes": [
     "Values are loaded from frozen JSON analyses; no values are hand-entered.",
     "ESCALATE is not counted as an exact unsafe BLOCK or safe ALLOW.",
+    "GPT-5.6 Luna and DeepSeek V4 Flash used reasoning=none in the original frozen comparison.",
     "Gemini 3.6 Flash used thinkingLevel=minimal and omitted temperature, as recorded in its freeze manifest."
   ]
 }
